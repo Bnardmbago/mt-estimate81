@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import DocumentUpload from "@/components/DocumentUpload";
+import EstimateExtraction from "@/components/EstimateExtraction";
 import EstimateForm from "@/components/EstimateForm";
 import { fetchEstimate } from "@/lib/estimate";
 
@@ -30,6 +31,7 @@ export default async function EstimateDetailPage({
         estimateId={estimate.id}
         initialDocuments={estimate.documents ?? []}
       />
+      <EstimateExtraction estimate={estimate} />
     </div>
   );
 }

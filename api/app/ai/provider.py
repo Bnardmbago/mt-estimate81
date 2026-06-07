@@ -9,4 +9,6 @@ class AIProvider(Protocol):
         form_data: dict[str, Any],
         document_texts: list[str],
         locale: Literal["ja", "en"],
+        *,
+        rate_card_roles: list[dict[str, Any]] | None = None,
     ) -> ExtractedRequirements: ...

@@ -59,9 +59,41 @@ class EstimateSummary(BaseModel):
     updated_at: datetime
 
 
+class FeatureItemInput(BaseModel):
+    id: uuid.UUID | None = None
+    sort_order: int = 0
+    name: str = Field(min_length=1, max_length=255)
+    description: str = ""
+    hours: float = Field(gt=0)
+    phase: str = Field(min_length=1, max_length=50)
+    role: str = Field(min_length=1, max_length=50)
+    is_ai_generated: bool = False
+
+
+class FeatureItemsUpdate(BaseModel):
+    items: list[FeatureItemInput]
+
+
+class ExtractedDataUpdate(BaseModel):
+    functional_requirements: list[str] | None = None
+    non_functional_requirements: list[str] | None = None
+    user_roles: list[str] | None = None
+    modules: list[str] | None = None
+    external_systems: list[str] | None = None
+    risks: list[str] | None = None
+    gaps: list[str] | None = None
+    confidence_notes: str | None = None
+
+
+class EstimateStatusResponse(BaseModel):
+    status: str
+    extraction_progress: dict[str, Any] | None = None
+
+
 class EstimateDetail(EstimateSummary):
     form_data: dict[str, Any]
     extracted_data: dict[str, Any] | None
+    maintenance_assumptions: dict[str, Any]
     calculation_result: dict[str, Any] | None
     rate_card_version_id: uuid.UUID | None
     feature_items: list[FeatureItemResponse]

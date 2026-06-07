@@ -54,6 +54,47 @@
       "failed": "失敗"
     }
   },
+  "review": {
+    "extractTitle": "AI抽出",
+    "extractDescription": "フォームとアップロード資料から要件と機能見積を抽出します。",
+    "extractButton": "要件を抽出",
+    "extracting": "抽出を開始中…",
+    "extractingTitle": "要件を抽出中",
+    "progressDocuments": "ドキュメント処理中 ({done}/{total})…",
+    "progressAi": "AIで要件を分析中…",
+    "extractError": "抽出の開始に失敗しました",
+    "requirementsTitle": "抽出された要件",
+    "requirementsDescription": "AIが抽出した要件リストを確認・編集します。",
+    "featuresTitle": "機能項目",
+    "featuresDescription": "計算前に機能名・工数・フェーズ・ロールを編集します。",
+    "save": "保存",
+    "saving": "保存中…",
+    "saved": "保存しました",
+    "saveError": "保存に失敗しました",
+    "addItem": "項目を追加",
+    "addRow": "行を追加",
+    "remove": "削除",
+    "emptySection": "項目がありません",
+    "emptyFeatures": "機能項目がありません",
+    "featureItemsRequired": "有効な機能項目を1件以上追加してください",
+    "sections": {
+      "functional_requirements": "機能要件",
+      "non_functional_requirements": "非機能要件",
+      "user_roles": "ユーザーロール",
+      "modules": "モジュール",
+      "external_systems": "外部システム",
+      "risks": "リスク",
+      "gaps": "ギャップ",
+      "confidence_notes": "信頼度メモ"
+    },
+    "columns": {
+      "name": "名称",
+      "hours": "工数",
+      "phase": "フェーズ",
+      "role": "ロール",
+      "description": "説明"
+    }
+  },
   "form": {
     "selectPlaceholder": "選択してください",
     "required": "必須項目です",

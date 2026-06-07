@@ -47,6 +47,7 @@ class Estimate(Base):
     )
     form_data: Mapped[dict] = mapped_column(JSONB, default=dict)
     extracted_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    maintenance_assumptions: Mapped[dict] = mapped_column(JSONB, default=dict)
     calculation_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

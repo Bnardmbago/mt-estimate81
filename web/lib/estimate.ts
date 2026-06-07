@@ -8,6 +8,30 @@ export type EstimateDocument = {
   uploaded_at: string;
 };
 
+export type FeatureItem = {
+  id: string;
+  sort_order: number;
+  name: string;
+  description: string;
+  hours: number;
+  phase: string;
+  role: string;
+  is_ai_generated: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExtractedData = {
+  functional_requirements: string[];
+  non_functional_requirements: string[];
+  user_roles: string[];
+  modules: string[];
+  external_systems: string[];
+  risks: string[];
+  gaps: string[];
+  confidence_notes: string;
+};
+
 export type EstimateDetail = {
   id: string;
   project_name: string;
@@ -15,6 +39,9 @@ export type EstimateDetail = {
   status: string;
   locale: string;
   form_data: Record<string, unknown>;
+  extracted_data: ExtractedData | null;
+  maintenance_assumptions: Record<string, unknown>;
+  feature_items: FeatureItem[];
   documents: EstimateDocument[];
   created_at: string;
   updated_at: string;

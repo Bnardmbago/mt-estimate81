@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,7 +10,13 @@ from app.audit.service import log_change
 from app.models.audit import AuditLog
 from app.models.estimate import Estimate, EstimateStatus
 from app.models.user import User
-from app.schemas.estimate import EstimateCreate, EstimateUpdate
+from app.models.estimate import FeatureItem
+from app.schemas.estimate import (
+    EstimateCreate,
+    EstimateUpdate,
+    ExtractedDataUpdate,
+    FeatureItemsUpdate,
+)
 
 
 async def create_estimate(
@@ -109,6 +115,113 @@ async def update_estimate(
 
     await db.commit()
     return await get_estimate(db, estimate.id)
+
+
+async def update_feature_items(
+    db: AsyncSession,
+    user: User,
+    estimate_id: uuid.UUID,
+    data: FeatureItemsUpdate,
+) -> Estimate:
+    estimate = await get_estimate(db, estimate_id)
+
+    if estimate.status not in (
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Feature items can only be edited during review",
+                "code": "INVALID_STATUS",
+            },
+        )
+
+    existing_ids = {item.id for item in estimate.feature_items}
+    incoming_ids = {item.id for item in data.items if item.id is not None}
+    removed_ids = existing_ids - incoming_ids
+
+    if removed_ids:
+        await db.execute(
+            delete(FeatureItem).where(
+                FeatureItem.estimate_id == estimate_id,
+                FeatureItem.id.in_(removed_ids),
+            )
+        )
+
+    items_by_id = {item.id: item for item in estimate.feature_items}
+    updated_items: list[FeatureItem] = []
+
+    for index, item_data in enumerate(data.items):
+        if item_data.id and item_data.id in items_by_id:
+            item = items_by_id[item_data.id]
+            item.sort_order = index
+            item.name = item_data.name
+            item.description = item_data.description
+            item.hours = item_data.hours
+            item.phase = item_data.phase
+            item.role = item_data.role
+            item.is_ai_generated = item_data.is_ai_generated
+            updated_items.append(item)
+        else:
+            item = FeatureItem(
+                estimate_id=estimate_id,
+                sort_order=index,
+                name=item_data.name,
+                description=item_data.description,
+                hours=item_data.hours,
+                phase=item_data.phase,
+                role=item_data.role,
+                is_ai_generated=item_data.is_ai_generated,
+            )
+            db.add(item)
+            updated_items.append(item)
+
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="feature_items_updated",
+        changes={"count": len(updated_items)},
+    )
+    await db.commit()
+    return await get_estimate(db, estimate_id)
+
+
+async def update_extracted_data(
+    db: AsyncSession,
+    user: User,
+    estimate_id: uuid.UUID,
+    data: ExtractedDataUpdate,
+) -> Estimate:
+    estimate = await get_estimate(db, estimate_id)
+
+    if estimate.status not in (
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Extracted data can only be edited during review",
+                "code": "INVALID_STATUS",
+            },
+        )
+
+    current = dict(estimate.extracted_data or {})
+    update_data = data.model_dump(exclude_unset=True)
+    current.update(update_data)
+    estimate.extracted_data = current
+
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="extracted_data_updated",
+        changes={"fields": list(update_data.keys())},
+    )
+    await db.commit()
+    return await get_estimate(db, estimate_id)
 
 
 async def get_audit_log(db: AsyncSession, estimate_id: uuid.UUID) -> list[AuditLog]:

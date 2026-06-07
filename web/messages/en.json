@@ -54,6 +54,47 @@
       "failed": "Failed"
     }
   },
+  "review": {
+    "extractTitle": "AI Extraction",
+    "extractDescription": "Extract requirements and feature estimates from the form and uploaded documents.",
+    "extractButton": "Extract Requirements",
+    "extracting": "Starting extraction…",
+    "extractingTitle": "Extracting requirements",
+    "progressDocuments": "Processing documents ({done}/{total})…",
+    "progressAi": "Analyzing requirements with AI…",
+    "extractError": "Failed to start extraction",
+    "requirementsTitle": "Extracted Requirements",
+    "requirementsDescription": "Review and edit the AI-extracted requirement lists.",
+    "featuresTitle": "Feature Items",
+    "featuresDescription": "Edit feature names, hours, phases, and roles before calculation.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveError": "Failed to save changes",
+    "addItem": "Add item",
+    "addRow": "Add row",
+    "remove": "Remove",
+    "emptySection": "No items yet",
+    "emptyFeatures": "No feature items yet",
+    "featureItemsRequired": "Add at least one valid feature item",
+    "sections": {
+      "functional_requirements": "Functional requirements",
+      "non_functional_requirements": "Non-functional requirements",
+      "user_roles": "User roles",
+      "modules": "Modules",
+      "external_systems": "External systems",
+      "risks": "Risks",
+      "gaps": "Gaps",
+      "confidence_notes": "Confidence notes"
+    },
+    "columns": {
+      "name": "Name",
+      "hours": "Hours",
+      "phase": "Phase",
+      "role": "Role",
+      "description": "Description"
+    }
+  },
   "form": {
     "selectPlaceholder": "Select…",
     "required": "This field is required",
