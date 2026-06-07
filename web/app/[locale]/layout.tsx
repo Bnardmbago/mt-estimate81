@@ -36,6 +36,9 @@ export default async function LocaleLayout({
                 <Link href={`/${locale}/estimates`} className="hover:text-blue-600">
                   {t("estimates")}
                 </Link>
+                <Link href={`/${locale}/estimates/variance`} className="hover:text-blue-600">
+                  {t("variance")}
+                </Link>
                 <Link href={`/${locale}/admin`} className="hover:text-blue-600">
                   {t("admin")}
                 </Link>

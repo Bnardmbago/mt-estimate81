@@ -69,6 +69,18 @@ export type ExportRecord = {
   generated_by: string;
 };
 
+export type Actuals = {
+  id: string;
+  estimate_id: string;
+  actual_effort_hours: number;
+  actual_duration_days: number;
+  actual_nrc_jpy: number;
+  actual_rc_monthly_jpy: number;
+  variance_notes: string | null;
+  entered_by: string;
+  entered_at: string;
+};
+
 export type EstimateDetail = {
   id: string;
   project_name: string;
@@ -82,6 +94,7 @@ export type EstimateDetail = {
   rate_card_version_id: string | null;
   feature_items: FeatureItem[];
   documents: EstimateDocument[];
+  actuals: Actuals | null;
   created_at: string;
   updated_at: string;
 };

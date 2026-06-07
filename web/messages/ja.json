@@ -1,6 +1,7 @@
 {
   "nav": {
     "estimates": "見積一覧",
+    "variance": "差異分析",
     "admin": "管理",
     "logout": "ログアウト"
   },
@@ -149,6 +150,50 @@
     "annualTotal": "年額合計",
     "firstYearTotal": "初年度合計",
     "firstYearFormula": "初年度 = NRC + 年額RC"
+  },
+  "variance": {
+    "dashboardTitle": "差異ダッシュボード",
+    "dashboardDescription": "完了したプロジェクトの見積と実績を比較します。",
+    "actualsTitle": "実績入力と完了",
+    "actualsDescription": "プロジェクトの実績を入力し、見積を完了にします。",
+    "varianceTitle": "見積 vs 実績",
+    "markComplete": "完了にする",
+    "completing": "完了処理中…",
+    "completeError": "見積の完了に失敗しました",
+    "saveActuals": "実績を保存",
+    "saving": "保存中…",
+    "saved": "実績を保存しました",
+    "saveError": "実績の保存に失敗しました",
+    "loadError": "差異ダッシュボードの読み込みに失敗しました",
+    "loading": "読み込み中…",
+    "applyFilters": "フィルターを適用",
+    "empty": "差異データのある完了見積はまだありません",
+    "noActuals": "実績未入力",
+    "fields": {
+      "effortHours": "実績工数（時間）",
+      "effortDays": "実績工数（人日）",
+      "nrc": "実績NRC（¥）",
+      "rcMonthly": "実績RC月額（¥）",
+      "notes": "差異メモ"
+    },
+    "filters": {
+      "client": "クライアント",
+      "dateFrom": "開始日",
+      "dateTo": "終了日",
+      "sortMetric": "並び替え",
+      "sortOrder": "順序",
+      "desc": "差異が大きい順",
+      "asc": "差異が小さい順"
+    },
+    "columns": {
+      "project": "プロジェクト",
+      "client": "クライアント",
+      "effortHours": "工数（時間）",
+      "effortDays": "工数（人日）",
+      "nrc": "NRC",
+      "rcMonthly": "RC月額",
+      "notes": "メモ"
+    }
   },
   "admin": {
     "title": "管理",

@@ -7,6 +7,7 @@ import { apiFetch, apiJson } from "@/lib/api";
 import type { EstimateDetail, ExtractedData } from "@/lib/estimate";
 import EstimateCalculation from "@/components/EstimateCalculation";
 import ExportPanel from "@/components/ExportPanel";
+import ActualsForm from "@/components/ActualsForm";
 import FeatureItemEditor from "@/components/FeatureItemEditor";
 import RequirementsReview from "@/components/RequirementsReview";
 
@@ -167,6 +168,15 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
             estimateId={estimate.id}
             locale={estimate.locale}
             estimateUpdatedAt={estimate.updated_at}
+          />
+        )}
+        {estimate.calculation_result && (
+          <ActualsForm
+            estimateId={estimate.id}
+            locale={estimate.locale}
+            status={status}
+            calculationResult={estimate.calculation_result}
+            initialActuals={estimate.actuals ?? null}
           />
         )}
       </div>

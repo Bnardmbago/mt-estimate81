@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.feedback import ActualsResponse
+
 
 class EstimateCreate(BaseModel):
     project_name: str = Field(min_length=1, max_length=255)
@@ -98,6 +100,7 @@ class EstimateDetail(EstimateSummary):
     rate_card_version_id: uuid.UUID | None
     feature_items: list[FeatureItemResponse]
     documents: list[EstimateDocumentResponse]
+    actuals: ActualsResponse | None = None
 
 
 class AuditLogEntry(BaseModel):

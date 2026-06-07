@@ -66,6 +66,7 @@ async def get_estimate(db: AsyncSession, estimate_id: uuid.UUID) -> Estimate:
         .options(
             selectinload(Estimate.feature_items),
             selectinload(Estimate.documents),
+            selectinload(Estimate.actuals),
         )
     )
     estimate = result.scalar_one_or_none()
@@ -89,6 +90,7 @@ async def update_estimate(
         .options(
             selectinload(Estimate.feature_items),
             selectinload(Estimate.documents),
+            selectinload(Estimate.actuals),
         )
     )
     estimate = result.scalar_one_or_none()

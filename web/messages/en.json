@@ -1,6 +1,7 @@
 {
   "nav": {
     "estimates": "Estimates",
+    "variance": "Variance",
     "admin": "Admin",
     "logout": "Logout"
   },
@@ -149,6 +150,50 @@
     "annualTotal": "Annual total",
     "firstYearTotal": "First year total",
     "firstYearFormula": "First year = NRC + annual RC"
+  },
+  "variance": {
+    "dashboardTitle": "Variance Dashboard",
+    "dashboardDescription": "Compare estimated vs actual effort and cost for completed projects.",
+    "actualsTitle": "Actuals & Completion",
+    "actualsDescription": "Enter actual project results and mark the estimate complete.",
+    "varianceTitle": "Estimate vs Actual",
+    "markComplete": "Mark complete",
+    "completing": "Completing…",
+    "completeError": "Failed to mark estimate complete",
+    "saveActuals": "Save actuals",
+    "saving": "Saving…",
+    "saved": "Actuals saved",
+    "saveError": "Failed to save actuals",
+    "loadError": "Failed to load variance dashboard",
+    "loading": "Loading…",
+    "applyFilters": "Apply filters",
+    "empty": "No completed estimates with variance data yet",
+    "noActuals": "Actuals not entered",
+    "fields": {
+      "effortHours": "Actual effort hours",
+      "effortDays": "Actual effort days",
+      "nrc": "Actual NRC (¥)",
+      "rcMonthly": "Actual RC monthly (¥)",
+      "notes": "Variance notes"
+    },
+    "filters": {
+      "client": "Client",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "sortMetric": "Sort by",
+      "sortOrder": "Order",
+      "desc": "Highest variance first",
+      "asc": "Lowest variance first"
+    },
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "effortHours": "Effort hours",
+      "effortDays": "Effort days",
+      "nrc": "NRC",
+      "rcMonthly": "RC monthly",
+      "notes": "Notes"
+    }
   },
   "admin": {
     "title": "Admin",
