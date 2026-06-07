@@ -14,6 +14,58 @@
   "estimates": {
     "new": "New Estimate",
     "list": "Estimates",
-    "empty": "No estimates yet"
+    "empty": "No estimates yet",
+    "back": "Back to list",
+    "client": "Client",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "unsaved": "Unsaved changes",
+    "saveError": "Failed to save estimate",
+    "notFound": "Estimate not found",
+    "status": {
+      "draft": "Draft",
+      "extracting": "Extracting",
+      "review": "Review",
+      "calculated": "Calculated",
+      "exported": "Exported",
+      "completed": "Completed"
+    }
+  },
+  "form": {
+    "selectPlaceholder": "Select…",
+    "required": "This field is required",
+    "project_name": "Project name",
+    "nature_of_work": "Nature of work",
+    "scope_boundaries": "Scope boundaries",
+    "project_overview": "Project overview",
+    "system_type": "Type of system",
+    "business_domain": "Business domain",
+    "main_functional_needs": "Main functional needs",
+    "non_functional_needs": "Non-functional needs",
+    "users_and_load": "Users and load",
+    "integrations": "Connections to other systems",
+    "data_complexity": "Data complexity",
+    "ui_complexity": "User interface complexity",
+    "technology_preferences": "Technology preferences",
+    "development_approach": "Development approach",
+    "rules_and_standards": "Rules and standards to follow",
+    "team_and_resources": "Team and resources",
+    "development_location": "Where development happens",
+    "delivery_timing": "Delivery timing",
+    "maintenance_support": "Maintenance and support",
+    "risks_unknowns": "Risks and unknowns",
+    "budget": "Budget",
+    "options": {
+      "simple": "Simple",
+      "moderate": "Moderate",
+      "complex": "Complex",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "japan": "Mainly in Japan",
+      "offshore": "Mainly offshore",
+      "hybrid": "Mix of Japan and offshore"
+    }
   }
 }

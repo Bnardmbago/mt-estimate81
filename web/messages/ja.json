@@ -14,6 +14,58 @@
   "estimates": {
     "new": "新規見積",
     "list": "見積一覧",
-    "empty": "見積がありません"
+    "empty": "見積がありません",
+    "back": "一覧に戻る",
+    "client": "クライアント",
+    "save": "保存",
+    "saving": "保存中…",
+    "saved": "保存しました",
+    "unsaved": "未保存の変更があります",
+    "saveError": "見積の保存に失敗しました",
+    "notFound": "見積が見つかりません",
+    "status": {
+      "draft": "下書き",
+      "extracting": "抽出中",
+      "review": "レビュー",
+      "calculated": "計算済み",
+      "exported": "出力済み",
+      "completed": "完了"
+    }
+  },
+  "form": {
+    "selectPlaceholder": "選択してください",
+    "required": "必須項目です",
+    "project_name": "プロジェクト名",
+    "nature_of_work": "作業の性質",
+    "scope_boundaries": "スコープ境界",
+    "project_overview": "プロジェクト概要",
+    "system_type": "システム種別",
+    "business_domain": "業界・ドメイン",
+    "main_functional_needs": "主要機能要件",
+    "non_functional_needs": "非機能要件",
+    "users_and_load": "ユーザー数・負荷",
+    "integrations": "他システム連携",
+    "data_complexity": "データ複雑度",
+    "ui_complexity": "UI複雑度",
+    "technology_preferences": "技術的偏好",
+    "development_approach": "開発アプローチ",
+    "rules_and_standards": "遵守ルール・標準",
+    "team_and_resources": "チーム・リソース",
+    "development_location": "開発拠点",
+    "delivery_timing": "納期・スケジュール",
+    "maintenance_support": "保守・サポート",
+    "risks_unknowns": "リスク・不明点",
+    "budget": "予算",
+    "options": {
+      "simple": "シンプル",
+      "moderate": "中程度",
+      "complex": "複雑",
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "japan": "主に国内",
+      "offshore": "主にオフショア",
+      "hybrid": "国内とオフショアの混合"
+    }
   }
 }
