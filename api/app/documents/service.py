@@ -1,7 +1,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import BackgroundTasks, HTTPException, UploadFile
+from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.documents.extractor import SUPPORTED_FILE_TYPES, ExtractionError, extract_document_text
 from app.documents.hermes_client import HermesClient
+from app.exceptions import AppError
 from app.models.estimate import Estimate, EstimateDocument
 from app.storage.factory import get_storage_backend
 
@@ -25,10 +26,7 @@ async def _get_estimate(db: AsyncSession, estimate_id: uuid.UUID) -> Estimate:
     result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = result.scalar_one_or_none()
     if not estimate:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
-        )
+        raise AppError("Estimate not found", "ESTIMATE_NOT_FOUND", status_code=404)
     return estimate
 
 
@@ -45,10 +43,7 @@ async def _get_document(
     )
     document = result.scalar_one_or_none()
     if not document:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Document not found", "code": "DOCUMENT_NOT_FOUND"},
-        )
+        raise AppError("Document not found", "DOCUMENT_NOT_FOUND", status_code=404)
     return document
 
 
@@ -92,27 +87,19 @@ async def upload_document(
     await _get_estimate(db, estimate_id)
 
     if not file.filename:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Filename is required", "code": "INVALID_FILE"},
-        )
+        raise AppError("Filename is required", "INVALID_FILE")
 
     file_type = get_file_extension(file.filename)
     if file_type not in SUPPORTED_FILE_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": f"Unsupported file type: {file_type}",
-                "code": "UNSUPPORTED_FILE_TYPE",
-            },
+        raise AppError(
+            f"Unsupported file type: {file_type}",
+            "UNSUPPORTED_FILE_TYPE",
+            details={"file_type": file_type},
         )
 
     content = await file.read()
     if not content:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "File is empty", "code": "INVALID_FILE"},
-        )
+        raise AppError("File is empty", "INVALID_FILE")
 
     document_id = uuid.uuid4()
     storage_path = f"uploads/{estimate_id}/{document_id}.{file_type}"

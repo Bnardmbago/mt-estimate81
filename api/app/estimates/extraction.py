@@ -2,7 +2,6 @@ import asyncio
 import uuid
 from typing import Any, Literal
 
-from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +11,7 @@ from app.ai.factory import get_ai_provider
 from app.ai.schemas import ExtractedRequirements
 from app.audit.service import log_change
 from app.documents.service import run_extraction as run_document_extraction
+from app.exceptions import AppError
 from app.models.estimate import Estimate, EstimateDocument, EstimateStatus, FeatureItem
 from app.models.rate_card import RateCard, RateCardVersion
 
@@ -58,6 +58,13 @@ def _collect_document_texts(documents: list[EstimateDocument]) -> tuple[list[str
     return texts, skipped
 
 
+def _is_timeout_error(exc: BaseException) -> bool:
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    name = type(exc).__name__
+    return "Timeout" in name
+
+
 async def _call_ai_provider(
     form_data: dict[str, Any],
     document_texts: list[str],
@@ -77,9 +84,22 @@ async def _call_ai_provider(
             )
         except ValidationError as exc:
             last_error = exc
+        except Exception as exc:
+            if _is_timeout_error(exc):
+                raise AppError(
+                    "AI request timed out",
+                    "AI_TIMEOUT",
+                    status_code=504,
+                ) from exc
+            raise
 
     assert last_error is not None
-    raise last_error
+    raise AppError(
+        "AI returned invalid JSON",
+        "AI_INVALID_JSON",
+        status_code=502,
+        details={"validation_errors": last_error.errors()},
+    )
 
 
 def _build_extracted_data(result: ExtractedRequirements, skipped_docs: list[str]) -> dict[str, Any]:
@@ -119,6 +139,10 @@ async def run_extraction(
 
     if estimate.status not in (EstimateStatus.DRAFT.value, EstimateStatus.REVIEW.value):
         return
+
+    await db.execute(delete(FeatureItem).where(FeatureItem.estimate_id == estimate_id))
+    estimate.extracted_data = None
+    estimate.maintenance_assumptions = {}
 
     estimate.status = EstimateStatus.EXTRACTING.value
     await log_change(
@@ -209,10 +233,7 @@ async def get_extraction_status(db: AsyncSession, estimate_id: uuid.UUID) -> dic
     )
     estimate = result.scalar_one_or_none()
     if not estimate:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
-        )
+        raise AppError("Estimate not found", "ESTIMATE_NOT_FOUND", status_code=404)
 
     documents = list(estimate.documents)
     documents_done = sum(

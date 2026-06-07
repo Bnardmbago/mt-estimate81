@@ -27,10 +27,18 @@ export async function apiJson<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
+    const payload =
+      typeof error.error === "string"
+        ? error
+        : typeof error.detail === "object"
+          ? error.detail
+          : error;
     throw new Error(
-      typeof error.detail === "object"
-        ? error.detail.error
-        : error.detail || response.statusText,
+      typeof payload.error === "string"
+        ? payload.error
+        : typeof error.detail === "string"
+          ? error.detail
+          : response.statusText,
     );
   }
 

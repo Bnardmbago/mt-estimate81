@@ -326,15 +326,8 @@ async def run_calculation(
             maintenance,
             rate_card_version_id=str(version.id),
         )
-    except CalculationError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": str(exc),
-                "code": "CALCULATION_ERROR",
-                "feature_item_name": exc.feature_item_name,
-            },
-        ) from exc
+    except CalculationError:
+        raise
 
     estimate.calculation_result = result.model_dump()
     estimate.status = EstimateStatus.CALCULATED.value

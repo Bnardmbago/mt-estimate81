@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
+from pydantic import ValidationError
 
 from app.ai.schemas import ExtractedRequirements, FeatureItemSuggestion, MaintenanceAssumptions
 
@@ -166,3 +167,50 @@ async def test_update_feature_items_and_extracted_data(
     )
     assert patched.status_code == 200
     assert patched.json()["extracted_data"]["functional_requirements"] == ["Updated requirement"]
+
+
+@pytest.mark.asyncio
+async def test_extraction_retry_clears_partial_ai_output(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    mock_ai_provider,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("EXTRACT_SYNC", "1")
+
+    create = await client.post(
+        "/estimates",
+        json={
+            "project_name": "Retry Clear Test",
+            "client_name": "ACME",
+            "locale": "en",
+        },
+        headers=auth_headers,
+    )
+    estimate_id = create.json()["id"]
+
+    with patch("app.estimates.extraction.get_ai_provider", return_value=mock_ai_provider):
+        await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
+
+    detail = await client.get(f"/estimates/{estimate_id}", headers=auth_headers)
+    assert detail.json()["status"] == "review"
+    assert len(detail.json()["feature_items"]) >= 1
+
+    class FailingProvider:
+        async def extract_requirements(self, form_data, document_texts, locale, **kwargs):
+            raise ValidationError.from_exception_data(
+                "ExtractedRequirements",
+                [{"type": "missing", "loc": ("feature_items",), "msg": "Field required", "input": {}}],
+            )
+
+    with patch("app.estimates.extraction.get_ai_provider", return_value=FailingProvider()):
+        response = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
+        assert response.status_code == 502
+        assert response.json()["code"] == "AI_INVALID_JSON"
+
+    detail = await client.get(f"/estimates/{estimate_id}", headers=auth_headers)
+    payload = detail.json()
+    assert payload["status"] == "draft"
+    assert payload["feature_items"] == []
+    assert payload["extracted_data"] is None
+    assert payload["maintenance_assumptions"] == {}

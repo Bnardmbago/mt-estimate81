@@ -280,6 +280,28 @@
       "statusUnreachable": "接続不可"
     }
   },
+  "errors": {
+    "AI_TIMEOUT": "AIリクエストがタイムアウトしました。もう一度お試しください。",
+    "AI_INVALID_JSON": "AIから無効なデータが返されました。もう一度お試しください。",
+    "UNKNOWN_ROLE": "機能項目に不明なロールがあります。レートカードのロールを確認してください。",
+    "EXPORT_FAILED": "エクスポートの生成に失敗しました。もう一度お試しください。",
+    "EXPORT_FORMAT_NOT_IMPLEMENTED": "このエクスポート形式はまだ利用できません。",
+    "EXPORT_NOT_FOUND": "エクスポートが見つかりません。",
+    "EXPORT_FILE_NOT_FOUND": "エクスポートファイルがありません。",
+    "ESTIMATE_NOT_FOUND": "見積が見つかりません。",
+    "DOCUMENT_NOT_FOUND": "ドキュメントが見つかりません。",
+    "INVALID_FILE": "無効なファイルです。",
+    "UNSUPPORTED_FILE_TYPE": "未対応のファイル形式です。",
+    "INVALID_STATUS": "現在のステータスではこの操作はできません。",
+    "CALCULATION_REQUIRED": "エクスポート前に見積を計算してください。",
+    "INVALID_LOCALE": "ロケールは日本語または英語である必要があります。",
+    "FEATURE_ITEMS_REQUIRED": "計算前に機能項目を1件以上追加してください。",
+    "FORBIDDEN": "この操作を行う権限がありません。",
+    "RATE_CARD_NOT_FOUND": "有効なレートカードが設定されていません。",
+    "AUTH_INVALID": "メールまたはパスワードが正しくありません。",
+    "INVALID_PHASE_SUM": "フェーズ割合の合計は100%である必要があります。",
+    "HTTP_ERROR": "問題が発生しました。もう一度お試しください。"
+  },
   "form": {
     "selectPlaceholder": "選択してください",
     "required": "必須項目です",

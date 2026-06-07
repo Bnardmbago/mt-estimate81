@@ -2,13 +2,13 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import HTTPException
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_change
+from app.exceptions import AppError
 from app.exports.excel import generate_excel
 from app.exports.markdown import generate_markdown
 from app.models.estimate import Estimate, EstimateStatus, Export, ExportFormat
@@ -62,10 +62,7 @@ async def _get_estimate_for_export(db: AsyncSession, estimate_id: uuid.UUID) -> 
     )
     estimate = result.scalar_one_or_none()
     if not estimate:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
-        )
+        raise AppError("Estimate not found", "ESTIMATE_NOT_FOUND", status_code=404)
     return estimate
 
 
@@ -108,12 +105,11 @@ def _generate_content(
             generated_at=generated_at,
         )
 
-    raise HTTPException(
+    raise AppError(
+        f"Export format '{export_format}' is not yet implemented",
+        "EXPORT_FORMAT_NOT_IMPLEMENTED",
         status_code=501,
-        detail={
-            "error": f"Export format '{export_format}' is not yet implemented",
-            "code": "EXPORT_FORMAT_NOT_IMPLEMENTED",
-        },
+        details={"format": export_format},
     )
 
 
@@ -131,29 +127,21 @@ async def export_estimate(
         EstimateStatus.EXPORTED.value,
         EstimateStatus.COMPLETED.value,
     ):
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Export requires calculated status or later",
-                "code": "INVALID_STATUS",
-            },
+        raise AppError(
+            "Export requires calculated status or later",
+            "INVALID_STATUS",
+            details={"required_statuses": ["calculated", "exported", "completed"]},
         )
 
     if not estimate.calculation_result:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Calculation result is required before export",
-                "code": "CALCULATION_REQUIRED",
-            },
+        raise AppError(
+            "Calculation result is required before export",
+            "CALCULATION_REQUIRED",
         )
 
     resolved_locale = locale or estimate.locale
     if resolved_locale not in ("ja", "en"):
-        raise HTTPException(
-            status_code=400,
-            detail={"error": "Locale must be ja or en", "code": "INVALID_LOCALE"},
-        )
+        raise AppError("Locale must be ja or en", "INVALID_LOCALE", details={"locale": resolved_locale})
 
     rate_card_name, rate_card_version_number = await _get_rate_card_version(
         db,
@@ -175,14 +163,11 @@ async def export_estimate(
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)
-    except HTTPException:
+    except AppError:
         raise
     except Exception:
         logger.exception("Export generation failed for estimate %s", estimate_id)
-        raise HTTPException(
-            status_code=500,
-            detail={"error": "Export generation failed", "code": "EXPORT_FAILED"},
-        )
+        raise AppError("Export generation failed", "EXPORT_FAILED", status_code=500)
 
     export_record = Export(
         id=export_id,
@@ -228,17 +213,11 @@ async def download_export(db: AsyncSession, export_id: uuid.UUID) -> Response:
     result = await db.execute(select(Export).where(Export.id == export_id))
     export_record = result.scalar_one_or_none()
     if not export_record:
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Export not found", "code": "EXPORT_NOT_FOUND"},
-        )
+        raise AppError("Export not found", "EXPORT_NOT_FOUND", status_code=404)
 
     storage = get_storage_backend()
     if not await storage.exists(export_record.storage_path):
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Export file not found", "code": "EXPORT_FILE_NOT_FOUND"},
-        )
+        raise AppError("Export file not found", "EXPORT_FILE_NOT_FOUND", status_code=404)
 
     content = await storage.read(export_record.storage_path)
     extension = FORMAT_EXTENSIONS.get(export_record.format, export_record.format)

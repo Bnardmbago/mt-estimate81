@@ -280,6 +280,28 @@
       "statusUnreachable": "Unreachable"
     }
   },
+  "errors": {
+    "AI_TIMEOUT": "AI request timed out. Please try again.",
+    "AI_INVALID_JSON": "AI returned invalid data. Please try again.",
+    "UNKNOWN_ROLE": "Unknown role on a feature item. Check roles against the rate card.",
+    "EXPORT_FAILED": "Export generation failed. Please try again.",
+    "EXPORT_FORMAT_NOT_IMPLEMENTED": "This export format is not available yet.",
+    "EXPORT_NOT_FOUND": "Export not found.",
+    "EXPORT_FILE_NOT_FOUND": "Export file is missing.",
+    "ESTIMATE_NOT_FOUND": "Estimate not found.",
+    "DOCUMENT_NOT_FOUND": "Document not found.",
+    "INVALID_FILE": "Invalid file.",
+    "UNSUPPORTED_FILE_TYPE": "Unsupported file type.",
+    "INVALID_STATUS": "This action is not allowed in the current status.",
+    "CALCULATION_REQUIRED": "Calculate the estimate before exporting.",
+    "INVALID_LOCALE": "Locale must be Japanese or English.",
+    "FEATURE_ITEMS_REQUIRED": "Add at least one feature item before calculating.",
+    "FORBIDDEN": "You do not have permission for this action.",
+    "RATE_CARD_NOT_FOUND": "No active rate card is configured.",
+    "AUTH_INVALID": "Invalid email or password.",
+    "INVALID_PHASE_SUM": "Phase percentages must sum to 100%.",
+    "HTTP_ERROR": "Something went wrong. Please try again."
+  },
   "form": {
     "selectPlaceholder": "Select…",
     "required": "This field is required",

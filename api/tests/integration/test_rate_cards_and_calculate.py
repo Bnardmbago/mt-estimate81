@@ -149,7 +149,7 @@ async def test_update_rate_card_rejects_invalid_phase_sum(
         headers=admin_headers,
     )
     assert response.status_code == 400
-    assert response.json()["detail"]["code"] == "INVALID_PHASE_SUM"
+    assert response.json()["code"] == "INVALID_PHASE_SUM"
 
 
 @pytest.mark.asyncio
