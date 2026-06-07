@@ -7,10 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_change
+from app.calculation.engine import CalculationError, calculate_estimate
+from app.calculation.schemas import FeatureItemInput as CalcFeatureItemInput
+from app.calculation.schemas import RateCardSettings
 from app.models.audit import AuditLog
-from app.models.estimate import Estimate, EstimateStatus
+from app.models.estimate import Estimate, EstimateStatus, FeatureItem
+from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
-from app.models.estimate import FeatureItem
 from app.schemas.estimate import (
     EstimateCreate,
     EstimateUpdate,
@@ -219,6 +222,131 @@ async def update_extracted_data(
         user_id=user.id,
         action="extracted_data_updated",
         changes={"fields": list(update_data.keys())},
+    )
+    await db.commit()
+    return await get_estimate(db, estimate_id)
+
+
+async def _get_active_rate_card_version(db: AsyncSession) -> RateCardVersion:
+    result = await db.execute(select(RateCard).where(RateCard.is_active.is_(True)))
+    rate_card = result.scalar_one_or_none()
+    if not rate_card:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "No active rate card configured", "code": "RATE_CARD_NOT_FOUND"},
+        )
+
+    version_result = await db.execute(
+        select(RateCardVersion)
+        .where(RateCardVersion.rate_card_id == rate_card.id)
+        .order_by(RateCardVersion.version_number.desc())
+        .limit(1)
+    )
+    version = version_result.scalar_one_or_none()
+    if not version:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Active rate card has no versions", "code": "RATE_CARD_NOT_FOUND"},
+        )
+    return version
+
+
+async def run_calculation(
+    db: AsyncSession,
+    user: User,
+    estimate_id: uuid.UUID,
+    recalculate_with_current_rates: bool = False,
+) -> Estimate:
+    estimate = await get_estimate(db, estimate_id)
+
+    if estimate.status not in (
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Calculation requires review or calculated status",
+                "code": "INVALID_STATUS",
+            },
+        )
+
+    if not estimate.feature_items:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "At least one feature item is required",
+                "code": "FEATURE_ITEMS_REQUIRED",
+            },
+        )
+
+    is_owner = estimate.created_by == user.id
+    if recalculate_with_current_rates and not user.is_admin and not is_owner:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Only admin or estimate owner can recalculate with current rates",
+                "code": "FORBIDDEN",
+            },
+        )
+
+    if recalculate_with_current_rates:
+        version = await _get_active_rate_card_version(db)
+        estimate.rate_card_version_id = version.id
+    elif estimate.rate_card_version_id:
+        version_result = await db.execute(
+            select(RateCardVersion).where(RateCardVersion.id == estimate.rate_card_version_id)
+        )
+        version = version_result.scalar_one_or_none()
+        if not version:
+            version = await _get_active_rate_card_version(db)
+            estimate.rate_card_version_id = version.id
+    else:
+        version = await _get_active_rate_card_version(db)
+        estimate.rate_card_version_id = version.id
+
+    feature_inputs = [
+        CalcFeatureItemInput(
+            name=item.name,
+            hours=float(item.hours),
+            phase=item.phase,
+            role=item.role,
+        )
+        for item in estimate.feature_items
+    ]
+    rate_settings = RateCardSettings.model_validate(version.settings)
+    maintenance = dict(estimate.maintenance_assumptions or {})
+
+    try:
+        result = calculate_estimate(
+            feature_inputs,
+            rate_settings,
+            maintenance,
+            rate_card_version_id=str(version.id),
+        )
+    except CalculationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": str(exc),
+                "code": "CALCULATION_ERROR",
+                "feature_item_name": exc.feature_item_name,
+            },
+        ) from exc
+
+    estimate.calculation_result = result.model_dump()
+    estimate.status = EstimateStatus.CALCULATED.value
+
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="calculated",
+        changes={
+            "rate_card_version_id": str(version.id),
+            "recalculate_with_current_rates": recalculate_with_current_rates,
+            "first_year_total_jpy": result.first_year_total_jpy,
+        },
     )
     await db.commit()
     return await get_estimate(db, estimate_id)

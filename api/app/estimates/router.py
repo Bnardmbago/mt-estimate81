@@ -120,6 +120,21 @@ async def update_extracted_data(
     return await service.update_extracted_data(db, user, estimate_id, body)
 
 
+@router.post("/{estimate_id}/calculate", response_model=EstimateDetail)
+async def calculate_estimate_endpoint(
+    estimate_id: uuid.UUID,
+    recalculate_with_current_rates: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await service.run_calculation(
+        db,
+        user,
+        estimate_id,
+        recalculate_with_current_rates=recalculate_with_current_rates,
+    )
+
+
 @router.get("/{estimate_id}/audit", response_model=list[AuditLogEntry])
 async def get_estimate_audit(
     estimate_id: uuid.UUID,

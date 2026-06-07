@@ -32,6 +32,33 @@ export type ExtractedData = {
   confidence_notes: string;
 };
 
+export type CalculationResult = {
+  total_effort_hours: number;
+  total_effort_days: number;
+  phase_breakdown: Array<{ phase: string; hours: number; percentage: number }>;
+  role_breakdown: Array<{
+    role: string;
+    hours: number;
+    rate_jpy: number;
+    cost_jpy: number;
+  }>;
+  nrc: {
+    labor_jpy: number;
+    setup_jpy: number;
+    contingency_jpy: number;
+    overhead_jpy: number;
+    total_jpy: number;
+  };
+  rc: {
+    monthly_items: Array<{ name: string; amount_jpy: number }>;
+    maintenance_jpy: number;
+    monthly_total_jpy: number;
+    annual_total_jpy: number;
+  };
+  first_year_total_jpy: number;
+  rate_card_version_id: string;
+};
+
 export type EstimateDetail = {
   id: string;
   project_name: string;
@@ -41,6 +68,8 @@ export type EstimateDetail = {
   form_data: Record<string, unknown>;
   extracted_data: ExtractedData | null;
   maintenance_assumptions: Record<string, unknown>;
+  calculation_result: CalculationResult | null;
+  rate_card_version_id: string | null;
   feature_items: FeatureItem[];
   documents: EstimateDocument[];
   created_at: string;

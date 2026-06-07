@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
 import type { EstimateDetail, ExtractedData } from "@/lib/estimate";
+import EstimateCalculation from "@/components/EstimateCalculation";
 import FeatureItemEditor from "@/components/FeatureItemEditor";
 import RequirementsReview from "@/components/RequirementsReview";
 
@@ -139,7 +140,7 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
     );
   }
 
-  if (status === "review") {
+  if (status === "review" || status === "calculated") {
     const extractedData = {
       ...emptyExtractedData(),
       ...(estimate.extracted_data ?? {}),
@@ -152,6 +153,7 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
           estimateId={estimate.id}
           initialItems={estimate.feature_items ?? []}
         />
+        <EstimateCalculation estimate={estimate} />
       </div>
     );
   }
