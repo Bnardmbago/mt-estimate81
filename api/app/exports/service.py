@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_change
+from app.exports.excel import generate_excel
 from app.exports.markdown import generate_markdown
 from app.models.estimate import Estimate, EstimateStatus, Export, ExportFormat
 from app.models.rate_card import RateCard, RateCardVersion
@@ -86,6 +87,15 @@ def _generate_content(
             generated_at=generated_at,
         )
         return content.encode("utf-8")
+
+    if export_format == ExportFormat.XLSX.value:
+        return generate_excel(
+            estimate,
+            locale,
+            rate_card_name=rate_card_name,
+            rate_card_version_number=rate_card_version_number,
+            generated_at=generated_at,
+        )
 
     raise HTTPException(
         status_code=501,
