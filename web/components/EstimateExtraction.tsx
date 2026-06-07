@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
 import type { EstimateDetail, ExtractedData } from "@/lib/estimate";
 import EstimateCalculation from "@/components/EstimateCalculation";
+import ExportPanel from "@/components/ExportPanel";
 import FeatureItemEditor from "@/components/FeatureItemEditor";
 import RequirementsReview from "@/components/RequirementsReview";
 
@@ -140,11 +141,18 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
     );
   }
 
-  if (status === "review" || status === "calculated") {
+  if (
+    status === "review" ||
+    status === "calculated" ||
+    status === "exported" ||
+    status === "completed"
+  ) {
     const extractedData = {
       ...emptyExtractedData(),
       ...(estimate.extracted_data ?? {}),
     };
+    const showExportPanel =
+      status === "calculated" || status === "exported" || status === "completed";
 
     return (
       <div>
@@ -154,6 +162,13 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
           initialItems={estimate.feature_items ?? []}
         />
         <EstimateCalculation estimate={estimate} />
+        {showExportPanel && estimate.calculation_result && (
+          <ExportPanel
+            estimateId={estimate.id}
+            locale={estimate.locale}
+            estimateUpdatedAt={estimate.updated_at}
+          />
+        )}
       </div>
     );
   }

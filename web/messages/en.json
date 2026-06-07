@@ -95,6 +95,21 @@
       "description": "Description"
     }
   },
+  "export": {
+    "title": "Export",
+    "description": "Generate PDF, Excel, or Markdown reports in the estimate locale.",
+    "formatPdf": "PDF",
+    "formatXlsx": "Excel",
+    "formatMd": "Markdown",
+    "exportButton": "Export",
+    "exporting": "Exporting…",
+    "exportError": "Export failed",
+    "downloadsTitle": "Previous exports",
+    "download": "Download",
+    "loading": "Loading exports…",
+    "empty": "No exports yet",
+    "staleBadge": "Stale — recalculate or re-export"
+  },
   "calculation": {
     "title": "Calculation Results",
     "description": "NRC and RC breakdown from feature items and rate card.",

@@ -95,6 +95,21 @@
       "description": "説明"
     }
   },
+  "export": {
+    "title": "エクスポート",
+    "description": "見積のロケールでPDF・Excel・Markdownレポートを生成します。",
+    "formatPdf": "PDF",
+    "formatXlsx": "Excel",
+    "formatMd": "Markdown",
+    "exportButton": "エクスポート",
+    "exporting": "エクスポート中…",
+    "exportError": "エクスポートに失敗しました",
+    "downloadsTitle": "過去のエクスポート",
+    "download": "ダウンロード",
+    "loading": "エクスポートを読み込み中…",
+    "empty": "エクスポートはまだありません",
+    "staleBadge": "古い — 再計算または再エクスポート"
+  },
   "calculation": {
     "title": "計算結果",
     "description": "機能項目とレートカードに基づくNRC・RC内訳です。",

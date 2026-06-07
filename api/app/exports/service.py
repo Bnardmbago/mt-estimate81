@@ -97,6 +97,17 @@ def _generate_content(
             generated_at=generated_at,
         )
 
+    if export_format == ExportFormat.PDF.value:
+        from app.exports.pdf import generate_pdf
+
+        return generate_pdf(
+            estimate,
+            locale,
+            rate_card_name=rate_card_name,
+            rate_card_version_number=rate_card_version_number,
+            generated_at=generated_at,
+        )
+
     raise HTTPException(
         status_code=501,
         detail={

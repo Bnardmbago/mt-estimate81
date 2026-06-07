@@ -59,6 +59,16 @@ export type CalculationResult = {
   rate_card_version_id: string;
 };
 
+export type ExportRecord = {
+  id: string;
+  estimate_id: string;
+  format: string;
+  storage_path: string;
+  locale: string;
+  generated_at: string;
+  generated_by: string;
+};
+
 export type EstimateDetail = {
   id: string;
   project_name: string;

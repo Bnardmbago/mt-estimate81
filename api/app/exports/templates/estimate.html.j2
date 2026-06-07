@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ labels.title }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 15mm;
+    }
+
+    @font-face {
+      font-family: "Noto Sans JP";
+      src: local("Noto Sans CJK JP"), local("Noto Sans JP");
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
+      font-size: 10pt;
+      line-height: 1.5;
+      color: #1f2937;
+    }
+
+    h1 {
+      font-size: 18pt;
+      margin: 0 0 16pt;
+      color: #111827;
+      border-bottom: 2px solid #4f46e5;
+      padding-bottom: 8pt;
+    }
+
+    h2 {
+      font-size: 12pt;
+      margin: 18pt 0 8pt;
+      color: #374151;
+      border-bottom: 1px solid #d1d5db;
+      padding-bottom: 4pt;
+    }
+
+    h3 {
+      font-size: 10pt;
+      margin: 10pt 0 4pt;
+      color: #4b5563;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6pt 0 12pt;
+    }
+
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 4pt 6pt;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+
+    .num {
+      text-align: right;
+    }
+
+    .total-row td {
+      font-weight: 700;
+      background: #f9fafb;
+    }
+
+    .highlight {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #4f46e5;
+      margin: 8pt 0;
+    }
+
+    ul {
+      margin: 4pt 0 8pt;
+      padding-left: 18pt;
+    }
+
+    li {
+      margin-bottom: 2pt;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .field-value {
+      margin: 0 0 8pt;
+      white-space: pre-wrap;
+    }
+
+    .section {
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+  <h1>{{ labels.title }}</h1>
+
+  <div class="section">
+    <h2>{{ labels.project_summary }}</h2>
+    <table>
+      <tr><th>{{ labels.project_name }}</th><td>{{ project_name }}</td></tr>
+      <tr><th>{{ labels.client_name }}</th><td>{{ client_name }}</td></tr>
+      <tr><th>{{ labels.generated_date }}</th><td>{{ generated_date }}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.input_assumptions }}</h2>
+    {% if form_fields %}
+      {% for field in form_fields %}
+        <h3>{{ field.label }}</h3>
+        <p class="field-value">{{ field.value }}</p>
+      {% endfor %}
+    {% else %}
+      <p class="muted">{{ labels.none }}</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.extracted_requirements }}</h2>
+    {% if extracted.functional_requirements %}
+      <h3>{{ labels.functional_requirements }}</h3>
+      <ul>
+        {% for item in extracted.functional_requirements %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if extracted.non_functional_requirements %}
+      <h3>{{ labels.non_functional_requirements }}</h3>
+      <ul>
+        {% for item in extracted.non_functional_requirements %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if extracted.user_roles %}
+      <h3>{{ labels.user_roles }}</h3>
+      <ul>
+        {% for item in extracted.user_roles %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if extracted.modules %}
+      <h3>{{ labels.modules }}</h3>
+      <ul>
+        {% for item in extracted.modules %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if extracted.external_systems %}
+      <h3>{{ labels.external_systems }}</h3>
+      <ul>
+        {% for item in extracted.external_systems %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if not extracted.functional_requirements and not extracted.non_functional_requirements and not extracted.user_roles and not extracted.modules and not extracted.external_systems %}
+      <p class="muted">{{ labels.none }}</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.feature_items }}</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>{{ labels.feature_name }}</th>
+          <th>{{ labels.feature_description }}</th>
+          <th>{{ labels.feature_phase }}</th>
+          <th>{{ labels.feature_role }}</th>
+          <th class="num">{{ labels.feature_hours }}</th>
+          <th class="num">{{ labels.feature_days }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in feature_items %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.description }}</td>
+            <td>{{ item.phase }}</td>
+            <td>{{ item.role }}</td>
+            <td class="num">{{ format_hours(item.hours) }}</td>
+            <td class="num">{{ format_effort_days(item.hours) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.effort_summary }}</h2>
+    <table>
+      <tr><th>{{ labels.total_hours }}</th><td class="num">{{ format_hours(calculation.total_effort_hours) }}</td></tr>
+      <tr><th>{{ labels.total_days }}</th><td class="num">{{ format_effort_days(calculation.total_effort_hours) }}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.phase_breakdown }}</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>{{ labels.phase }}</th>
+          <th class="num">{{ labels.hours }}</th>
+          <th class="num">{{ labels.percentage }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in calculation.phase_breakdown %}
+          <tr>
+            <td>{{ row.phase }}</td>
+            <td class="num">{{ format_hours(row.hours) }}</td>
+            <td class="num">{{ "%.0f"|format(row.percentage * 100) }}%</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.role_breakdown }}</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>{{ labels.role }}</th>
+          <th class="num">{{ labels.hours }}</th>
+          <th class="num">{{ labels.rate }}</th>
+          <th class="num">{{ labels.cost }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in calculation.role_breakdown %}
+          <tr>
+            <td>{{ row.role }}</td>
+            <td class="num">{{ format_hours(row.hours) }}</td>
+            <td class="num">{{ format_currency(row.rate_jpy) }}</td>
+            <td class="num">{{ format_currency(row.cost_jpy) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.nrc_breakdown }}</h2>
+    <table>
+      <tr><th>{{ labels.labor }}</th><td class="num">{{ format_currency(calculation.nrc.labor_jpy) }}</td></tr>
+      <tr><th>{{ labels.setup }}</th><td class="num">{{ format_currency(calculation.nrc.setup_jpy) }}</td></tr>
+      <tr><th>{{ labels.contingency }}</th><td class="num">{{ format_currency(calculation.nrc.contingency_jpy) }}</td></tr>
+      <tr><th>{{ labels.overhead }}</th><td class="num">{{ format_currency(calculation.nrc.overhead_jpy) }}</td></tr>
+      <tr class="total-row"><th>{{ labels.nrc_total }}</th><td class="num">{{ format_currency(calculation.nrc.total_jpy) }}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.rc_breakdown }}</h2>
+    <table>
+      <thead>
+        <tr><th>{{ labels.monthly_items }}</th><th class="num">{{ labels.cost }}</th></tr>
+      </thead>
+      <tbody>
+        {% for item in calculation.rc.monthly_items %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td class="num">{{ format_currency(item.amount_jpy) }}</td>
+          </tr>
+        {% endfor %}
+        <tr><th>{{ labels.maintenance }}</th><td class="num">{{ format_currency(calculation.rc.maintenance_jpy) }}</td></tr>
+        <tr class="total-row"><th>{{ labels.monthly_total }}</th><td class="num">{{ format_currency(calculation.rc.monthly_total_jpy) }}</td></tr>
+        <tr class="total-row"><th>{{ labels.annual_total }}</th><td class="num">{{ format_currency(calculation.rc.annual_total_jpy) }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.first_year_total }}</h2>
+    <p class="highlight">{{ format_currency(calculation.first_year_total_jpy) }}</p>
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.risks_gaps }}</h2>
+    {% if extracted.risks %}
+      <h3>{{ labels.risks }}</h3>
+      <ul>
+        {% for item in extracted.risks %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if extracted.gaps %}
+      <h3>{{ labels.gaps }}</h3>
+      <ul>
+        {% for item in extracted.gaps %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if not extracted.risks and not extracted.gaps %}
+      <p class="muted">{{ labels.none }}</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.confidence_notes }}</h2>
+    {% if extracted.confidence_notes %}
+      <p class="field-value">{{ extracted.confidence_notes }}</p>
+    {% else %}
+      <p class="muted">{{ labels.none }}</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <h2>{{ labels.rate_card_reference }}</h2>
+    <table>
+      <tr><th>{{ labels.rate_card_name }}</th><td>{{ rate_card_name or labels.none }}</td></tr>
+      <tr>
+        <th>{{ labels.rate_card_version }}</th>
+        <td>{% if rate_card_version_number is not none %}{{ rate_card_version_number }}{% else %}{{ labels.none }}{% endif %}</td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
