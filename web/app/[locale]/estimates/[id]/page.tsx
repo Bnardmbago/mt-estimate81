@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import DocumentUpload from "@/components/DocumentUpload";
 import EstimateForm from "@/components/EstimateForm";
 import { fetchEstimate } from "@/lib/estimate";
 
@@ -25,6 +26,10 @@ export default async function EstimateDetailPage({
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
       <EstimateForm estimate={estimate} locale={locale} />
+      <DocumentUpload
+        estimateId={estimate.id}
+        initialDocuments={estimate.documents ?? []}
+      />
     </div>
   );
 }

@@ -32,6 +32,28 @@
       "completed": "Completed"
     }
   },
+  "documents": {
+    "title": "Documents",
+    "description": "Upload project documents for text extraction.",
+    "dropzone": "Drag and drop files here, or click to browse",
+    "supportedTypes": "Supported: PDF, DOCX, XLSX, TXT, MD",
+    "uploading": "Uploading…",
+    "uploadError": "Failed to upload document",
+    "unsupportedType": "Unsupported file type: {type}",
+    "empty": "No documents uploaded yet",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteError": "Failed to delete document",
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "retryError": "Failed to retry extraction",
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "done": "Done",
+      "failed": "Failed"
+    }
+  },
   "form": {
     "selectPlaceholder": "Select…",
     "required": "This field is required",

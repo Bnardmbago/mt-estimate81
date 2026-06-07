@@ -1,3 +1,13 @@
+export type EstimateDocument = {
+  id: string;
+  original_filename: string;
+  file_type: string;
+  storage_path: string;
+  extracted_text: string | null;
+  extraction_status: "pending" | "processing" | "done" | "failed";
+  uploaded_at: string;
+};
+
 export type EstimateDetail = {
   id: string;
   project_name: string;
@@ -5,6 +15,7 @@ export type EstimateDetail = {
   status: string;
   locale: string;
   form_data: Record<string, unknown>;
+  documents: EstimateDocument[];
   created_at: string;
   updated_at: string;
 };
