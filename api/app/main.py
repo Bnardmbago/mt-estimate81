@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.admin.rate_cards import router as admin_rate_cards_router
+from app.admin.system import router as admin_system_router
+from app.admin.users import router as admin_users_router
 from app.auth.router import router as auth_router
 from app.documents.router import router as documents_router
 from app.estimates.router import router as estimates_router
@@ -15,6 +17,8 @@ app.include_router(feedback_router)
 app.include_router(estimates_router)
 app.include_router(documents_router)
 app.include_router(admin_rate_cards_router)
+app.include_router(admin_users_router)
+app.include_router(admin_system_router)
 app.include_router(exports_router)
 
 app.add_middleware(

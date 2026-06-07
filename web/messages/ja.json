@@ -198,7 +198,10 @@
   "admin": {
     "title": "管理",
     "tabs": {
-      "rateCards": "レートカード"
+      "rateCards": "レートカード",
+      "users": "ユーザー",
+      "aiSettings": "AI設定",
+      "system": "システム"
     },
     "rateCards": {
       "loading": "レートカードを読み込み中…",
@@ -226,6 +229,55 @@
       "monthlyRcItems": "月額RC項目",
       "itemName": "項目",
       "amount": "金額（¥）"
+    },
+    "users": {
+      "loading": "ユーザーを読み込み中…",
+      "loadError": "ユーザーの読み込みに失敗しました",
+      "createTitle": "ユーザー作成",
+      "listTitle": "ユーザー一覧",
+      "email": "メール",
+      "displayName": "表示名",
+      "password": "パスワード",
+      "locale": "言語",
+      "localeJa": "日本語",
+      "localeEn": "英語",
+      "isAdmin": "管理者",
+      "adminYes": "はい",
+      "adminNo": "いいえ",
+      "create": "ユーザーを作成",
+      "creating": "作成中…",
+      "createError": "ユーザーの作成に失敗しました",
+      "updateError": "ユーザーの更新に失敗しました",
+      "actions": "操作",
+      "resetPassword": "パスワードリセット",
+      "newPassword": "新しいパスワード",
+      "savePassword": "保存",
+      "cancel": "キャンセル",
+      "resetError": "パスワードのリセットに失敗しました"
+    },
+    "aiSettings": {
+      "loading": "AI設定を読み込み中…",
+      "loadError": "AI設定の読み込みに失敗しました",
+      "readOnlyNote": "AIプロバイダーとモデルは環境変数で設定され、ここからは変更できません。",
+      "provider": "プロバイダー",
+      "model": "モデル",
+      "hermesHealth": "Hermesサービス",
+      "statusOk": "正常",
+      "statusIssue": "問題あり"
+    },
+    "system": {
+      "loading": "システム状態を読み込み中…",
+      "loadError": "システム状態の読み込みに失敗しました",
+      "database": "データベース",
+      "hermes": "Hermes",
+      "appVersion": "アプリバージョン",
+      "storageUsage": "ストレージ使用量",
+      "stuckExtractions": "停止中の抽出（10分以上）",
+      "stuckWarning": "10分以上抽出状態の見積があります。",
+      "aiConfig": "AI設定",
+      "statusOk": "正常",
+      "statusError": "エラー",
+      "statusUnreachable": "接続不可"
     }
   },
   "form": {

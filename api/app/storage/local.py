@@ -31,3 +31,15 @@ class LocalStorageBackend:
         path = self._resolve_path(storage_path)
         if await asyncio.to_thread(path.is_file):
             await asyncio.to_thread(path.unlink)
+
+    async def usage(self) -> int:
+        def _calc() -> int:
+            if not self._base_path.exists():
+                return 0
+            total = 0
+            for path in self._base_path.rglob("*"):
+                if path.is_file():
+                    total += path.stat().st_size
+            return total
+
+        return await asyncio.to_thread(_calc)

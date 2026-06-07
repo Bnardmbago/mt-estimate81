@@ -198,7 +198,10 @@
   "admin": {
     "title": "Admin",
     "tabs": {
-      "rateCards": "Rate cards"
+      "rateCards": "Rate cards",
+      "users": "Users",
+      "aiSettings": "AI settings",
+      "system": "System"
     },
     "rateCards": {
       "loading": "Loading rate card…",
@@ -226,6 +229,55 @@
       "monthlyRcItems": "Monthly RC items",
       "itemName": "Item",
       "amount": "Amount (¥)"
+    },
+    "users": {
+      "loading": "Loading users…",
+      "loadError": "Failed to load users",
+      "createTitle": "Create user",
+      "listTitle": "Users",
+      "email": "Email",
+      "displayName": "Display name",
+      "password": "Password",
+      "locale": "Locale",
+      "localeJa": "Japanese",
+      "localeEn": "English",
+      "isAdmin": "Admin",
+      "adminYes": "Yes",
+      "adminNo": "No",
+      "create": "Create user",
+      "creating": "Creating…",
+      "createError": "Failed to create user",
+      "updateError": "Failed to update user",
+      "actions": "Actions",
+      "resetPassword": "Reset password",
+      "newPassword": "New password",
+      "savePassword": "Save",
+      "cancel": "Cancel",
+      "resetError": "Failed to reset password"
+    },
+    "aiSettings": {
+      "loading": "Loading AI settings…",
+      "loadError": "Failed to load AI settings",
+      "readOnlyNote": "AI provider and model are configured via environment variables and cannot be changed here.",
+      "provider": "Provider",
+      "model": "Model",
+      "hermesHealth": "Hermes service",
+      "statusOk": "Healthy",
+      "statusIssue": "Issue detected"
+    },
+    "system": {
+      "loading": "Loading system health…",
+      "loadError": "Failed to load system health",
+      "database": "Database",
+      "hermes": "Hermes",
+      "appVersion": "App version",
+      "storageUsage": "Storage usage",
+      "stuckExtractions": "Stuck extractions (>10 min)",
+      "stuckWarning": "Some estimates have been extracting for more than 10 minutes.",
+      "aiConfig": "AI configuration",
+      "statusOk": "OK",
+      "statusError": "Error",
+      "statusUnreachable": "Unreachable"
     }
   },
   "form": {
