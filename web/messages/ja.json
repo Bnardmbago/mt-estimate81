@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "estimates": "見積一覧",
+    "admin": "管理",
+    "logout": "ログアウト"
+  },
+  "login": {
+    "title": "ログイン",
+    "email": "メール",
+    "password": "パスワード",
+    "submit": "ログイン",
+    "error": "ログインに失敗しました"
+  },
+  "estimates": {
+    "new": "新規見積",
+    "list": "見積一覧",
+    "empty": "見積がありません"
+  }
+}

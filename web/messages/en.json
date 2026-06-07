@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "estimates": "Estimates",
+    "admin": "Admin",
+    "logout": "Logout"
+  },
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": "Login failed"
+  },
+  "estimates": {
+    "new": "New Estimate",
+    "list": "Estimates",
+    "empty": "No estimates yet"
+  }
+}
