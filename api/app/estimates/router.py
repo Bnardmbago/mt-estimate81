@@ -1,16 +1,19 @@
 import os
 import uuid
+from datetime import date
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import SessionLocal
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_content_locale, get_current_user, get_db, get_display_locale
 from app.estimates import extraction, service
 from app.models.estimate import EstimateStatus
 from app.models.user import User
 from app.schemas.estimate import (
     AuditLogEntry,
+    CalculateEstimateRequest,
+    CreateEstimateRateCardRequest,
     EstimateCreate,
     EstimateDetail,
     EstimateStatusResponse,
@@ -18,14 +21,20 @@ from app.schemas.estimate import (
     EstimateUpdate,
     ExtractedDataUpdate,
     FeatureItemsUpdate,
+    GenerateRateCardResponse,
+    GanttTimelineResponse,
 )
 
 router = APIRouter(prefix="/estimates", tags=["estimates"])
 
 
-async def _run_extraction_background(estimate_id: uuid.UUID, user_id: uuid.UUID) -> None:
+async def _run_extraction_background(
+    estimate_id: uuid.UUID,
+    user_id: uuid.UUID,
+    content_locale: str | None = None,
+) -> None:
     async with SessionLocal() as db:
-        await extraction.run_extraction(db, estimate_id, user_id)
+        await extraction.run_extraction(db, estimate_id, user_id, content_locale=content_locale)
 
 
 @router.post("", response_model=EstimateDetail, status_code=201)
@@ -35,7 +44,7 @@ async def create_estimate(
     user: User = Depends(get_current_user),
 ):
     estimate = await service.create_estimate(db, user, body)
-    return estimate
+    return await service.estimate_to_detail(db, estimate)
 
 
 @router.get("", response_model=list[EstimateSummary])
@@ -43,7 +52,7 @@ async def list_estimates(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await service.list_estimates(db)
+    return await service.list_estimates(db, user)
 
 
 @router.get("/{estimate_id}", response_model=EstimateDetail)
@@ -51,8 +60,10 @@ async def get_estimate(
     estimate_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    display_locale: str | None = Depends(get_display_locale),
 ):
-    return await service.get_estimate(db, estimate_id)
+    estimate = await service.get_estimate_for_user(db, estimate_id, user)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
 
 
 @router.patch("/{estimate_id}", response_model=EstimateDetail)
@@ -61,8 +72,26 @@ async def update_estimate(
     body: EstimateUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    content_locale: str | None = Depends(get_content_locale),
+    display_locale: str | None = Depends(get_display_locale),
 ):
-    return await service.update_estimate(db, user, estimate_id, body)
+    estimate = await service.update_estimate(
+        db,
+        user,
+        estimate_id,
+        body,
+        content_locale=content_locale,
+    )
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+
+
+@router.delete("/{estimate_id}", status_code=204)
+async def delete_estimate(
+    estimate_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    await service.delete_estimate(db, estimate_id, user)
 
 
 @router.post("/{estimate_id}/extract", status_code=202)
@@ -71,24 +100,57 @@ async def start_extraction(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    content_locale: str | None = Depends(get_content_locale),
 ):
-    estimate = await service.get_estimate(db, estimate_id)
+    estimate = await service.get_estimate_for_user(db, estimate_id, user)
 
-    if estimate.status not in (EstimateStatus.DRAFT.value, EstimateStatus.REVIEW.value):
+    if estimate.status not in (
+        EstimateStatus.DRAFT.value,
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+        EstimateStatus.EXPORTED.value,
+    ):
         raise HTTPException(
             status_code=400,
             detail={
-                "error": "Extraction can only be started from draft or review",
+                "error": "Extraction can only be started from draft, review, calculated, or exported",
                 "code": "INVALID_STATUS",
             },
         )
 
     if os.environ.get("EXTRACT_SYNC") == "1":
-        await extraction.run_extraction(db, estimate_id, user.id)
+        await extraction.run_extraction(db, estimate_id, user.id, content_locale=content_locale)
     else:
-        background_tasks.add_task(_run_extraction_background, estimate_id, user.id)
+        background_tasks.add_task(
+            _run_extraction_background,
+            estimate_id,
+            user.id,
+            content_locale,
+        )
 
     return {"status": "accepted"}
+
+
+@router.post("/{estimate_id}/rate-card/generate", response_model=GenerateRateCardResponse)
+async def generate_estimate_rate_card(
+    estimate_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    from app.rate_cards.generation import generate_rate_card_for_estimate
+
+    return await generate_rate_card_for_estimate(db, estimate_id, user)
+
+
+@router.post("/{estimate_id}/rate-card", response_model=EstimateDetail)
+async def create_estimate_rate_card(
+    estimate_id: uuid.UUID,
+    body: CreateEstimateRateCardRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    estimate = await service.create_rate_card_for_estimate(db, user, estimate_id, body)
+    return await service.estimate_to_detail(db, estimate)
 
 
 @router.get("/{estimate_id}/status", response_model=EstimateStatusResponse)
@@ -97,7 +159,7 @@ async def get_estimate_status(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await extraction.get_extraction_status(db, estimate_id)
+    return await extraction.get_extraction_status(db, estimate_id, user)
 
 
 @router.put("/{estimate_id}/feature-items", response_model=EstimateDetail)
@@ -106,8 +168,17 @@ async def update_feature_items(
     body: FeatureItemsUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    content_locale: str | None = Depends(get_content_locale),
+    display_locale: str | None = Depends(get_display_locale),
 ):
-    return await service.update_feature_items(db, user, estimate_id, body)
+    estimate = await service.update_feature_items(
+        db,
+        user,
+        estimate_id,
+        body,
+        content_locale=content_locale,
+    )
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
 
 
 @router.patch("/{estimate_id}/extracted-data", response_model=EstimateDetail)
@@ -116,23 +187,54 @@ async def update_extracted_data(
     body: ExtractedDataUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    content_locale: str | None = Depends(get_content_locale),
+    display_locale: str | None = Depends(get_display_locale),
 ):
-    return await service.update_extracted_data(db, user, estimate_id, body)
+    estimate = await service.update_extracted_data(
+        db,
+        user,
+        estimate_id,
+        body,
+        content_locale=content_locale,
+    )
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+
+
+@router.get("/{estimate_id}/gantt", response_model=GanttTimelineResponse)
+async def get_estimate_gantt(
+    estimate_id: uuid.UUID,
+    start_date: date | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    display_locale: str | None = Depends(get_display_locale),
+):
+    gantt = await service.get_gantt_timeline(
+        db,
+        estimate_id,
+        user,
+        start_date=start_date,
+        display_locale=display_locale,
+    )
+    return GanttTimelineResponse(gantt=gantt)
 
 
 @router.post("/{estimate_id}/calculate", response_model=EstimateDetail)
 async def calculate_estimate_endpoint(
     estimate_id: uuid.UUID,
     recalculate_with_current_rates: bool = False,
+    body: CalculateEstimateRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await service.run_calculation(
+    project_start_date = body.project_start_date if body else None
+    estimate = await service.run_calculation(
         db,
         user,
         estimate_id,
         recalculate_with_current_rates=recalculate_with_current_rates,
+        project_start_date=project_start_date,
     )
+    return await service.estimate_to_detail(db, estimate)
 
 
 @router.get("/{estimate_id}/audit", response_model=list[AuditLogEntry])
@@ -141,4 +243,4 @@ async def get_estimate_audit(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await service.get_audit_log(db, estimate_id)
+    return await service.get_audit_log(db, estimate_id, user)

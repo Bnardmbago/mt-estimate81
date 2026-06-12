@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { apiJson } from "@/lib/api";
 import type { EstimateDetail, FeatureItem } from "@/lib/estimate";
+import { isKnownPhaseKey, KNOWN_PHASE_KEYS } from "@/lib/displayI18n";
 
 type FeatureItemEditorProps = {
   estimateId: string;
@@ -55,7 +56,9 @@ export default function FeatureItemEditor({
   initialItems,
 }: FeatureItemEditorProps) {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("review");
+  const tRateCards = useTranslations("rateCards");
   const [items, setItems] = useState<EditableFeatureItem[]>(
     initialItems.map((item, index) => toEditable(item, index)),
   );
@@ -112,10 +115,14 @@ export default function FeatureItemEditor({
     }
 
     try {
-      await apiJson<EstimateDetail>(`/estimates/${estimateId}/feature-items`, {
-        method: "PUT",
-        body: JSON.stringify({ items: payload }),
-      });
+      await apiJson<EstimateDetail>(
+        `/estimates/${estimateId}/feature-items`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ items: payload }),
+        },
+        locale,
+      );
       setSaved(true);
       router.refresh();
     } catch (saveError) {
@@ -205,12 +212,20 @@ export default function FeatureItemEditor({
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input
-                      type="text"
+                    <select
                       value={item.phase}
                       onChange={(event) => updateItem(index, "phase", event.target.value)}
                       className={inputClassName}
-                    />
+                    >
+                      {!isKnownPhaseKey(item.phase) && item.phase ? (
+                        <option value={item.phase}>{item.phase}</option>
+                      ) : null}
+                      {KNOWN_PHASE_KEYS.map((phaseKey) => (
+                        <option key={phaseKey} value={phaseKey}>
+                          {tRateCards(`phaseLabels.${phaseKey}`)}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-3 py-2">
                     <input

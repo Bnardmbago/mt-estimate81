@@ -1,8 +1,11 @@
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getTranslations } from "next-intl/server";
+import { getMessages } from "next-intl/server";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { routing, type Locale } from "@/i18n/routing";
+import AppHeader from "@/components/AppHeader";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import ThemeScript from "@/components/ThemeScript";
 import "../globals.css";
 
 export function generateStaticParams() {
@@ -23,35 +26,31 @@ export default async function LocaleLayout({
   }
 
   const messages = await getMessages();
-  const t = await getTranslations("nav");
-  const otherLocale = locale === "ja" ? "en" : "ja";
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
+  const isAuthenticated = Boolean(token);
+  let isAdmin = false;
+
+  if (isAuthenticated && token) {
+    const { serverApiJson } = await import("@/lib/server-api");
+    const profile = await serverApiJson<{
+      is_admin: boolean;
+      is_active: boolean;
+    }>("/auth/me", token);
+    isAdmin = profile.status === "ok" && profile.data.is_admin && profile.data.is_active;
+  }
 
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body>
         <NextIntlClientProvider messages={messages}>
-          <header className="border-b border-gray-200 bg-white">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-              <nav className="flex items-center gap-4 text-sm font-medium">
-                <Link href={`/${locale}/estimates`} className="hover:text-blue-600">
-                  {t("estimates")}
-                </Link>
-                <Link href={`/${locale}/estimates/variance`} className="hover:text-blue-600">
-                  {t("variance")}
-                </Link>
-                <Link href={`/${locale}/admin`} className="hover:text-blue-600">
-                  {t("admin")}
-                </Link>
-              </nav>
-              <Link
-                href={`/${otherLocale}/login`}
-                className="rounded border border-gray-300 px-2 py-1 text-xs uppercase tracking-wide hover:bg-gray-100"
-              >
-                {otherLocale}
-              </Link>
-            </div>
-          </header>
-          <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+          <ThemeProvider>
+            <AppHeader locale={locale} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
+            <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>

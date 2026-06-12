@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import EstimatesList from "@/components/EstimatesList";
+import { fetchEstimates } from "@/lib/estimate";
 
 export default async function EstimatesPage({
   params,
@@ -16,22 +19,20 @@ export default async function EstimatesPage({
   }
 
   const t = await getTranslations("estimates");
+  const estimates = await fetchEstimates(token.value);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t("list")}</h1>
-        <button
-          type="button"
-          disabled
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white opacity-50"
+        <Link
+          href={`/${locale}/estimates/new`}
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           {t("new")}
-        </button>
+        </Link>
       </div>
-      <p className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
-        {t("empty")}
-      </p>
+      <EstimatesList estimates={estimates} locale={locale} />
     </div>
   );
 }

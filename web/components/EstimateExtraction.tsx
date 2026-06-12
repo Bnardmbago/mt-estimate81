@@ -1,18 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
-import type { EstimateDetail, ExtractedData } from "@/lib/estimate";
+import type { EstimateDetail, ExtractedData, GanttData, CalculationResult } from "@/lib/estimate";
+import type { EstimateFormHandle } from "@/components/EstimateForm";
 import EstimateCalculation from "@/components/EstimateCalculation";
+import EstimateRateCardPanel from "@/components/EstimateRateCardPanel";
 import ExportPanel from "@/components/ExportPanel";
 import ActualsForm from "@/components/ActualsForm";
 import FeatureItemEditor from "@/components/FeatureItemEditor";
+import GanttChart from "@/components/GanttChart";
 import RequirementsReview from "@/components/RequirementsReview";
 
 type EstimateExtractionProps = {
   estimate: EstimateDetail;
+  formRef?: RefObject<EstimateFormHandle | null>;
 };
 
 type EstimateStatusResponse = {
@@ -21,6 +25,7 @@ type EstimateStatusResponse = {
     documents_total: number;
     documents_done: number;
   } | null;
+  extraction_error: string | null;
 };
 
 const emptyExtractedData = (): ExtractedData => ({
@@ -34,17 +39,90 @@ const emptyExtractedData = (): ExtractedData => ({
   confidence_notes: "",
 });
 
-export default function EstimateExtraction({ estimate }: EstimateExtractionProps) {
+function parseApiError(payload: unknown, fallback: string): string {
+  if (typeof payload === "object" && payload !== null) {
+    const record = payload as Record<string, unknown>;
+    if (typeof record.error === "string") {
+      return record.error;
+    }
+    if (typeof record.detail === "object" && record.detail !== null) {
+      const detail = record.detail as Record<string, unknown>;
+      if (typeof detail.error === "string") {
+        return detail.error;
+      }
+    }
+    if (typeof record.detail === "string") {
+      return record.detail;
+    }
+  }
+  return fallback;
+}
+
+function ExtractButton({
+  extracting,
+  label,
+  extractingLabel,
+  onClick,
+}: {
+  extracting: boolean;
+  label: string;
+  extractingLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={extracting}
+      className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+    >
+      {extracting ? extractingLabel : label}
+    </button>
+  );
+}
+
+export default function EstimateExtraction({ estimate, formRef }: EstimateExtractionProps) {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("review");
   const [status, setStatus] = useState(estimate.status);
   const [progress, setProgress] = useState<EstimateStatusResponse["extraction_progress"]>(null);
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rateCardStale, setRateCardStale] = useState(estimate.rate_card_stale ?? false);
+  const [projectStartDate, setProjectStartDate] = useState<string | null>(
+    estimate.project_start_date ?? null,
+  );
 
   useEffect(() => {
     setStatus(estimate.status);
   }, [estimate.status]);
+
+  useEffect(() => {
+    setProjectStartDate(estimate.project_start_date ?? null);
+  }, [estimate.project_start_date]);
+
+  useEffect(() => {
+    setRateCardStale(estimate.rate_card_stale ?? false);
+  }, [estimate.rate_card_stale]);
+
+  const refreshRateCardStale = useCallback(async () => {
+    try {
+      const latest = await apiJson<EstimateDetail>(`/estimates/${estimate.id}`);
+      setRateCardStale(latest.rate_card_stale ?? false);
+    } catch {
+      // Keep the last known value when refresh fails.
+    }
+  }, [estimate.id]);
+
+  useEffect(() => {
+    void refreshRateCardStale();
+    const onFocus = () => {
+      void refreshRateCardStale();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refreshRateCardStale]);
 
   const pollStatus = useCallback(async () => {
     try {
@@ -52,20 +130,33 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
       setStatus(response.status);
       setProgress(response.extraction_progress);
 
-      if (response.status !== "extracting") {
-        setExtracting(false);
-        router.refresh();
+      if (response.status === "extracting") {
+        return;
       }
-    } catch {
+
       setExtracting(false);
+
+      if (response.extraction_error) {
+        setError(response.extraction_error);
+      }
+
+      if (response.status === "review") {
+        setError(null);
+      }
+
+      router.refresh();
+    } catch (pollError) {
+      setExtracting(false);
+      setError(pollError instanceof Error ? pollError.message : t("extractError"));
     }
-  }, [estimate.id, router]);
+  }, [estimate.id, router, t]);
 
   useEffect(() => {
     if (status !== "extracting" && !extracting) {
       return;
     }
 
+    void pollStatus();
     const interval = window.setInterval(() => {
       void pollStatus();
     }, 2000);
@@ -75,21 +166,28 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
 
   async function handleExtract() {
     setError(null);
+
+    const formSaved = await formRef?.current?.saveIfNeeded();
+    if (formSaved === false) {
+      setError(t("saveFormBeforeExtract"));
+      return;
+    }
+
     setExtracting(true);
     setStatus("extracting");
 
     try {
-      const response = await apiFetch(`/estimates/${estimate.id}/extract`, {
-        method: "POST",
-      });
+      const response = await apiFetch(
+        `/estimates/${estimate.id}/extract`,
+        {
+          method: "POST",
+        },
+        locale,
+      );
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        const message =
-          typeof payload.detail === "object"
-            ? payload.detail.error
-            : payload.detail || response.statusText;
-        throw new Error(message || t("extractError"));
+        throw new Error(parseApiError(payload, t("extractError")));
       }
 
       await pollStatus();
@@ -98,28 +196,6 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
       setStatus(estimate.status);
       setError(extractError instanceof Error ? extractError.message : t("extractError"));
     }
-  }
-
-  if (status === "draft") {
-    return (
-      <section className="mt-8 border-t border-gray-200 pt-8">
-        <h2 className="mb-1 text-lg font-semibold">{t("extractTitle")}</h2>
-        <p className="mb-4 text-sm text-gray-500">{t("extractDescription")}</p>
-        {error && (
-          <p className="mb-4 text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={() => void handleExtract()}
-          disabled={extracting}
-          className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {extracting ? t("extracting") : t("extractButton")}
-        </button>
-      </section>
-    );
   }
 
   if (status === "extracting" || extracting) {
@@ -154,26 +230,72 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
     };
     const showExportPanel =
       status === "calculated" || status === "exported" || status === "completed";
+    const storedGantt = (estimate.calculation_result?.gantt as GanttData | undefined) ?? null;
+    const featureItems = estimate.feature_items ?? [];
+    const canReExtract =
+      status === "review" || status === "calculated" || status === "exported";
 
     return (
       <div>
-        <RequirementsReview estimateId={estimate.id} initialData={extractedData} />
-        <FeatureItemEditor
-          estimateId={estimate.id}
-          initialItems={estimate.feature_items ?? []}
+        <EstimateRateCardPanel
+          rateCardId={estimate.rate_card_id}
+          rateCardName={estimate.rate_card_name}
+          readOnly={status === "completed"}
         />
-        <EstimateCalculation estimate={estimate} />
+        {rateCardStale && canReExtract && (
+          <div
+            className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="status"
+          >
+            <p className="font-medium">{t("rateCardStaleTitle")}</p>
+            <p className="mt-1">{t("rateCardStaleDescription")}</p>
+          </div>
+        )}
+        {canReExtract && (
+          <section className="mb-6 rounded-lg border border-indigo-100 bg-indigo-50 p-4">
+            <h2 className="text-sm font-semibold text-indigo-950">{t("reExtractTitle")}</h2>
+            <p className="mt-1 text-sm text-indigo-900">{t("reExtractDescription")}</p>
+            {error && (
+              <p
+                className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                role="alert"
+              >
+                {error}
+              </p>
+            )}
+            <div className="mt-3">
+              <ExtractButton
+                extracting={extracting}
+                label={t("extractButton")}
+                extractingLabel={t("extracting")}
+                onClick={() => void handleExtract()}
+              />
+            </div>
+          </section>
+        )}
+        <RequirementsReview estimateId={estimate.id} initialData={extractedData} />
+        <FeatureItemEditor estimateId={estimate.id} initialItems={featureItems} />
+        <GanttChart
+          estimateId={estimate.id}
+          initialStartDate={projectStartDate}
+          initialGantt={storedGantt}
+          hasFeatureItems={featureItems.length > 0}
+          onStartDateChange={setProjectStartDate}
+        />
+        <EstimateCalculation
+          estimate={estimate}
+          projectStartDate={projectStartDate}
+        />
         {showExportPanel && estimate.calculation_result && (
           <ExportPanel
             estimateId={estimate.id}
-            locale={estimate.locale}
             estimateUpdatedAt={estimate.updated_at}
+            calculationResult={estimate.calculation_result as CalculationResult}
           />
         )}
         {estimate.calculation_result && (
           <ActualsForm
             estimateId={estimate.id}
-            locale={estimate.locale}
             status={status}
             calculationResult={estimate.calculation_result}
             initialActuals={estimate.actuals ?? null}
@@ -183,5 +305,44 @@ export default function EstimateExtraction({ estimate }: EstimateExtractionProps
     );
   }
 
-  return null;
+  if (status === "draft") {
+    return (
+      <section className="mt-8 border-t border-gray-200 pt-8">
+        <h2 className="mb-1 text-lg font-semibold">{t("extractTitle")}</h2>
+        <p className="mb-4 text-sm text-gray-500">{t("extractDescription")}</p>
+        <EstimateRateCardPanel
+          rateCardId={estimate.rate_card_id}
+          rateCardName={estimate.rate_card_name}
+        />
+        {error && (
+          <p
+            className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+        <ExtractButton
+          extracting={extracting}
+          label={t("extractButton")}
+          extractingLabel={t("extracting")}
+          onClick={() => void handleExtract()}
+        />
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-8 border-t border-gray-200 pt-8">
+      <p className="text-sm text-gray-500">{t("extractDescription")}</p>
+      {error && (
+        <p
+          className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </section>
+  );
 }

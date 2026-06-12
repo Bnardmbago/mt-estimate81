@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -9,7 +9,7 @@ from app.schemas.feedback import ActualsResponse
 
 class EstimateCreate(BaseModel):
     project_name: str = Field(min_length=1, max_length=255)
-    client_name: str = Field(min_length=1, max_length=255)
+    client_name: str | None = Field(default=None, max_length=255)
     locale: str = Field(default="ja", pattern=r"^(ja|en)$")
     form_data: dict[str, Any] = Field(default_factory=dict)
 
@@ -19,6 +19,12 @@ class EstimateUpdate(BaseModel):
     client_name: str | None = Field(default=None, min_length=1, max_length=255)
     locale: str | None = Field(default=None, pattern=r"^(ja|en)$")
     form_data: dict[str, Any] | None = None
+    project_start_date: date | None = None
+    rate_card_id: uuid.UUID | None = None
+
+
+class CalculateEstimateRequest(BaseModel):
+    project_start_date: date | None = None
 
 
 class FeatureItemResponse(BaseModel):
@@ -90,6 +96,7 @@ class ExtractedDataUpdate(BaseModel):
 class EstimateStatusResponse(BaseModel):
     status: str
     extraction_progress: dict[str, Any] | None = None
+    extraction_error: str | None = None
 
 
 class EstimateDetail(EstimateSummary):
@@ -97,10 +104,32 @@ class EstimateDetail(EstimateSummary):
     extracted_data: dict[str, Any] | None
     maintenance_assumptions: dict[str, Any]
     calculation_result: dict[str, Any] | None
+    rate_card_id: uuid.UUID | None
+    rate_card_name: str | None = None
     rate_card_version_id: uuid.UUID | None
+    rate_card_stale: bool = False
+    project_start_date: date | None
     feature_items: list[FeatureItemResponse]
     documents: list[EstimateDocumentResponse]
     actuals: ActualsResponse | None = None
+
+
+class GanttTimelineResponse(BaseModel):
+    gantt: dict[str, Any]
+
+
+class GenerateRateCardResponse(BaseModel):
+    name: str
+    settings: dict[str, Any]
+    generation_notes: str
+    used_defaults: bool
+    default_fields: list[str]
+
+
+class CreateEstimateRateCardRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    settings: dict[str, Any]
+    activate: bool = True
 
 
 class AuditLogEntry(BaseModel):

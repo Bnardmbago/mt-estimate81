@@ -1,19 +1,29 @@
 const API_BASE = "/api";
 
+export function withLocaleHeaders(locale: string, options: RequestInit = {}): RequestInit {
+  const headers = new Headers(options.headers);
+  headers.set("X-Display-Locale", locale);
+  headers.set("X-Content-Locale", locale);
+  return { ...options, headers };
+}
+
 export async function apiFetch(
   path: string,
   options: RequestInit = {},
+  locale?: string,
 ): Promise<Response> {
+  const resolvedOptions = locale ? withLocaleHeaders(locale, options) : options;
   const url = path.startsWith("/") ? `${API_BASE}${path}` : `${API_BASE}/${path}`;
-  const headers = new Headers(options.headers);
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers = new Headers(resolvedOptions.headers);
+  const isFormData =
+    typeof FormData !== "undefined" && resolvedOptions.body instanceof FormData;
 
   if (!isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   return fetch(url, {
-    ...options,
+    ...resolvedOptions,
     credentials: "include",
     headers,
   });
@@ -22,8 +32,9 @@ export async function apiFetch(
 export async function apiJson<T>(
   path: string,
   options: RequestInit = {},
+  locale?: string,
 ): Promise<T> {
-  const response = await apiFetch(path, options);
+  const response = await apiFetch(path, options, locale);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));

@@ -1,36 +1,33 @@
-from datetime import datetime
 from io import BytesIO
 from typing import Any
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from app.exports.markdown import (
-    LABELS,
-    _build_feature_rows,
-    _build_form_fields,
-    format_date,
-)
 from app.models.estimate import Estimate
 
 SHEET_NAMES = {
     "en": {
-        "summary": "Summary",
+        "executive": "Executive",
         "features": "Features",
         "phase": "Phase Breakdown",
+        "timeline": "Timeline",
         "role": "Role Breakdown",
         "nrc": "NRC Detail",
         "rc": "RC Detail",
         "assumptions": "Assumptions",
+        "reference": "Risks & Reference",
     },
     "ja": {
-        "summary": "サマリー",
+        "executive": "エグゼクティブ",
         "features": "機能明細",
         "phase": "フェーズ内訳",
+        "timeline": "タイムライン",
         "role": "ロール内訳",
         "nrc": "NRC内訳",
         "rc": "RC内訳",
         "assumptions": "前提条件",
+        "reference": "リスク・参照",
     },
 }
 
@@ -90,91 +87,70 @@ def _auto_width(ws) -> None:
         ws.column_dimensions[column].width = min(max_length + 2, 50)
 
 
-def _build_summary_sheet(
-    ws,
-    estimate: Estimate,
-    locale: str,
-    labels: dict[str, str],
-    calculation: dict[str, Any],
-    *,
-    rate_card_name: str | None,
-    rate_card_version_number: int | None,
-    generated_at: datetime,
-) -> None:
-    extracted = estimate.extracted_data or {}
+def _write_bullet_list(ws, items: list[str], *, start_row: int) -> int:
+    row_idx = start_row
+    for item in items:
+        ws.cell(row=row_idx, column=1, value=f"- {item}")
+        row_idx += 1
+    return row_idx
+
+
+def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    project = ctx["project_summary"]
+    executive = ctx["executive_summary"]
+
     row_idx = _write_key_value_rows(
         ws,
         [
-            (labels["project_name"], estimate.project_name),
-            (labels["client_name"], estimate.client_name),
-            (labels["generated_date"], format_date(generated_at, locale)),
+            (labels["project_name"], project["project_name"]),
+            (labels["client_name"], project["client_name"]),
+            (labels["estimate_id"], project["estimate_id"]),
+            (labels["export_revision"], project["export_revision"]),
+            (labels["generated_date"], project["generated_date"]),
+            (labels["estimate_type"], project["estimate_type"]),
         ],
     )
     row_idx += 1
 
-    ws.cell(row=row_idx, column=1, value=labels["effort_summary"]).font = _header_font()
+    ws.cell(row=row_idx, column=1, value=labels["executive_cost_summary"]).font = _header_font()
     row_idx += 1
+    currency_rows = [
+        (labels["nrc_total"], executive["nrc_total_jpy"]),
+        (labels["monthly_rc"], executive["monthly_rc_jpy"]),
+        (labels["annual_rc"], executive["annual_rc_jpy"]),
+        (labels["first_year_total_cost"], executive["first_year_total_jpy"]),
+    ]
+    for label, value in currency_rows:
+        ws.cell(row=row_idx, column=1, value=label).font = _header_font()
+        cell = ws.cell(row=row_idx, column=2, value=value)
+        cell.number_format = CURRENCY_FORMAT
+        row_idx += 1
     row_idx = _write_key_value_rows(
         ws,
         [
-            (labels["total_hours"], calculation.get("total_effort_hours", 0)),
-            (labels["total_days"], calculation.get("total_effort_days", 0)),
+            (labels["confidence_score"], f"{executive['confidence_score']:.0f}%"),
+            (labels["accuracy_level"], executive["accuracy_label"]),
         ],
         start_row=row_idx,
     )
-    row_idx += 1
 
-    ws.cell(row=row_idx, column=1, value=labels["first_year_total"]).font = _header_font()
-    ws.cell(row=row_idx, column=2, value=calculation.get("first_year_total_jpy", 0)).number_format = (
-        CURRENCY_FORMAT
-    )
-    row_idx += 2
-
-    ws.cell(row=row_idx, column=1, value=labels["risks_gaps"]).font = _header_font()
+    ws.cell(row=row_idx, column=1, value=labels["key_assumptions"]).font = _header_font()
     row_idx += 1
-    risks = extracted.get("risks") or []
-    gaps = extracted.get("gaps") or []
-    if risks:
-        ws.cell(row=row_idx, column=1, value=labels["risks"]).font = _header_font()
-        row_idx += 1
-        for item in risks:
-            ws.cell(row=row_idx, column=1, value=f"- {item}")
-            row_idx += 1
-    if gaps:
-        ws.cell(row=row_idx, column=1, value=labels["gaps"]).font = _header_font()
-        row_idx += 1
-        for item in gaps:
-            ws.cell(row=row_idx, column=1, value=f"- {item}")
-            row_idx += 1
-    if not risks and not gaps:
+    key_assumptions = ctx.get("key_assumptions") or []
+    if key_assumptions:
+        row_idx = _write_key_value_rows(
+            ws,
+            [(row["label"], row["value"]) for row in key_assumptions],
+            start_row=row_idx,
+        )
+    else:
         ws.cell(row=row_idx, column=1, value=labels["none"])
         row_idx += 1
-    row_idx += 1
-
-    ws.cell(row=row_idx, column=1, value=labels["confidence_notes"]).font = _header_font()
-    row_idx += 1
-    ws.cell(row=row_idx, column=1, value=extracted.get("confidence_notes") or labels["none"])
-    row_idx += 2
-
-    ws.cell(row=row_idx, column=1, value=labels["rate_card_reference"]).font = _header_font()
-    row_idx += 1
-    _write_key_value_rows(
-        ws,
-        [
-            (labels["rate_card_name"], rate_card_name or labels["none"]),
-            (
-                labels["rate_card_version"],
-                rate_card_version_number
-                if rate_card_version_number is not None
-                else labels["none"],
-            ),
-        ],
-        start_row=row_idx,
-    )
 
 
-def _build_features_sheet(ws, estimate: Estimate, labels: dict[str, str]) -> None:
-    feature_rows = _build_feature_rows(estimate)
+def _build_features_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
     _write_table(
         ws,
         [
@@ -194,91 +170,149 @@ def _build_features_sheet(ws, estimate: Estimate, labels: dict[str, str]) -> Non
                 item["hours"],
                 item["days"],
             ]
-            for item in feature_rows
+            for item in ctx.get("feature_items") or []
         ],
     )
 
 
-def _build_phase_sheet(ws, calculation: dict[str, Any], labels: dict[str, str]) -> None:
+def _build_phase_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    calculation = ctx["calculation"]
     phase_rows = calculation.get("phase_breakdown") or []
     _write_table(
         ws,
-        [labels["phase"], labels["hours"], labels["percentage"]],
-        [[row["phase"], row["hours"], row["percentage"]] for row in phase_rows],
-        column_formats={3: PERCENT_FORMAT},
+        [labels["phase"], labels["hours"], labels["days"], labels["percentage"]],
+        [
+            [
+                row["phase"],
+                row["hours"],
+                row.get("days", row["hours"] / 8),
+                row["percentage"],
+            ]
+            for row in phase_rows
+        ],
+        column_formats={4: PERCENT_FORMAT},
     )
 
 
-def _build_role_sheet(ws, calculation: dict[str, Any], labels: dict[str, str]) -> None:
+def _build_timeline_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    gantt = ctx.get("gantt") or {}
+    tasks = gantt.get("tasks") or []
+
+    if not tasks:
+        ws.cell(row=1, column=1, value=labels["none"])
+        return
+
+    row_idx = _write_key_value_rows(
+        ws,
+        [
+            (labels["gantt_project_start"], gantt.get("project_start_date")),
+            (labels["gantt_project_end"], gantt.get("project_end_date")),
+            (labels["gantt_total_working_days"], gantt.get("total_working_days")),
+        ],
+    )
+    row_idx += 1
+    _write_table(
+        ws,
+        [
+            labels["gantt_task"],
+            labels["phase"],
+            labels["role"],
+            labels["hours"],
+            labels["gantt_start_date"],
+            labels["gantt_end_date"],
+            labels["gantt_duration_days"],
+        ],
+        [
+            [
+                task["name"],
+                task["phase"],
+                task["role"],
+                task["hours"],
+                task["start_date"],
+                task["end_date"],
+                task["duration_working_days"],
+            ]
+            for task in tasks
+        ],
+        start_row=row_idx,
+    )
+
+
+def _build_role_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    calculation = ctx["calculation"]
     role_rows = calculation.get("role_breakdown") or []
-    headers = [labels["role"], labels["hours"], labels["rate"], labels["cost"]]
+    headers = [labels["role"], labels["developers"], labels["hours"], labels["rate"], labels["cost"]]
     for col_idx, header in enumerate(headers, start=1):
         ws.cell(row=1, column=col_idx, value=header).font = _header_font()
 
     for row_idx, row in enumerate(role_rows, start=2):
         ws.cell(row=row_idx, column=1, value=row["role"])
-        ws.cell(row=row_idx, column=2, value=row["hours"])
-        rate_cell = ws.cell(row=row_idx, column=3, value=row["rate_jpy"])
+        ws.cell(row=row_idx, column=2, value=row.get("personnel_count", 1))
+        ws.cell(row=row_idx, column=3, value=row["hours"])
+        rate_cell = ws.cell(row=row_idx, column=4, value=row["rate_jpy"])
         rate_cell.number_format = CURRENCY_FORMAT
-        cost_cell = ws.cell(row=row_idx, column=4, value=f"=B{row_idx}*C{row_idx}")
+        cost_cell = ws.cell(row=row_idx, column=5, value=row["cost_jpy"])
         cost_cell.number_format = CURRENCY_FORMAT
 
-
-def _build_nrc_sheet(ws, calculation: dict[str, Any], labels: dict[str, str]) -> None:
-    nrc = calculation.get("nrc") or {}
-    _write_key_value_rows(
-        ws,
-        [
-            (labels["labor"], nrc.get("labor_jpy", 0)),
-            (labels["setup"], nrc.get("setup_jpy", 0)),
-            (labels["contingency"], nrc.get("contingency_jpy", 0)),
-            (labels["overhead"], nrc.get("overhead_jpy", 0)),
-            (labels["nrc_total"], nrc.get("total_jpy", 0)),
-        ],
-        value_format=CURRENCY_FORMAT,
+    subtotal_row = len(role_rows) + 2
+    ws.cell(row=subtotal_row, column=1, value=labels["subtotal"]).font = _header_font()
+    subtotal_cell = ws.cell(
+        row=subtotal_row,
+        column=5,
+        value=calculation.get("role_labor_subtotal_jpy", 0),
     )
-    ws.cell(row=5, column=1).font = _header_font()
-    ws.cell(row=5, column=2).font = _header_font()
+    subtotal_cell.number_format = CURRENCY_FORMAT
+    subtotal_cell.font = _header_font()
 
 
-def _build_rc_sheet(ws, calculation: dict[str, Any], labels: dict[str, str]) -> None:
-    rc = calculation.get("rc") or {}
-    row_idx = 1
-    ws.cell(row=row_idx, column=1, value=labels["monthly_items"]).font = _header_font()
-    ws.cell(row=row_idx, column=2, value=labels["cost"]).font = _header_font()
+def _build_nrc_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    calculation = ctx["calculation"]
+    line_items = calculation.get("nrc_line_items") or []
+    row_idx = _write_table(
+        ws,
+        [labels["category"], labels["item"], labels["cost"]],
+        [[row["category"], row["item"], row["cost_jpy"]] for row in line_items],
+        column_formats={3: CURRENCY_FORMAT},
+    )
     row_idx += 1
-
-    for item in rc.get("monthly_items") or []:
-        ws.cell(row=row_idx, column=1, value=item["name"])
-        cell = ws.cell(row=row_idx, column=2, value=item["amount_jpy"])
-        cell.number_format = CURRENCY_FORMAT
-        row_idx += 1
-
-    for label, key in (
-        (labels["maintenance"], "maintenance_jpy"),
-        (labels["monthly_total"], "monthly_total_jpy"),
-        (labels["annual_total"], "annual_total_jpy"),
-    ):
-        ws.cell(row=row_idx, column=1, value=label).font = _header_font()
-        cell = ws.cell(row=row_idx, column=2, value=rc.get(key, 0))
-        cell.number_format = CURRENCY_FORMAT
-        cell.font = _header_font()
-        row_idx += 1
+    ws.cell(row=row_idx, column=1, value=labels["nrc_total"]).font = _header_font()
+    total_cell = ws.cell(row=row_idx, column=3, value=ctx["executive_summary"]["nrc_total_jpy"])
+    total_cell.number_format = CURRENCY_FORMAT
+    total_cell.font = _header_font()
 
 
-def _build_assumptions_sheet(
-    ws,
-    estimate: Estimate,
-    locale: str,
-    labels: dict[str, str],
-) -> None:
-    extracted = estimate.extracted_data or {}
-    form_data = estimate.form_data or {}
+def _build_rc_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    calculation = ctx["calculation"]
+    line_items = calculation.get("rc_line_items") or []
+    _write_table(
+        ws,
+        [labels["category"], labels["item"], labels["monthly"], labels["annual"]],
+        [
+            [
+                row["category"],
+                row["item"],
+                row["monthly_jpy"],
+                row["annual_jpy"],
+            ]
+            for row in line_items
+        ],
+        column_formats={3: CURRENCY_FORMAT, 4: CURRENCY_FORMAT},
+    )
+
+
+def _build_assumptions_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    extracted = ctx["extracted"]
     row_idx = 1
 
     ws.cell(row=row_idx, column=1, value=labels["input_assumptions"]).font = _header_font()
     row_idx += 1
-    form_fields = _build_form_fields(form_data, locale)
+    form_fields = ctx.get("form_fields") or []
     if form_fields:
         for field in form_fields:
             ws.cell(row=row_idx, column=1, value=field["label"]).font = _header_font()
@@ -306,68 +340,126 @@ def _build_assumptions_sheet(
         has_content = True
         ws.cell(row=row_idx, column=1, value=section_label).font = _header_font()
         row_idx += 1
-        for item in items:
-            ws.cell(row=row_idx, column=1, value=f"- {item}")
-            row_idx += 1
+        row_idx = _write_bullet_list(ws, items, start_row=row_idx)
     if not has_content:
         ws.cell(row=row_idx, column=1, value=labels["none"])
 
 
-def generate_excel(
-    estimate: Estimate,
-    locale: str,
-    *,
-    rate_card_name: str | None = None,
-    rate_card_version_number: int | None = None,
-    generated_at: datetime | None = None,
-) -> bytes:
+def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
+    labels = ctx["labels"]
+    extracted = ctx["extracted"]
+    rate_card = ctx["rate_card_reference"]
+    row_idx = 1
+
+    ws.cell(row=row_idx, column=1, value=labels["cost_drivers_title"]).font = _header_font()
+    row_idx += 1
+    cost_drivers = ctx.get("cost_drivers") or []
+    if cost_drivers:
+        row_idx = _write_table(
+            ws,
+            [labels["driver"], labels["impact"]],
+            [[row["name"], row["impact_jpy"]] for row in cost_drivers],
+            start_row=row_idx,
+            column_formats={2: CURRENCY_FORMAT},
+        )
+    else:
+        ws.cell(row=row_idx, column=1, value=labels["none"])
+        row_idx += 2
+
+    ws.cell(row=row_idx, column=1, value=labels["risks_gaps"]).font = _header_font()
+    row_idx += 1
+    for section_label, key in (
+        (labels["risks"], "risks"),
+        (labels["missing_information"], "gaps"),
+        (labels["estimation_warnings"], "estimation_warnings"),
+        (labels["assumption_risks"], "assumption_risks"),
+    ):
+        items = extracted.get(key) or []
+        if not items:
+            continue
+        ws.cell(row=row_idx, column=1, value=section_label).font = _header_font()
+        row_idx += 1
+        row_idx = _write_bullet_list(ws, items, start_row=row_idx)
+    row_idx += 1
+
+    ws.cell(row=row_idx, column=1, value=labels["estimate_exclusions"]).font = _header_font()
+    row_idx += 1
+    exclusions = extracted.get("estimate_exclusions") or []
+    if exclusions:
+        row_idx = _write_bullet_list(ws, exclusions, start_row=row_idx)
+    else:
+        ws.cell(row=row_idx, column=1, value=labels["none"])
+        row_idx += 2
+
+    ws.cell(row=row_idx, column=1, value=labels["confidence_notes"]).font = _header_font()
+    row_idx += 1
+    row_idx = _write_key_value_rows(
+        ws,
+        [(labels["confidence_score"], f"{extracted.get('confidence_score', 0):.0f}%")],
+        start_row=row_idx,
+    )
+    for key, label_key in (
+        ("confidence_factors", "confidence_factors"),
+        ("missing_inputs", "missing_inputs"),
+        ("recommendations", "recommendations"),
+    ):
+        items = extracted.get(key) or []
+        if not items:
+            continue
+        ws.cell(row=row_idx, column=1, value=labels[label_key]).font = _header_font()
+        row_idx += 1
+        row_idx = _write_bullet_list(ws, items, start_row=row_idx)
+    notes = extracted.get("confidence_notes")
+    if notes:
+        ws.cell(row=row_idx, column=1, value=notes)
+        row_idx += 2
+
+    ws.cell(row=row_idx, column=1, value=labels["rate_card_reference"]).font = _header_font()
+    row_idx += 1
+    _write_key_value_rows(
+        ws,
+        [
+            (labels["rate_card_name"], rate_card["name"]),
+            (
+                labels["rate_card_version"],
+                rate_card["version_number"]
+                if rate_card["version_number"] is not None
+                else labels["none"],
+            ),
+            (labels["effective_date"], rate_card["effective_date"]),
+            (labels["policy_version"], rate_card["policy_version"]),
+        ],
+        start_row=row_idx,
+    )
+
+
+def generate_excel(report_context: dict[str, Any], estimate: Estimate) -> bytes:
+    locale = report_context["locale"]
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
 
-    calculation = estimate.calculation_result or {}
-    labels = LABELS[locale]
     sheet_names = SHEET_NAMES[locale]
-    generated_at = generated_at or datetime.utcnow()
-
     wb = Workbook()
     wb.remove(wb.active)
 
-    summary_ws = wb.create_sheet(sheet_names["summary"])
-    _build_summary_sheet(
-        summary_ws,
-        estimate,
-        locale,
-        labels,
-        calculation,
-        rate_card_name=rate_card_name,
-        rate_card_version_number=rate_card_version_number,
-        generated_at=generated_at,
-    )
-    _auto_width(summary_ws)
+    builders = [
+        (sheet_names["executive"], _build_executive_sheet),
+        (sheet_names["features"], _build_features_sheet),
+        (sheet_names["phase"], _build_phase_sheet),
+        (sheet_names["timeline"], _build_timeline_sheet),
+        (sheet_names["role"], _build_role_sheet),
+        (sheet_names["nrc"], _build_nrc_sheet),
+        (sheet_names["rc"], _build_rc_sheet),
+        (sheet_names["assumptions"], _build_assumptions_sheet),
+        (sheet_names["reference"], _build_reference_sheet),
+    ]
 
-    features_ws = wb.create_sheet(sheet_names["features"])
-    _build_features_sheet(features_ws, estimate, labels)
-    _auto_width(features_ws)
+    for name, builder in builders:
+        ws = wb.create_sheet(name)
+        builder(ws, report_context)
+        _auto_width(ws)
 
-    phase_ws = wb.create_sheet(sheet_names["phase"])
-    _build_phase_sheet(phase_ws, calculation, labels)
-    _auto_width(phase_ws)
-
-    role_ws = wb.create_sheet(sheet_names["role"])
-    _build_role_sheet(role_ws, calculation, labels)
-    _auto_width(role_ws)
-
-    nrc_ws = wb.create_sheet(sheet_names["nrc"])
-    _build_nrc_sheet(nrc_ws, calculation, labels)
-    _auto_width(nrc_ws)
-
-    rc_ws = wb.create_sheet(sheet_names["rc"])
-    _build_rc_sheet(rc_ws, calculation, labels)
-    _auto_width(rc_ws)
-
-    assumptions_ws = wb.create_sheet(sheet_names["assumptions"])
-    _build_assumptions_sheet(assumptions_ws, estimate, locale, labels)
-    _auto_width(assumptions_ws)
+    del estimate  # retained for API compatibility; workbook uses report_context only
 
     buffer = BytesIO()
     wb.save(buffer)

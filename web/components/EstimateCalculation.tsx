@@ -1,45 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import CalculationBreakdown, { type CalculationResult } from "@/components/CalculationBreakdown";
-import { apiFetch, apiJson } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import type { EstimateDetail } from "@/lib/estimate";
 
 type EstimateCalculationProps = {
   estimate: EstimateDetail;
+  projectStartDate: string | null;
 };
 
-export default function EstimateCalculation({ estimate }: EstimateCalculationProps) {
+export default function EstimateCalculation({
+  estimate,
+  projectStartDate,
+}: EstimateCalculationProps) {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("calculation");
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [recalculateWithCurrentRates, setRecalculateWithCurrentRates] = useState(false);
   const [result, setResult] = useState<CalculationResult | null>(
     (estimate.calculation_result as CalculationResult | null) ?? null,
   );
 
+  useEffect(() => {
+    setResult((estimate.calculation_result as CalculationResult | null) ?? null);
+  }, [estimate.calculation_result]);
+
   async function handleCalculate() {
+    if (!estimate.rate_card_id) {
+      setError(t("rateCardRequired"));
+      return;
+    }
+
     setCalculating(true);
     setError(null);
 
-    const query = recalculateWithCurrentRates
-      ? "?recalculate_with_current_rates=true"
-      : "";
-
     try {
-      const response = await apiFetch(`/estimates/${estimate.id}/calculate${query}`, {
-        method: "POST",
-      });
+      const response = await apiFetch(
+        `/estimates/${estimate.id}/calculate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            projectStartDate ? { project_start_date: projectStartDate } : {},
+          ),
+        },
+        locale,
+      );
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         const message =
           typeof payload.detail === "object"
             ? payload.detail.error
-            : payload.detail || response.statusText;
+            : payload.detail || payload.error || response.statusText;
         throw new Error(message || t("calculateError"));
       }
 
@@ -55,29 +73,42 @@ export default function EstimateCalculation({ estimate }: EstimateCalculationPro
     }
   }
 
+  const isCalculated =
+    estimate.status === "calculated" ||
+    estimate.status === "exported" ||
+    estimate.status === "completed";
+
   return (
     <section className="mt-8 border-t border-gray-200 pt-8">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold">{t("calculateTitle")}</h2>
           <p className="text-sm text-gray-500">{t("calculateDescription")}</p>
         </div>
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          {estimate.status === "calculated" && (
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={recalculateWithCurrentRates}
-                onChange={(event) => setRecalculateWithCurrentRates(event.target.checked)}
-                className="rounded border-gray-300"
-              />
-              {t("recalculateWithCurrentRates")}
-            </label>
-          )}
+
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[320px]">
+          <div className="block text-sm">
+            <span className="mb-1 block font-medium text-gray-700">{t("rateCardLabel")}</span>
+            <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800">
+              {estimate.rate_card_name ?? "—"}
+            </p>
+            {estimate.rate_card_id && (
+              <Link
+                href={`/${locale}/rate-cards/${estimate.rate_card_id}`}
+                className="mt-2 inline-block rounded border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+              >
+                {t("viewRateCard")}
+              </Link>
+            )}
+            {isCalculated && (
+              <p className="mt-1 text-xs text-gray-500">{t("rateCardFrozenHint")}</p>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={() => void handleCalculate()}
-            disabled={calculating}
+            disabled={calculating || !estimate.rate_card_id}
             className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {calculating ? t("calculating") : t("calculateButton")}

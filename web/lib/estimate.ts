@@ -32,13 +32,39 @@ export type ExtractedData = {
   confidence_notes: string;
 };
 
+export type GanttData = {
+  project_start_date: string;
+  project_end_date: string;
+  total_working_days: number;
+  phases: Array<{
+    phase: string;
+    start_date: string;
+    end_date: string;
+    duration_working_days: number;
+  }>;
+  tasks: Array<{
+    feature_item_id: string | null;
+    name: string;
+    phase: string;
+    role: string;
+    hours: number;
+    effort_days: number;
+    start_date: string;
+    end_date: string;
+    duration_working_days: number;
+  }>;
+};
+
 export type CalculationResult = {
   total_effort_hours: number;
   total_effort_days: number;
+  estimated_duration_days?: number;
+  gantt?: GanttData;
   phase_breakdown: Array<{ phase: string; hours: number; percentage: number }>;
   role_breakdown: Array<{
     role: string;
     hours: number;
+    personnel_count?: number;
     rate_jpy: number;
     cost_jpy: number;
   }>;
@@ -81,6 +107,17 @@ export type Actuals = {
   entered_at: string;
 };
 
+export type EstimateSummary = {
+  id: string;
+  project_name: string;
+  client_name: string;
+  status: string;
+  locale: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type EstimateDetail = {
   id: string;
   project_name: string;
@@ -91,7 +128,11 @@ export type EstimateDetail = {
   extracted_data: ExtractedData | null;
   maintenance_assumptions: Record<string, unknown>;
   calculation_result: CalculationResult | null;
+  rate_card_id: string | null;
+  rate_card_name: string | null;
   rate_card_version_id: string | null;
+  rate_card_stale: boolean;
+  project_start_date: string | null;
   feature_items: FeatureItem[];
   documents: EstimateDocument[];
   actuals: Actuals | null;
@@ -99,44 +140,64 @@ export type EstimateDetail = {
   updated_at: string;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://api:8000";
+import {
+  type ApiFetchResult,
+  serverApiJson,
+} from "@/lib/server-api";
+
+export type { ApiFetchResult };
+
+export async function fetchEstimates(
+  token: string,
+): Promise<EstimateSummary[]> {
+  const result = await serverApiJson<EstimateSummary[]>("/estimates", token);
+
+  if (result.status !== "ok") {
+    return [];
+  }
+
+  return result.data;
+}
+
+export async function fetchEstimateResult(
+  id: string,
+  token: string,
+  locale?: string,
+): Promise<ApiFetchResult<EstimateDetail>> {
+  const query = locale ? `?display_locale=${encodeURIComponent(locale)}` : "";
+  const headers = locale
+    ? {
+        "X-Display-Locale": locale,
+        "X-Content-Locale": locale,
+      }
+    : undefined;
+
+  return serverApiJson<EstimateDetail>(`/estimates/${id}${query}`, token, {
+    headers,
+  });
+}
 
 export async function fetchEstimate(
   id: string,
   token: string,
+  locale?: string,
 ): Promise<EstimateDetail | null> {
-  const response = await fetch(`${API_URL}/estimates/${id}`, {
-    headers: { Cookie: `access_token=${token}` },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  return response.json() as Promise<EstimateDetail>;
+  const result = await fetchEstimateResult(id, token, locale);
+  return result.status === "ok" ? result.data : null;
 }
 
 export async function createEstimate(
   locale: string,
   token: string,
 ): Promise<EstimateDetail | null> {
-  const response = await fetch(`${API_URL}/estimates`, {
+  const result = await serverApiJson<EstimateDetail>("/estimates", token, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: `access_token=${token}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       project_name: locale === "ja" ? "新規見積" : "New Estimate",
-      client_name: locale === "ja" ? "未設定" : "TBD",
       locale,
     }),
   });
 
-  if (!response.ok) {
-    return null;
-  }
-
-  return response.json() as Promise<EstimateDetail>;
+  return result.status === "ok" ? result.data : null;
 }

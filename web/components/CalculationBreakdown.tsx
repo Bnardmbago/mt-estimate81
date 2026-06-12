@@ -1,19 +1,27 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useDisplayLabels } from "@/lib/displayI18n";
+import { roleDevelopersCount } from "@/lib/datetime";
 
 export type CalculationResult = {
   total_effort_hours: number;
   total_effort_days: number;
+  estimated_duration_days?: number;
+  development_approach?: string;
+  development_approach_effort_multiplier?: number;
+  recommended_team_size?: number;
   phase_breakdown: Array<{ phase: string; hours: number; percentage: number }>;
   role_breakdown: Array<{
     role: string;
     hours: number;
+    personnel_count?: number;
     rate_jpy: number;
     cost_jpy: number;
   }>;
   nrc: {
     labor_jpy: number;
+    setup_items?: Array<{ name: string; amount_jpy: number }>;
     setup_jpy: number;
     contingency_jpy: number;
     overhead_jpy: number;
@@ -31,11 +39,8 @@ export type CalculationResult = {
 
 type CalculationBreakdownProps = {
   result: CalculationResult;
+  embedded?: boolean;
 };
-
-function formatJpy(value: number): string {
-  return `¥${value.toLocaleString()}`;
-}
 
 function Tooltip({ text }: { text: string }) {
   return (
@@ -49,24 +54,58 @@ function Tooltip({ text }: { text: string }) {
   );
 }
 
-export default function CalculationBreakdown({ result }: CalculationBreakdownProps) {
+export default function CalculationBreakdown({ result, embedded = false }: CalculationBreakdownProps) {
   const t = useTranslations("calculation");
+  const tRateCards = useTranslations("rateCards");
+  const { translatePhase, translateRole, translateSetupItem, formatJpy, formatNumber } =
+    useDisplayLabels();
+
+  const approachKey = result.development_approach;
+  const approachLabel =
+    approachKey &&
+    ["traditional", "ai_assisted", "hybrid", "low_code"].includes(approachKey)
+      ? tRateCards(`developmentApproachOptions.${approachKey}.label`)
+      : null;
 
   return (
-    <section className="mt-8 space-y-8 border-t border-gray-200 pt-8">
-      <div>
-        <h2 className="text-lg font-semibold">{t("title")}</h2>
-        <p className="text-sm text-gray-500">{t("description")}</p>
-      </div>
+    <section
+      className={
+        embedded
+          ? "space-y-8"
+          : "mt-8 space-y-8 border-t border-gray-200 pt-8"
+      }
+    >
+      {!embedded && (
+        <div>
+          <h2 className="text-lg font-semibold">{t("title")}</h2>
+          <p className="text-sm text-gray-500">{t("description")}</p>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
+        {approachLabel && (
+          <>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-sm text-gray-500">{t("developmentApproach")}</p>
+              <p className="text-xl font-semibold">{approachLabel}</p>
+            </div>
+            {result.development_approach_effort_multiplier != null && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <p className="text-sm text-gray-500">{t("developmentApproachMultiplier")}</p>
+                <p className="text-xl font-semibold">
+                  ×{result.development_approach_effort_multiplier}
+                </p>
+              </div>
+            )}
+          </>
+        )}
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <p className="text-sm text-gray-500">{t("totalHours")}</p>
-          <p className="text-xl font-semibold">{result.total_effort_hours.toLocaleString()}</p>
+          <p className="text-xl font-semibold">{formatNumber(result.total_effort_hours)}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
           <p className="text-sm text-gray-500">{t("totalDays")}</p>
-          <p className="text-xl font-semibold">{result.total_effort_days.toLocaleString()}</p>
+          <p className="text-xl font-semibold">{formatNumber(result.total_effort_days)}</p>
           <p className="text-xs text-gray-400">{t("daysFormula")}</p>
         </div>
       </div>
@@ -88,9 +127,9 @@ export default function CalculationBreakdown({ result }: CalculationBreakdownPro
             <tbody className="divide-y divide-gray-200 bg-white">
               {result.phase_breakdown.map((row) => (
                 <tr key={row.phase}>
-                  <td className="px-3 py-2">{row.phase}</td>
+                  <td className="px-3 py-2">{translatePhase(row.phase)}</td>
                   <td className="px-3 py-2 text-right">{(row.percentage * 100).toFixed(0)}%</td>
-                  <td className="px-3 py-2 text-right">{row.hours.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right">{formatNumber(row.hours)}</td>
                 </tr>
               ))}
             </tbody>
@@ -105,6 +144,10 @@ export default function CalculationBreakdown({ result }: CalculationBreakdownPro
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-700">{t("role")}</th>
+                <th className="px-3 py-2 text-right font-medium text-gray-700">
+                  {t("developers")}
+                  <Tooltip text={t("developersFormula")} />
+                </th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">{t("hours")}</th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">{t("rate")}</th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">
@@ -116,8 +159,18 @@ export default function CalculationBreakdown({ result }: CalculationBreakdownPro
             <tbody className="divide-y divide-gray-200 bg-white">
               {result.role_breakdown.map((row) => (
                 <tr key={row.role}>
-                  <td className="px-3 py-2">{row.role}</td>
-                  <td className="px-3 py-2 text-right">{row.hours.toLocaleString()}</td>
+                  <td className="px-3 py-2">{translateRole(row.role)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {formatNumber(
+                      roleDevelopersCount(
+                        row.hours,
+                        row.personnel_count,
+                        result.estimated_duration_days,
+                        result.total_effort_days,
+                      ),
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right">{formatNumber(row.hours)}</td>
                   <td className="px-3 py-2 text-right">{formatJpy(row.rate_jpy)}</td>
                   <td className="px-3 py-2 text-right">{formatJpy(row.cost_jpy)}</td>
                 </tr>
@@ -139,10 +192,28 @@ export default function CalculationBreakdown({ result }: CalculationBreakdownPro
                 <td className="px-3 py-2">{t("labor")}</td>
                 <td className="px-3 py-2 text-right">{formatJpy(result.nrc.labor_jpy)}</td>
               </tr>
-              <tr>
-                <td className="px-3 py-2">{t("setup")}</td>
-                <td className="px-3 py-2 text-right">{formatJpy(result.nrc.setup_jpy)}</td>
-              </tr>
+              {(result.nrc.setup_items ?? []).map((item) => (
+                <tr key={item.name}>
+                  <td className="px-3 py-2 pl-6 text-gray-600">
+                    {t("setup")}: {translateSetupItem(item.name)}
+                  </td>
+                  <td className="px-3 py-2 text-right">{formatJpy(item.amount_jpy)}</td>
+                </tr>
+              ))}
+              {(!result.nrc.setup_items || result.nrc.setup_items.length === 0) && (
+                <tr>
+                  <td className="px-3 py-2">{t("setup")}</td>
+                  <td className="px-3 py-2 text-right">{formatJpy(result.nrc.setup_jpy)}</td>
+                </tr>
+              )}
+              {(result.nrc.setup_items?.length ?? 0) > 0 && (
+                <tr className="bg-gray-50">
+                  <td className="px-3 py-2 font-medium">{t("setupTotal")}</td>
+                  <td className="px-3 py-2 text-right font-medium">
+                    {formatJpy(result.nrc.setup_jpy)}
+                  </td>
+                </tr>
+              )}
               <tr>
                 <td className="px-3 py-2">
                   {t("contingency")}
@@ -176,7 +247,7 @@ export default function CalculationBreakdown({ result }: CalculationBreakdownPro
             <tbody className="divide-y divide-gray-200 bg-white">
               {result.rc.monthly_items.map((item) => (
                 <tr key={item.name}>
-                  <td className="px-3 py-2">{item.name}</td>
+                  <td className="px-3 py-2">{translateSetupItem(item.name)}</td>
                   <td className="px-3 py-2 text-right">{formatJpy(item.amount_jpy)}</td>
                 </tr>
               ))}
@@ -203,11 +274,19 @@ export default function CalculationBreakdown({ result }: CalculationBreakdownPro
       </div>
 
       <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4">
-        <p className="text-sm text-indigo-700">{t("firstYearTotal")}</p>
+        <p className="text-sm text-indigo-700">{t("totalDevelopmentCost")}</p>
         <p className="text-2xl font-bold text-indigo-900">
+          {formatJpy(result.nrc.total_jpy)}
+        </p>
+        <p className="text-xs text-indigo-600">{t("totalDevelopmentCostFormula")}</p>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm text-gray-600">{t("firstYearTotal")}</p>
+        <p className="text-xl font-semibold text-gray-900">
           {formatJpy(result.first_year_total_jpy)}
         </p>
-        <p className="text-xs text-indigo-600">{t("firstYearFormula")}</p>
+        <p className="text-xs text-gray-500">{t("firstYearFormula")}</p>
       </div>
     </section>
   );

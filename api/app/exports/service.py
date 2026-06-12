@@ -7,10 +7,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.admin.smtp_config import get_smtp_config, smtp_runtime_config
+from app.estimates.access import require_estimate_access
+from app.estimates.service import get_estimate_for_user
 from app.audit.service import log_change
+from app.email.smtp import EmailAttachment, send_email_with_attachments
 from app.exceptions import AppError
 from app.exports.excel import generate_excel
 from app.exports.markdown import generate_markdown
+from app.exports.quotation_context import build_quotation_context
+from app.exports.report_context import build_report_context
+from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 from app.models.estimate import Estimate, EstimateStatus, Export, ExportFormat
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
@@ -22,21 +29,24 @@ FORMAT_EXTENSIONS = {
     ExportFormat.MD.value: "md",
     ExportFormat.XLSX.value: "xlsx",
     ExportFormat.PDF.value: "pdf",
+    ExportFormat.PDF_QUOTATION.value: "pdf",
 }
 
 CONTENT_TYPES = {
     ExportFormat.MD.value: "text/markdown; charset=utf-8",
     ExportFormat.XLSX.value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ExportFormat.PDF.value: "application/pdf",
+    ExportFormat.PDF_QUOTATION.value: "application/pdf",
 }
 
 
 async def _get_rate_card_version(
     db: AsyncSession,
     rate_card_version_id: uuid.UUID | None,
-) -> tuple[str | None, int | None]:
+) -> tuple[str | None, int | None, datetime | None, float]:
+    default_tax = float(DEFAULT_RATE_CARD_SETTINGS.get("tax_rate", 0.10))
     if not rate_card_version_id:
-        return None, None
+        return None, None, None, default_tax
 
     result = await db.execute(
         select(RateCardVersion, RateCard)
@@ -45,13 +55,20 @@ async def _get_rate_card_version(
     )
     row = result.one_or_none()
     if not row:
-        return None, None
+        return None, None, None, default_tax
 
     version, rate_card = row
-    return rate_card.name, version.version_number
+    settings = version.settings or {}
+    tax_rate = float(settings.get("tax_rate", default_tax))
+    return rate_card.name, version.version_number, version.created_at, tax_rate
 
 
-async def _get_estimate_for_export(db: AsyncSession, estimate_id: uuid.UUID) -> Estimate:
+async def _get_estimate_for_export(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+) -> Estimate:
+    estimate = await get_estimate_for_user(db, estimate_id, user)
     result = await db.execute(
         select(Estimate)
         .where(Estimate.id == estimate_id)
@@ -60,10 +77,7 @@ async def _get_estimate_for_export(db: AsyncSession, estimate_id: uuid.UUID) -> 
             selectinload(Estimate.exports),
         )
     )
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        raise AppError("Estimate not found", "ESTIMATE_NOT_FOUND", status_code=404)
-    return estimate
+    return result.scalar_one()
 
 
 def _generate_content(
@@ -73,37 +87,47 @@ def _generate_content(
     *,
     rate_card_name: str | None,
     rate_card_version_number: int | None,
+    rate_card_effective_date: datetime | None,
+    export_revision: int,
     generated_at: datetime,
+    tax_rate: float,
 ) -> bytes:
+    report_context = build_report_context(
+        estimate,
+        locale,
+        generated_at=generated_at,
+        rate_card_name=rate_card_name,
+        rate_card_version_number=rate_card_version_number,
+        rate_card_effective_date=rate_card_effective_date,
+        export_revision=export_revision,
+    )
+
     if export_format == ExportFormat.MD.value:
-        content = generate_markdown(
-            estimate,
-            locale,
-            rate_card_name=rate_card_name,
-            rate_card_version_number=rate_card_version_number,
-            generated_at=generated_at,
-        )
+        content = generate_markdown(report_context)
         return content.encode("utf-8")
 
     if export_format == ExportFormat.XLSX.value:
-        return generate_excel(
-            estimate,
-            locale,
-            rate_card_name=rate_card_name,
-            rate_card_version_number=rate_card_version_number,
-            generated_at=generated_at,
-        )
+        return generate_excel(report_context, estimate)
 
     if export_format == ExportFormat.PDF.value:
-        from app.exports.pdf import generate_pdf
+        from app.exports.pdf import generate_report_pdf
 
-        return generate_pdf(
+        return generate_report_pdf(report_context)
+
+    if export_format == ExportFormat.PDF_QUOTATION.value:
+        from app.exports.pdf import generate_quotation_pdf
+
+        quotation_context = build_quotation_context(
             estimate,
             locale,
+            generated_at=generated_at,
             rate_card_name=rate_card_name,
             rate_card_version_number=rate_card_version_number,
-            generated_at=generated_at,
+            rate_card_effective_date=rate_card_effective_date,
+            export_revision=export_revision,
+            tax_rate=tax_rate,
         )
+        return generate_quotation_pdf(quotation_context)
 
     raise AppError(
         f"Export format '{export_format}' is not yet implemented",
@@ -113,6 +137,12 @@ def _generate_content(
     )
 
 
+def _export_filename(export_record: Export) -> str:
+    extension = FORMAT_EXTENSIONS.get(export_record.format, export_record.format)
+    format_label = export_record.format.replace("_", "-")
+    return f"estimate-{format_label}-{export_record.locale}.{extension}"
+
+
 async def export_estimate(
     db: AsyncSession,
     estimate_id: uuid.UUID,
@@ -120,7 +150,7 @@ async def export_estimate(
     locale: str | None,
     user: User,
 ) -> Export:
-    estimate = await _get_estimate_for_export(db, estimate_id)
+    estimate = await _get_estimate_for_export(db, estimate_id, user)
 
     if estimate.status not in (
         EstimateStatus.CALCULATED.value,
@@ -143,11 +173,11 @@ async def export_estimate(
     if resolved_locale not in ("ja", "en"):
         raise AppError("Locale must be ja or en", "INVALID_LOCALE", details={"locale": resolved_locale})
 
-    rate_card_name, rate_card_version_number = await _get_rate_card_version(
-        db,
-        estimate.rate_card_version_id,
+    rate_card_name, rate_card_version_number, rate_card_effective_date, tax_rate = (
+        await _get_rate_card_version(db, estimate.rate_card_version_id)
     )
     generated_at = datetime.utcnow()
+    export_revision = len(estimate.exports) + 1
     export_id = uuid.uuid4()
     extension = FORMAT_EXTENSIONS[export_format]
     storage_path = f"exports/{estimate_id}/{export_id}.{extension}"
@@ -159,7 +189,10 @@ async def export_estimate(
             resolved_locale,
             rate_card_name=rate_card_name,
             rate_card_version_number=rate_card_version_number,
+            rate_card_effective_date=rate_card_effective_date,
+            export_revision=export_revision,
             generated_at=generated_at,
+            tax_rate=tax_rate,
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)
@@ -199,8 +232,12 @@ async def export_estimate(
     return export_record
 
 
-async def list_exports(db: AsyncSession, estimate_id: uuid.UUID) -> list[Export]:
-    await _get_estimate_for_export(db, estimate_id)
+async def list_exports(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+) -> list[Export]:
+    await _get_estimate_for_export(db, estimate_id, user)
     result = await db.execute(
         select(Export)
         .where(Export.estimate_id == estimate_id)
@@ -209,11 +246,24 @@ async def list_exports(db: AsyncSession, estimate_id: uuid.UUID) -> list[Export]
     return list(result.scalars().all())
 
 
-async def download_export(db: AsyncSession, export_id: uuid.UUID) -> Response:
-    result = await db.execute(select(Export).where(Export.id == export_id))
-    export_record = result.scalar_one_or_none()
-    if not export_record:
+async def download_export(
+    db: AsyncSession,
+    export_id: uuid.UUID,
+    user: User,
+    *,
+    inline: bool = False,
+) -> Response:
+    result = await db.execute(
+        select(Export, Estimate)
+        .join(Estimate, Export.estimate_id == Estimate.id)
+        .where(Export.id == export_id)
+    )
+    row = result.one_or_none()
+    if not row:
         raise AppError("Export not found", "EXPORT_NOT_FOUND", status_code=404)
+
+    export_record, estimate = row
+    require_estimate_access(estimate, user)
 
     storage = get_storage_backend()
     if not await storage.exists(export_record.storage_path):
@@ -221,11 +271,121 @@ async def download_export(db: AsyncSession, export_id: uuid.UUID) -> Response:
 
     content = await storage.read(export_record.storage_path)
     extension = FORMAT_EXTENSIONS.get(export_record.format, export_record.format)
-    filename = f"estimate-{export_record.estimate_id}.{extension}"
+    suffix = ""
+    if export_record.format == ExportFormat.PDF_QUOTATION.value:
+        suffix = "-quotation"
+    filename = f"estimate-{export_record.estimate_id}{suffix}.{extension}"
     content_type = CONTENT_TYPES.get(export_record.format, "application/octet-stream")
+    disposition = "inline" if inline else "attachment"
 
     return Response(
         content=content,
         media_type=content_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
     )
+
+
+async def delete_export(
+    db: AsyncSession,
+    export_id: uuid.UUID,
+    user: User,
+) -> None:
+    result = await db.execute(
+        select(Export, Estimate)
+        .join(Estimate, Export.estimate_id == Estimate.id)
+        .where(Export.id == export_id)
+    )
+    row = result.one_or_none()
+    if not row:
+        raise AppError("Export not found", "EXPORT_NOT_FOUND", status_code=404)
+
+    export_record, estimate = row
+    require_estimate_access(estimate, user)
+
+    storage = get_storage_backend()
+    if await storage.exists(export_record.storage_path):
+        await storage.delete(export_record.storage_path)
+
+    await db.delete(export_record)
+    await db.commit()
+
+
+async def send_exports_email(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    export_ids: list[uuid.UUID],
+    to_email: str,
+    message: str | None,
+    user: User,
+) -> dict:
+    estimate = await _get_estimate_for_export(db, estimate_id, user)
+
+    unique_ids = list(dict.fromkeys(export_ids))
+    result = await db.execute(
+        select(Export).where(
+            Export.estimate_id == estimate_id,
+            Export.id.in_(unique_ids),
+        )
+    )
+    export_records = list(result.scalars().all())
+
+    if len(export_records) != len(unique_ids):
+        raise AppError("One or more exports not found", "EXPORT_NOT_FOUND", status_code=404)
+
+    export_by_id = {record.id: record for record in export_records}
+    ordered_exports = [export_by_id[export_id] for export_id in unique_ids]
+
+    storage = get_storage_backend()
+    attachments: list[EmailAttachment] = []
+    for export_record in ordered_exports:
+        if not await storage.exists(export_record.storage_path):
+            raise AppError("Export file not found", "EXPORT_FILE_NOT_FOUND", status_code=404)
+
+        content = await storage.read(export_record.storage_path)
+        content_type = CONTENT_TYPES.get(export_record.format, "application/octet-stream")
+        attachments.append(
+            EmailAttachment(
+                filename=_export_filename(export_record),
+                content=content,
+                content_type=content_type,
+            )
+        )
+
+    subject = f"Estimate export: {estimate.project_name}"
+    body_lines = [
+        f"Estimate exports for project: {estimate.project_name}",
+        "",
+    ]
+    if message and message.strip():
+        body_lines.extend([message.strip(), ""])
+    body_lines.append("Attached files:")
+    for attachment in attachments:
+        body_lines.append(f"- {attachment.filename}")
+
+    sent_at = datetime.utcnow()
+    smtp_config = await get_smtp_config(db)
+    await send_email_with_attachments(
+        to_email=to_email,
+        subject=subject,
+        body_text="\n".join(body_lines),
+        attachments=attachments,
+        config=smtp_runtime_config(smtp_config),
+    )
+
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="export_emailed",
+        changes={
+            "to_email": to_email,
+            "export_ids": [str(export_id) for export_id in unique_ids],
+        },
+    )
+    await db.commit()
+
+    return {
+        "to_email": to_email,
+        "export_ids": unique_ids,
+        "sent_at": sent_at,
+    }

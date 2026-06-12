@@ -1,4 +1,8 @@
 import asyncio
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
 
@@ -37,14 +41,29 @@ async def main():
         existing = await db.execute(select(User).where(User.email == "admin@example.com"))
         admin = existing.scalar_one_or_none()
         if admin:
-            print("Admin already exists")
+            changed = False
+            if not admin.is_admin:
+                admin.is_admin = True
+                changed = True
+            if not admin.is_active:
+                admin.is_active = True
+                changed = True
+            if not admin.preferred_currency:
+                admin.preferred_currency = "JPY"
+                changed = True
+            if changed:
+                print("Admin account restored: admin@example.com (admin access re-enabled)")
+            else:
+                print("Admin already exists")
         else:
             admin = User(
                 email="admin@example.com",
                 password_hash=hash_password("admin123"),
                 display_name="Admin",
                 is_admin=True,
+                is_active=True,
                 preferred_locale="ja",
+                preferred_currency="JPY",
             )
             db.add(admin)
             await db.flush()

@@ -1,9 +1,9 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import AdminPanel from "@/components/admin/AdminPanel";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://api:8000";
+import { serverApiFetch } from "@/lib/server-api";
 
 export default async function AdminPage({
   params,
@@ -19,10 +19,7 @@ export default async function AdminPage({
     redirect(`/${locale}/login`);
   }
 
-  const response = await fetch(`${API_URL}/admin/rate-cards/active`, {
-    headers: { Cookie: `access_token=${token.value}` },
-    cache: "no-store",
-  });
+  const response = await serverApiFetch("/admin/users", token.value);
 
   if (response.status === 403) {
     redirect(`/${locale}/estimates`);
@@ -32,10 +29,20 @@ export default async function AdminPage({
     redirect(`/${locale}/login`);
   }
 
+  if (!response.ok) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-800">
+        <h1 className="text-lg font-semibold">{t("loadError")}</h1>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
       <h1 className="mb-6 text-2xl font-bold">{t("title")}</h1>
-      <AdminPanel />
+      <Suspense fallback={<p className="text-sm text-gray-500">{t("loading")}</p>}>
+        <AdminPanel />
+      </Suspense>
     </div>
   );
 }

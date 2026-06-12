@@ -37,7 +37,23 @@ export const FORM_FIELDS = [
   { key: "budget", required: false, type: "text" },
 ] as const;
 
-export type FormFieldKey = (typeof FORM_FIELDS)[number]["key"];
+export type FormFieldDefinition = (typeof FORM_FIELDS)[number];
+
+export type FormFieldKey = FormFieldDefinition["key"];
+
+/** Project name is always required; other fields become optional when documents are uploaded. */
+export function isFieldRequired(
+  field: FormFieldDefinition,
+  hasUploadedDocuments: boolean,
+): boolean {
+  if (field.key === "project_name") {
+    return true;
+  }
+  if (hasUploadedDocuments) {
+    return false;
+  }
+  return field.required;
+}
 
 export type FormFieldValues = Record<FormFieldKey, string>;
 

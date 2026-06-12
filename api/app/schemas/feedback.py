@@ -41,16 +41,6 @@ class VarianceSummary(BaseModel):
     rc_monthly_jpy: VarianceMetric
 
 
-class VarianceDashboardRow(BaseModel):
-    estimate_id: uuid.UUID
-    project_name: str
-    client_name: str
-    completed_at: datetime
-    actuals_entered_at: datetime | None
-    variance: VarianceSummary | None
-    variance_notes: str | None
-
-
 class CompleteResponse(BaseModel):
     id: uuid.UUID
     status: str

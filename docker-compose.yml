@@ -22,6 +22,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      hermes:
+        condition: service_healthy
     ports:
       - "8000:8000"
 
@@ -34,12 +36,18 @@ services:
       - "3000:3000"
 
   hermes:
-    image: nousresearch/hermes-agent:latest
-    env_file: .env
+    build: ./hermes
     volumes:
       - upload_data:/data/uploads:ro
     ports:
       - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   nginx:
     image: nginx:alpine

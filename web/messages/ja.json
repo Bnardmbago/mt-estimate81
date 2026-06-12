@@ -1,9 +1,18 @@
 {
   "nav": {
     "estimates": "見積一覧",
-    "variance": "差異分析",
+    "rateCards": "レートカード",
     "admin": "管理",
-    "logout": "ログアウト"
+    "welcome": "ようこそ",
+    "help": "ヘルプ",
+    "logout": "ログアウト",
+    "openMenu": "メニューを開く",
+    "closeMenu": "メニューを閉じる"
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "toggle": "テーマ切替"
   },
   "login": {
     "title": "ログイン",
@@ -15,6 +24,9 @@
   "estimates": {
     "new": "新規見積",
     "list": "見積一覧",
+    "project": "プロジェクト",
+    "statusLabel": "ステータス",
+    "updated": "更新日",
     "empty": "見積がありません",
     "back": "一覧に戻る",
     "client": "クライアント",
@@ -24,6 +36,15 @@
     "unsaved": "未保存の変更があります",
     "saveError": "見積の保存に失敗しました",
     "notFound": "見積が見つかりません",
+    "loadError": "見積を読み込めませんでした",
+    "loadErrorDetail": "サーバーからエラーが返されました（HTTP {status}）。再読み込みするか、一覧に戻ってください。",
+    "actions": "操作",
+    "delete": "削除",
+    "deleting": "削除中…",
+    "deleteConfirm": "「{project}」を削除しますか？この操作は取り消せません。",
+    "deleteConfirmAction": "削除する",
+    "deleteCancel": "キャンセル",
+    "deleteError": "見積の削除に失敗しました",
     "status": {
       "draft": "下書き",
       "extracting": "抽出中",
@@ -37,7 +58,9 @@
     "title": "ドキュメント",
     "description": "プロジェクト資料をアップロードしてテキストを抽出します。",
     "dropzone": "ファイルをドラッグ＆ドロップ、またはクリックして選択",
-    "supportedTypes": "対応形式: PDF, DOCX, XLSX, TXT, MD",
+    "supportedTypes": "対応形式: PDF, DOCX, XLSX, TXT, MD。",
+    "aiPromptLabel": "AI追加仕様の提案",
+    "aiPromptPlaceholder": "プロジェクト仕様の詳細を入力してください...",
     "uploading": "アップロード中…",
     "uploadError": "ドキュメントのアップロードに失敗しました",
     "unsupportedType": "未対応のファイル形式です: {type}",
@@ -64,6 +87,52 @@
     "progressDocuments": "ドキュメント処理中 ({done}/{total})…",
     "progressAi": "AIで要件を分析中…",
     "extractError": "抽出の開始に失敗しました",
+    "saveFormBeforeExtract": "フォームを保存してください。必須項目を入力するか、ドキュメントをアップロードしてフォーム入力を省略できます。",
+    "rateCardLabel": "レートカード",
+    "rateCardRequired": "要件抽出の前にレートカードを選択してください。",
+    "rateCardLoading": "レートカードを読み込み中…",
+    "rateCardEmpty": "レートカードがありません。レートカードページで作成してください。",
+    "rateCardManageLink": "レートカードを管理",
+    "rateCardSaving": "選択を保存中…",
+    "rateCardSaveError": "レートカードの保存に失敗しました",
+    "rateCardAutoRegenerateHint": "見積がレビュー中の間はいつでもレートカードを編集できます。要件を再抽出しても、編集したレートカードは上書きされません。",
+    "reExtractTitle": "抽出を再実行",
+    "reExtractDescription": "現在のレートカード（編集内容を含む）を使って要件を再抽出します。レートカード自体は上書きされません。",
+    "rateCardStaleTitle": "レートカードが変更されました",
+    "rateCardStaleDescription": "リンクされたレートカードが最後の抽出後に更新されています。下の「抽出を再実行」で要件と機能項目を更新してください。",
+    "rateCardPanel": {
+      "autoTitle": "プロジェクトレートカード",
+      "autoDescription": "要件抽出時にフォームと資料からレートカードが自動作成されます。役割単価、NRCセットアップ費、月額RC項目が含まれます。",
+      "autoPending": "レートカードはまだありません。「要件を抽出」をクリックすると自動生成されます。",
+      "editRateCard": "レートカードを編集",
+      "editableHint": "レートカードはいつでも編集できます。見積で抽出を再実行すると、変更が要件に反映されます。",
+      "title": "レートカードを選択",
+      "description": "要件抽出の前に、既存のレートカードを選ぶか、このプロジェクトのフォームと資料から新規生成してください。",
+      "modeSelectExisting": "既存のレートカード",
+      "modeCreateNew": "新規レートカードを生成",
+      "existingHint": "システムに登録済みのレートカードから選択します。",
+      "existingLabel": "既存のレートカード",
+      "generateOnExtractHint": "「要件を抽出」をクリックすると、フォームと資料からレートカードを生成します。",
+      "generateReadyHint": "「要件を抽出」をクリックすると \"{project}\" を分析し、確認用のレートカードを生成します。",
+      "noExistingCards": "レートカードがありません。新規生成するか、レートカード管理で作成してください。",
+      "manageRateCards": "レートカード管理",
+      "selectPlaceholder": "レートカードを選択…",
+      "createDescription": "見積フォームとアップロード資料を分析し、プロジェクト名でレートカードを自動生成します。",
+      "generateButton": "プロジェクト情報から生成",
+      "generating": "レートカードを生成中…",
+      "generateError": "レートカードの生成に失敗しました",
+      "saveGeneratedError": "生成したレートカードの保存に失敗しました",
+      "loadOptionsError": "レートカード一覧を読み込めませんでした。新規生成は引き続き利用できます。",
+      "selectedCard": "割り当て: {name}",
+      "reviewModalTitle": "生成されたレートカードの確認",
+      "reviewModalDescription": "保存前に生成値を確認・編集してください。情報が不足している場合は既定値が使用されます。",
+      "usedDefaultsNotice": "プロジェクト情報が限られているため、一部の値に既定値を使用しています。",
+      "productivityDefaultHours": "機能あたりのデフォルト時間",
+      "reviewCancel": "キャンセル",
+      "reviewSave": "レートカードを保存",
+      "reviewSaveAndExtract": "保存して要件を抽出",
+      "reviewSaving": "保存中…"
+    },
     "requirementsTitle": "抽出された要件",
     "requirementsDescription": "AIが抽出した要件リストを確認・編集します。",
     "featuresTitle": "機能項目",
@@ -98,8 +167,12 @@
   },
   "export": {
     "title": "エクスポート",
-    "description": "見積のロケールでPDF・Excel・Markdownレポートを生成します。",
-    "formatPdf": "PDF",
+    "description": "エクスポート言語と形式を選択します。PDFはプロジェクト見積の詳細レポートです。Excel・Markdownも同じ内容を出力します。",
+    "localeLabel": "エクスポート言語",
+    "localeJa": "日本語",
+    "localeEn": "英語",
+    "formatsLabel": "形式",
+    "formatPdf": "PDF（プロジェクト見積書・詳細版）",
     "formatXlsx": "Excel",
     "formatMd": "Markdown",
     "exportButton": "エクスポート",
@@ -109,24 +182,60 @@
     "download": "ダウンロード",
     "loading": "エクスポートを読み込み中…",
     "empty": "エクスポートはまだありません",
-    "staleBadge": "古い — 再計算または再エクスポート"
+    "staleBadge": "古い — 再計算または再エクスポート",
+    "emailTitle": "メールで送信",
+    "emailDescription": "下の一覧から送信するエクスポートを選択してください。",
+    "emailToLabel": "送信先メールアドレス",
+    "emailMessageLabel": "メッセージ（任意）",
+    "emailMessagePlaceholder": "受信者へのメモを入力…",
+    "emailSelectLabel": "添付",
+    "emailSendButton": "メール送信",
+    "emailSending": "送信中…",
+    "emailSuccess": "メールを送信しました",
+    "emailError": "メール送信に失敗しました",
+    "emailSelectRequired": "送信するエクスポートを1件以上選択してください",
+    "includedDataTitle": "エクスポートに含まれる計算結果",
+    "includedDataDescription": "PDF・Excel・Markdownには、以下と同じ計算内訳が含まれます。",
+    "preview": "プレビュー",
+    "previewTitle": "エクスポートプレビュー",
+    "previewClose": "閉じる",
+    "previewPrint": "印刷",
+    "previewLoading": "プレビューを読み込み中…",
+    "previewError": "プレビューの読み込みに失敗しました",
+    "previewXlsxHint": "Excelファイルはブラウザ内でプレビューできません。ダウンロードして開いてください。",
+    "delete": "削除",
+    "deleting": "削除中…",
+    "deleteConfirm": "このエクスポートファイルを削除しますか？",
+    "deleteConfirmAction": "削除する",
+    "deleteCancel": "キャンセル",
+    "deleteError": "エクスポートの削除に失敗しました"
   },
   "calculation": {
     "title": "計算結果",
     "description": "機能項目とレートカードに基づくNRC・RC内訳です。",
     "calculateTitle": "見積計算",
-    "calculateDescription": "機能項目と有効なレートカードで計算エンジンを実行します。",
+    "calculateDescription": "機能項目と選択したレートカードで計算エンジンを実行します。",
+    "rateCardLabel": "レートカード",
+    "rateCardFrozenHint": "計算時に固定されたレートカードバージョンを使用します。",
+    "viewRateCard": "レートカードを開く",
+    "rateCardRequired": "計算前にレートカードを選択してください。",
     "calculateButton": "計算する",
     "calculating": "計算中…",
     "calculateError": "計算に失敗しました",
     "recalculateWithCurrentRates": "現在のレートで再計算",
     "totalHours": "総工数（時間）",
     "totalDays": "総工数（人日）",
+    "developmentApproach": "開発アプローチ",
+    "developmentApproachMultiplier": "工数係数",
     "daysFormula": "人日 = 時間 ÷ 8",
     "phaseBreakdown": "フェーズ内訳",
     "roleBreakdown": "ロール内訳",
     "phase": "フェーズ",
     "role": "ロール",
+    "personnel": "開発者数",
+    "personnelFormula": "ceil(ロール時間 ÷ (見積工期日数 × 8))、最小 1",
+    "developers": "開発者数",
+    "developersFormula": "ceil(ロール時間 ÷ (見積工期日数 × 8))、最小 1",
     "hours": "工数",
     "percentage": "割合",
     "rate": "時間単価",
@@ -137,6 +246,7 @@
     "nrcFormula": "NRC = 人件費 + セットアップ + 予備費 + 間接費",
     "labor": "人件費",
     "setup": "セットアップ費用",
+    "setupTotal": "セットアップ費用合計",
     "contingency": "予備費",
     "contingencyFormula": "予備費 = 人件費 × 予備費率",
     "overhead": "間接費",
@@ -148,11 +258,37 @@
     "maintenanceFormula": "保守費用 = 月間サポート時間 × サポートロール時間単価",
     "monthlyTotal": "月額合計",
     "annualTotal": "年額合計",
+    "totalDevelopmentCost": "開発費用合計（デプロイ・引渡し検収まで）",
+    "totalDevelopmentCostFormula": "デプロイ・引渡し検収までのNRC合計",
     "firstYearTotal": "初年度合計",
     "firstYearFormula": "初年度 = NRC + 年額RC"
   },
+  "gantt": {
+    "title": "プロジェクトタイムライン（ガント）",
+    "description": "抽出された機能項目とレートカードのフェーズ順から算出した逐次スケジュールです。",
+    "assumption": "稼働日は月〜金のみ。タスクは順番に実行。祝日は考慮しません。",
+    "startDate": "プロジェクト開始日",
+    "saveStartDate": "開始日を保存",
+    "refresh": "タイムラインを更新",
+    "refreshing": "更新中…",
+    "saving": "保存中…",
+    "saved": "開始日を保存しました",
+    "saveError": "開始日の保存に失敗しました",
+    "loadError": "タイムラインの読み込みに失敗しました",
+    "loading": "タイムラインを読み込み中…",
+    "empty": "スケジュール可能な機能項目がありません。",
+    "projectStart": "開始日",
+    "projectEnd": "終了日",
+    "totalWorkingDays": "総稼働日数",
+    "task": "タスク",
+    "phase": "フェーズ",
+    "role": "ロール",
+    "hours": "時間",
+    "endDate": "終了日",
+    "durationDays": "期間（日）"
+  },
   "variance": {
-    "dashboardTitle": "差異ダッシュボード",
+    "dashboardTitle": "リアルタイムKPI管理",
     "dashboardDescription": "完了したプロジェクトの見積と実績を比較します。",
     "actualsTitle": "実績入力と完了",
     "actualsDescription": "プロジェクトの実績を入力し、見積を完了にします。",
@@ -195,19 +331,16 @@
       "notes": "メモ"
     }
   },
-  "admin": {
-    "title": "管理",
-    "tabs": {
-      "rateCards": "レートカード",
-      "users": "ユーザー",
-      "aiSettings": "AI設定",
-      "system": "システム"
-    },
-    "rateCards": {
-      "loading": "レートカードを読み込み中…",
+  "rateCards": {
+    "pageTitle": "レートカード管理",
+    "pageDescription": "見積計算に使用するレートカードを作成・管理します。",
+    "loading": "レートカードを読み込み中…",
       "loadError": "レートカードの読み込みに失敗しました",
-      "version": "バージョン {number}",
-      "save": "新バージョンを保存",
+      "saveCard": "カードを保存",
+      "saveCardInUseConfirm": "このレートカードは既存の見積で使用されています。保存しますか？",
+      "saveCardConfirmYes": "保存する",
+      "saveCardConfirmNo": "キャンセル",
+      "cardActionsTitle": "レートカード",
       "saving": "保存中…",
       "saved": "保存しました",
       "saveError": "レートカードの保存に失敗しました",
@@ -219,16 +352,180 @@
       "phases": "フェーズ",
       "phaseName": "フェーズ",
       "percentage": "割合（%）",
+      "phaseMeaning": "意味",
+      "phaseMeanings": {
+        "requirement": "要件の収集と整理",
+        "design": "アーキテクチャ、UI/UX、技術設計",
+        "development": "実装・コーディング",
+        "testing": "QA、UAT、バグ修正",
+        "deployment": "リリース、本番投入、引き渡し"
+      },
+      "phaseLabels": {
+        "requirement": "要件定義",
+        "design": "設計",
+        "development": "開発",
+        "testing": "テスト",
+        "deployment": "リリース"
+      },
+      "roleNames": {
+        "pm": "PM",
+        "project_manager": "プロジェクトマネージャー",
+        "developer": "開発者",
+        "senior_developer": "シニア開発者",
+        "frontend_developer": "フロントエンド開発者",
+        "backend_developer": "バックエンド開発者",
+        "full_stack_developer": "フルスタック開発者",
+        "qa": "QA",
+        "qa_engineer": "QAエンジニア",
+        "designer": "デザイナー",
+        "ui_designer": "UIデザイナー",
+        "ux_designer": "UXデザイナー",
+        "architect": "アーキテクト",
+        "devops": "DevOps",
+        "business_analyst": "ビジネスアナリスト",
+        "tech_lead": "テックリード"
+      },
+      "setupItemNames": {
+        "infrastructure": "インフラ",
+        "tooling": "ツール",
+        "third_party": "第三者サービス"
+      },
       "contingency": "予備費（%）",
       "overhead": "間接費（%）",
       "tax": "税率（%）",
-      "setupCosts": "セットアップ費用",
-      "infrastructure": "インフラ",
-      "tooling": "ツール",
-      "thirdParty": "第三者",
+      "setupCosts": "セットアップ費用（NRC）",
+      "setupCostsHint": "これらの初期費用は見積計算時にNRCに含まれます。",
+      "setupTotal": "セットアップ費用合計",
+      "monthlyRcHint": "月額RC小計には、個別見積の保守サポート時間は含まれません。",
+      "monthlyRcSubtotal": "月額RC小計",
+      "annualRcSubtotal": "年額RC小計（×12）",
+      "addItem": "項目を追加",
+      "removeItem": "削除",
+      "cardName": "レートカード名",
+      "selectCard": "レートカード",
+      "activeCard": "有効",
+      "createCard": "カードを作成",
+      "createCardConfirm": "作成",
+      "createCardCancel": "キャンセル",
+      "creatingCard": "作成中…",
+      "createCardError": "レートカードの作成に失敗しました",
+      "switchCardError": "レートカードの切り替えに失敗しました",
+      "newCardName": "新しいカード名",
+      "newCardDefaultName": "新規レートカード",
+      "noCards": "レートカードがありません。作成して開始してください。",
+      "loadVersion": "バージョンを読み込み",
+      "versionOption": "バージョン {number}{label}",
+      "versionLabel": "バージョンラベル",
+      "versionLabelPlaceholder": "例：2026年Q3 クライアント向け",
+      "unsavedChanges": "未保存の変更あり",
+      "dailyRateFormula": "時間単価 × 8",
+      "resetDailyRate": "時間単価から再計算",
       "monthlyRcItems": "月額RC項目",
       "itemName": "項目",
-      "amount": "金額（¥）"
+      "amount": "金額（¥）",
+      "deleteCard": "カードを削除",
+      "deleteCardConfirm": "「{name}」を削除しますか？元に戻せません。",
+      "deleteCardConfirmYes": "削除する",
+      "deleteCardConfirmNo": "キャンセル",
+      "deletingCard": "削除中…",
+      "deleteCardError": "レートカードの削除に失敗しました",
+      "deleteCardInUse": "削除できません：このレートカードは見積で使用されています。",
+      "deleteLastCardHint": "少なくとも1つのレートカードが必要です。",
+      "estimateCountBadge": "{count}件の見積",
+      "lockedBanner": "このレートカードは{count}件の出力済みまたは完了見積で使用されているため編集できません。変更するには複製してください。",
+      "lockedSaveError": "このレートカードはロックされています。変更するには複製してください。",
+      "duplicateCard": "カードを複製",
+      "duplicateModalTitle": "レートカードを複製",
+      "duplicateModalDescription": "新しい名前で編集可能なコピーを作成します。コピーが新規見積の有効レートカードになります。",
+      "duplicateOriginalName": "元の名前",
+      "duplicateNewName": "新しい名前",
+      "duplicateDefaultName": "{name}（コピー）",
+      "duplicateConfirm": "複製",
+      "duplicateCancel": "キャンセル",
+      "duplicating": "複製中…",
+      "duplicateError": "レートカードの複製に失敗しました",
+      "usageTitle": "このレートカードを使用している見積",
+      "usageLoading": "見積を読み込み中…",
+      "usageEmpty": "このレートカードを使用した見積はまだありません。",
+      "usageProject": "プロジェクト",
+      "usageClient": "クライアント",
+      "usageStatus": "ステータス",
+      "usageUpdated": "最終更新",
+      "ai": {
+        "suggest": "AI提案",
+        "noEstimatesHint": "プロジェクト固有の文脈を使う場合は、このレートカードにプロジェクトを紐づけてください。",
+        "noLinkOption": "紐づけなし — 自由入力",
+        "modalTitle": "AI提案 — {section}",
+        "modalDescription": "プロジェクトを紐づけると見積データを参照できます。紐づけなしを選ぶとプロンプトのみで自由に提案します。",
+        "estimateLabel": "紐づいたプロジェクト",
+        "promptLabel": "プロンプト",
+        "promptPlaceholder": "例: 連携要件に基づきクラウド基盤向けのDevOpsロールを追加",
+        "generate": "提案を生成",
+        "generating": "生成中…",
+        "apply": "提案を適用",
+        "cancel": "キャンセル",
+        "error": "AI提案に失敗しました。再試行するかAI設定を確認してください。",
+        "previewTitle": "{project} 向けの提案",
+        "previewTitleNoLink": "自由入力の提案",
+        "noSuggestions": "追加する新規項目がありません。別のプロンプトまたはプロジェクトをお試しください。",
+        "replaceAllPhasesHint": "この提案はフェーズ比率をすべて置き換えます。適用すると現在のフェーズ表が上書きされます。",
+        "sections": {
+          "roles": "ロール",
+          "phases": "フェーズ",
+          "setup_cost_items": "セットアップ費用（NRC）",
+          "monthly_rc_items": "月次RC項目"
+        }
+      },
+      "developmentApproach": "開発アプローチ",
+      "developmentApproachHint": "見積計算時に工数・チーム規模・人件費に反映される係数として適用されます。",
+      "developmentApproachOptions": {
+        "traditional": {
+          "label": "従来型開発",
+          "description": "AI支援を最小限とした手作業によるソフトウェア開発。"
+        },
+        "ai_assisted": {
+          "label": "AI支援開発",
+          "description": "GitHub Copilot、Cursor AI、Claude Code などのAIコーディングツールを主に活用した開発。"
+        },
+        "hybrid": {
+          "label": "ハイブリッド開発",
+          "description": "従来型開発とAI支援開発を組み合わせた開発。"
+        },
+        "low_code": {
+          "label": "ローコード / ノーコード開発",
+          "description": "ローコードまたはノーコードプラットフォームを用い、カスタムコーディングを最小限にした開発。"
+        }
+      },
+      "allCardsList": {
+        "title": "すべてのレートカード",
+        "description": "レートカード名をクリックして詳細を表示・編集します。",
+        "loading": "レートカードを読み込み中…",
+        "empty": "レートカードがありません。",
+        "name": "レートカード名",
+        "developmentApproach": "開発アプローチ",
+        "status": "ステータス",
+        "estimates": "見積数",
+        "estimateCount": "{count}",
+        "statusActive": "有効",
+        "statusInactive": "無効",
+        "statusLocked": "ロック中",
+        "backToList": "← すべてのレートカード",
+        "detailTitle": "レートカード詳細",
+        "detailDescription": "ロール、単価、コスト前提を表示・編集します。"
+      }
+  },
+  "admin": {
+    "title": "管理",
+    "loading": "読み込み中…",
+    "loadError": "管理ページを読み込めませんでした。",
+    "tabs": {
+      "users": "ユーザー",
+      "discountSettings": "見積割引",
+      "aiSettings": "AI設定",
+      "smtpSettings": "SMTP設定",
+      "formulas": "計算式",
+      "help": "ヘルプ",
+      "system": "システム"
     },
     "users": {
       "loading": "ユーザーを読み込み中…",
@@ -237,10 +534,20 @@
       "listTitle": "ユーザー一覧",
       "email": "メール",
       "displayName": "表示名",
+      "companyName": "会社名",
+      "companyNamePlaceholder": "新規見積のデフォルトクライアント名",
       "password": "パスワード",
       "locale": "言語",
       "localeJa": "日本語",
       "localeEn": "英語",
+      "currency": "通貨",
+      "currencyJPY": "円（JPY）",
+      "currencyUSD": "米ドル（USD）",
+      "currencyPHP": "フィリピンペソ（PHP）",
+      "isActive": "有効",
+      "status": "状態",
+      "activeYes": "有効",
+      "activeNo": "無効",
       "isAdmin": "管理者",
       "adminYes": "はい",
       "adminNo": "いいえ",
@@ -248,6 +555,14 @@
       "creating": "作成中…",
       "createError": "ユーザーの作成に失敗しました",
       "updateError": "ユーザーの更新に失敗しました",
+      "editTitle": "ユーザーを編集",
+      "edit": "編集",
+      "save": "保存",
+      "saving": "保存中…",
+      "delete": "削除",
+      "deleting": "削除中…",
+      "deleteConfirm": "ユーザー {email} を削除しますか？この操作は取り消せません。",
+      "deleteError": "ユーザーの削除に失敗しました",
       "actions": "操作",
       "resetPassword": "パスワードリセット",
       "newPassword": "新しいパスワード",
@@ -258,12 +573,77 @@
     "aiSettings": {
       "loading": "AI設定を読み込み中…",
       "loadError": "AI設定の読み込みに失敗しました",
-      "readOnlyNote": "AIプロバイダーとモデルは環境変数で設定され、ここからは変更できません。",
+      "description": "使用中のAIプロバイダーとモデルを選択し、OpenAIおよびAnthropicのAPIキーを設定します。",
       "provider": "プロバイダー",
+      "providerOpenai": "OpenAI (GPT)",
+      "providerAnthropic": "Anthropic (Claude)",
       "model": "モデル",
+      "openaiApiKey": "OpenAI APIキー",
+      "anthropicApiKey": "Anthropic APIキー",
+      "apiKeyPlaceholder": "更新する場合は新しいキーを入力",
+      "apiKeyConfigured": "設定済み（{hint}）",
+      "apiKeyNotConfigured": "未設定",
+      "save": "設定を保存",
+      "saving": "保存中…",
+      "saved": "AI設定を保存しました",
+      "saveError": "AI設定の保存に失敗しました",
+      "testConnection": "接続テスト",
+      "testing": "テスト中…",
+      "testSuccess": "接続に成功しました",
+      "testFailed": "接続に失敗しました: {message}",
+      "testNoKey": "APIキーを入力するか、保存済みのキーを使用してください",
+      "testError": "接続テストに失敗しました",
       "hermesHealth": "Hermesサービス",
       "statusOk": "正常",
       "statusIssue": "問題あり"
+    },
+    "discountSettings": {
+      "loading": "割引設定を読み込み中…",
+      "loadError": "割引設定の読み込みに失敗しました",
+      "description": "見積計算時に適用する内部割引率です。エンドユーザーおよびクライアントにはこの割引率や内訳は表示されません。",
+      "rateLabel": "割引率",
+      "rateHint": "各計算コスト項目に適用されます。例: ¥1,000 に 30% 割引を適用すると ¥700 になります。",
+      "applicationTitle": "計算への適用方法",
+      "applicationIntro": "見積計算の最後に、NRC各項目に (1 − 割引率) の乗数を適用します。経常費用（RC）には割引を適用しません。",
+      "applicationPoints": [
+        "NRCの人件費、セットアップ、予備費、間接費に割引乗数を乗じます。",
+        "内訳のロール単価は、割引後の人件費コストから再計算されます。",
+        "月次・年次のRC合計は変更されません。",
+        "初年度合計は、割引後NRC合計 + 年次RC として再計算されます。",
+        "エンドユーザーとエクスポートには、割引率や割引内訳は表示されません。"
+      ],
+      "invalidRate": "0〜100 の整数で入力してください。",
+      "save": "設定を保存",
+      "saving": "保存中…",
+      "saved": "割引設定を保存しました",
+      "saveError": "割引設定の保存に失敗しました"
+    },
+    "smtpSettings": {
+      "loading": "SMTP設定を読み込み中…",
+      "loadError": "SMTP設定の読み込みに失敗しました",
+      "description": "エクスポートメール送信用のSMTPを設定します。値はデータベースに保存され、.envのデフォルトを上書きします。",
+      "envFallbackHint": "一部の値はまだ.envのデフォルトを使用しています。ここで保存するとデータベースに記録されます。",
+      "smtpHost": "SMTPホスト",
+      "smtpPort": "SMTPポート",
+      "smtpUser": "SMTPユーザー",
+      "smtpPassword": "SMTPパスワード",
+      "smtpFrom": "送信元アドレス",
+      "smtpUseTls": "TLSを使用（STARTTLS）",
+      "passwordPlaceholder": "更新する場合は新しいパスワードを入力",
+      "passwordConfigured": "設定済み（{hint}）",
+      "passwordNotConfigured": "未設定",
+      "configuredStatus": "メール送信",
+      "statusConfigured": "設定済み",
+      "statusNotConfigured": "未設定",
+      "save": "設定を保存",
+      "saving": "保存中…",
+      "saved": "SMTP設定を保存しました",
+      "saveError": "SMTP設定の保存に失敗しました",
+      "testConnection": "接続テスト",
+      "testing": "テスト中…",
+      "testSuccess": "接続に成功しました",
+      "testFailed": "接続に失敗しました: {message}",
+      "testError": "接続テストに失敗しました"
     },
     "system": {
       "loading": "システム状態を読み込み中…",
@@ -275,10 +655,443 @@
       "stuckExtractions": "停止中の抽出（10分以上）",
       "stuckWarning": "10分以上抽出状態の見積があります。",
       "aiConfig": "AI設定",
+      "provider": "プロバイダー",
+      "model": "モデル",
+      "openaiCredentials": "OpenAI認証情報",
+      "anthropicCredentials": "Anthropic認証情報",
+      "configured": "設定済み",
+      "notConfigured": "未設定",
       "statusOk": "正常",
       "statusError": "エラー",
       "statusUnreachable": "接続不可"
+    },
+    "formulas": {
+      "title": "計算式リファレンス",
+      "intro": "見積、レートカード、差異、KPIの計算方法のリファレンスです。見積にレートカードが指定されている場合はそのバージョンを、未指定の場合は現在ユーザーのアクティブなレートカードを使用します。管理者はすべてのレートカードにアクセスできます。",
+      "columns": {
+        "metric": "項目",
+        "formula": "計算式",
+        "notes": "備考"
+      },
+      "effort": {
+        "title": "工数単位",
+        "description": "見積の機能項目から算出します。",
+        "rows": [
+          {
+            "metric": "レートカードの解決",
+            "formula": "estimate.rate_card_id → そのカードのバージョン、未設定時はユーザーのアクティブカード",
+            "notes": "再計算時は rate_card_version_id を固定（recalculate_with_current_rates=true を除く）"
+          },
+          {
+            "metric": "総工数（時間）",
+            "formula": "Σ (機能項目の時間 × 開発アプローチ工数係数)",
+            "notes": "工数係数: 従来型 1.0、AI支援 0.75、ハイブリッド 0.875、ローコード 0.55"
+          },
+          {
+            "metric": "総工数（日）",
+            "formula": "total_hours ÷ 8",
+            "notes": "1人日 = 8時間（HOURS_PER_EFFORT_DAY）"
+          },
+          {
+            "metric": "フェーズ別時間",
+            "formula": "total_hours × phase.percentage",
+            "notes": "フェーズごと1行。割合の合計は100%であること"
+          },
+          {
+            "metric": "ロール別時間",
+            "formula": "ロール R の時間の Σ",
+            "notes": "機能項目をロールで集計（工数係数適用後）"
+          },
+          {
+            "metric": "要員数（ロール別）",
+            "formula": "ceil(role_hours ÷ capacity)、最小 1",
+            "notes": "capacity = max(estimated_duration_days × 8, 8)。ガント期間を優先"
+          },
+          {
+            "metric": "推奨チーム規模",
+            "formula": "ceil(active_roles × team_size_multiplier)、最小 1",
+            "notes": "チーム規模係数: 従来型 1.0、AI支援 0.85、ハイブリッド 0.90、ローコード 0.70"
+          },
+          {
+            "metric": "開発アプローチ",
+            "formula": "レートカード設定（必須）",
+            "notes": "traditional | ai_assisted | hybrid | low_code — 工数・チーム規模係数に影響"
+          }
+        ]
+      },
+      "nrc": {
+        "title": "非経常費用（NRC）",
+        "description": "プロジェクトの一回限りの費用（円）。",
+        "rows": [
+          {
+            "metric": "人件費",
+            "formula": "Σ (role_hours × hourly_rate_jpy)",
+            "notes": "レートカードのロール単価を使用"
+          },
+          {
+            "metric": "セットアップ",
+            "formula": "Σ setup_cost_items.amount_jpy",
+            "notes": "レートカードのNRCセットアップ明細"
+          },
+          {
+            "metric": "予備費",
+            "formula": "labor × contingency_rate",
+            "notes": "レートカードの率（例: 0.10 = 10%）"
+          },
+          {
+            "metric": "間接費",
+            "formula": "labor × overhead_rate",
+            "notes": "レートカードの率"
+          },
+          {
+            "metric": "NRC合計",
+            "formula": "labor + setup + contingency + overhead",
+            "notes": "tax_rateは保存されますが計算には未使用"
+          }
+        ]
+      },
+      "rc": {
+        "title": "経常費用（RC）",
+        "description": "月次・年次の継続費用（円）。",
+        "rows": [
+          {
+            "metric": "保守",
+            "formula": "monthly_support_hours × サポートロールの時間単価",
+            "notes": "見積の保守設定から"
+          },
+          {
+            "metric": "月次RC明細",
+            "formula": "Σ monthly_rc_items.amount_jpy",
+            "notes": "レートカードの明細"
+          },
+          {
+            "metric": "月次合計",
+            "formula": "maintenance + Σ 月次RC明細",
+            "notes": ""
+          },
+          {
+            "metric": "年次合計",
+            "formula": "monthly_total × 12",
+            "notes": ""
+          },
+          {
+            "metric": "初年度合計",
+            "formula": "NRC合計 + 年次RC",
+            "notes": "管理者割引前。割引セクションを参照"
+          }
+        ]
+      },
+      "discount": {
+        "title": "管理者見積割引",
+        "description": "管理画面の「見積割引」で設定する内部割引。エンドユーザーとエクスポートには表示されません。",
+        "rows": [
+          {
+            "metric": "割引乗数",
+            "formula": "1 − estimate_discount_rate",
+            "notes": "計算終了時に適用（例: 0.30 → 乗数 0.70）"
+          },
+          {
+            "metric": "NRC人件費・セットアップ・予備費・間接費",
+            "formula": "amount_jpy × 乗数",
+            "notes": "内訳のロール単価は割引後コストから再計算"
+          },
+          {
+            "metric": "RC月次・年次",
+            "formula": "変更なし",
+            "notes": "経常費用には割引を適用しない"
+          },
+          {
+            "metric": "初年度合計（割引後）",
+            "formula": "割引後NRC合計 + 年次RC",
+            "notes": "NRC割引適用後に再計算"
+          }
+        ]
+      },
+      "gantt": {
+        "title": "ガントタイムライン",
+        "description": "計算時にプロジェクト開始日を指定した場合に生成されるスケジュール。",
+        "rows": [
+          {
+            "metric": "ガントタイムライン",
+            "formula": "build_gantt_timeline(機能項目, フェーズ, project_start_date)",
+            "notes": "稼働日カレンダー上のフェーズ順タスク"
+          },
+          {
+            "metric": "推定期間（日）",
+            "formula": "gantt.total_working_days があればそれ、なければ total_effort_days",
+            "notes": "要員数とチーム規模の文脈で使用"
+          }
+        ]
+      },
+      "rateCard": {
+        "title": "レートカード",
+        "description": "レートカードのデフォルト、検証、アクセスルール。",
+        "rows": [
+          {
+            "metric": "所有権",
+            "formula": "created_by == user.id",
+            "notes": "一般ユーザーは自分のカードのみ一覧・編集・割当可能"
+          },
+          {
+            "metric": "アクティブカード",
+            "formula": "所有者ごとに1件 is_active",
+            "notes": "管理者: グローバルなアクティブ動作"
+          },
+          {
+            "metric": "ロックされたカード",
+            "formula": "1件以上の見積で使用中",
+            "notes": "複製して過去の見積に影響せず編集可能なコピーを作成"
+          },
+          {
+            "metric": "見積への割当",
+            "formula": "ユーザーは所有カードのみ rate_card_id を設定可能",
+            "notes": "管理者は任意のカードを割当可能"
+          },
+          {
+            "metric": "日単価",
+            "formula": "hourly_rate_jpy × 8",
+            "notes": "日単価未入力時のデフォルト。編集・リセット可"
+          },
+          {
+            "metric": "フェーズ割合",
+            "formula": "Σ phase.percentage = 1.0",
+            "notes": "保存前に合計100%（1.0）であること"
+          },
+          {
+            "metric": "セットアップ合計",
+            "formula": "Σ setup_cost_items.amount_jpy",
+            "notes": "レートカード編集のNRCセットアップ欄に表示"
+          },
+          {
+            "metric": "月次RC合計",
+            "formula": "Σ monthly_rc_items.amount_jpy",
+            "notes": "レートカード編集のRC欄に表示"
+          },
+          {
+            "metric": "開発アプローチ",
+            "formula": "レートカード必須設定",
+            "notes": "見積の工数・チーム規模係数に影響"
+          }
+        ]
+      },
+      "variance": {
+        "title": "差異（実績 vs 見積）",
+        "description": "見積完了後に実績を入力した場合。",
+        "rows": [
+          {
+            "metric": "差異 %",
+            "formula": "(actual − estimated) ÷ estimated × 100",
+            "notes": "見積が0の場合、差異は0%"
+          },
+          {
+            "metric": "重要度: 緑",
+            "formula": "|差異 %| ≤ 10",
+            "notes": "目標内"
+          },
+          {
+            "metric": "重要度: 黄",
+            "formula": "10 < |差異 %| ≤ 25",
+            "notes": "中程度の乖離"
+          },
+          {
+            "metric": "重要度: 赤",
+            "formula": "|差異 %| > 25",
+            "notes": "大きな乖離"
+          },
+          {
+            "metric": "比較項目",
+            "formula": "effort_hours, effort_days, nrc_jpy, rc_monthly_jpy",
+            "notes": "各項目ごとに差異行を生成"
+          }
+        ]
+      }
+    },
+    "help": {
+      "title": "リソース",
+      "description": "レートカード設定、AI文書抽出、コスト計算、日英エクスポートまで、見積ワークフローに関するガイド・FAQ・リファレンスをご覧ください。",
+      "search": {
+        "placeholder": "ガイド、FAQ、ドキュメントを検索…",
+        "clear": "検索をクリア",
+        "noResults": "「{query}」に一致する結果がありません",
+        "resultCount": "{count} 件の結果",
+        "browseAll": "下のトピックを参照するか、検索を絞り込んでください。"
+      },
+      "categories": {
+        "all": "すべて",
+        "articles": "記事",
+        "faqs": "FAQ",
+        "documentation": "ドキュメント"
+      },
+      "articles": [
+        {
+          "id": "rate-cards-basics",
+          "title": "レートカードの基本",
+          "summary": "レートカードが見積ごとのロール、フェーズ、レートをどう定義するか。",
+          "body": "レートカードにはロール別の時間単価・日単価、フェーズ比率、予備費、間接費、税、セットアップ費用、月次RC項目が含まれます。アクティブなレートカードが見積計算に適用されます。各ユーザーは自分のレートカードを管理し、管理者はすべてのカードにアクセスできます。既存の見積で使用されているカードはロックされ、過去の見積に影響を与えずに変更するには複製してください。"
+        },
+        {
+          "id": "export-formats",
+          "title": "エクスポート形式",
+          "summary": "日本語または英語のPDF、Excel、Markdownエクスポート。",
+          "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。"
+        },
+        {
+          "id": "locale-switching",
+          "title": "言語の切り替え",
+          "summary": "ヘッダーのロケール切替で日本語・英語UIを使用します。",
+          "body": "右上ヘッダーのロケール切替をクリックして日本語と英語を切り替えます。ナビゲーションの選択は保持されます。翻訳がある場合、見積コンテンツはロケールごとに保存・表示できます。"
+        }
+      ],
+      "faqs": [
+        {
+          "id": "what-is-ai-estimate",
+          "question": "AI見積とは何ですか？",
+          "answer": "AI見積はソフトウェアプロジェクト見積を作成する社内ツールです。構造化されたプロジェクトフォームにクライアントとスコープの情報を入力し、必要に応じて要件文書をアップロードしてAI抽出を行い、確定的な計算エンジンでNRC、RC、初年度コストを円で算出します。"
+        },
+        {
+          "id": "who-can-use",
+          "question": "誰がこのシステムを利用できますか？",
+          "answer": "アクセスは認証情報に基づきます。アカウントは組織内で作成されます—付与されたメールアドレスとパスワードでサインインしてください。アカウントが必要な場合やログインできない場合は、管理者にお問い合わせください。"
+        },
+        {
+          "id": "supported-languages",
+          "question": "対応している言語は？",
+          "answer": "インターフェースは日本語と英語で利用できます。ヘッダーのロケール切替でUI言語を変更できます。計算後、どちらの言語でも見積をエクスポートできます。"
+        },
+        {
+          "id": "supported-documents",
+          "question": "どのような文書をアップロードできますか？",
+          "answer": "見積にPDFなど対応形式の文書をアップロードできます。AIが機能一覧と工数提案を抽出します。計算を実行する前に、必ずAI提案をレビュー・調整してください。"
+        },
+        {
+          "id": "export-options",
+          "question": "利用できるエクスポート形式は？",
+          "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。"
+        },
+        {
+          "id": "estimate-statuses",
+          "question": "見積ステータスの意味は？",
+          "answer": "下書き：フォーム入力中。抽出中：AIがアップロード文書を処理中。レビュー：機能の編集可能。計算済：コスト算出済。エクスポート済：少なくとも1回エクスポート済。"
+        },
+        {
+          "id": "login-trouble",
+          "question": "ログインできません。確認すべきことは？",
+          "answer": "メールアドレスとパスワードを確認してください。無効化されたアカウントはサインインできません。問題が続く場合は、管理者にアカウントが有効か確認し、必要なら資格情報のリセットを依頼してください。"
+        },
+        {
+          "id": "ai-extraction",
+          "question": "AIドキュメント抽出はどう動作しますか？",
+          "answer": "見積にPDFなど対応形式の文書をアップロードします。システムが抽出処理を行い、機能一覧と工数提案を返します。計算前に必ずAI提案をレビュー・調整してください。正確な見積にはレビュー工程が必要です。"
+        }
+      ],
+      "documentation": [
+        {
+          "id": "cost-overview",
+          "title": "NRC、RC、初年度コスト",
+          "summary": "非経常、経常、初年度合計の概要。",
+          "body": "NRC（非経常コスト）は要件からリリースまでの一回限りの工数に加え、セットアップ費用と予備費・間接費・税を含みます。RC（経常コスト）は保守サポートなどの月次項目を12倍した年間小計です。初年度コストはNRCと年間RC合計を合わせた1年目のプロジェクト全体像です。"
+        },
+        {
+          "id": "estimate-workflow",
+          "title": "見積ワークフロー",
+          "summary": "フォーム入力からエクスポートまでの一連の流れ。",
+          "body": "見積を作成しプロジェクトフォームを完成させます。必要に応じてAI抽出用に文書をアップロードします。機能一覧と工数をレビュー・編集します。アクティブなレートカードを確認します。計算を実行してフェーズ内訳、ガント、コストサマリーを生成します。クライアント提出の準備ができたら希望形式でエクスポートします。"
+        },
+        {
+          "id": "rate-card-fields",
+          "title": "レートカード項目リファレンス",
+          "summary": "レートカード各セクションが計算に与える影響。",
+          "body": "ロールはチーム種別ごとの時間・日単価を定義します。フェーズは要件、設計、開発、テスト、リリースへの工数配分です—比率の合計は100%である必要があります。予備費、間接費、税は乗数として適用されます。セットアップ費用はNRCの一回限り項目です。月次RC項目は経常費用を追加します。開発アプローチは工数計算の生産性前提に影響します。"
+        }
+      ]
     }
+  },
+  "help": {
+    "title": "ヘルプ",
+    "description": "見積の作成、文書のアップロード、コスト計算、エクスポートに関するよくある質問とガイドです。",
+    "search": {
+      "placeholder": "ガイド、FAQ、ドキュメントを検索…",
+      "clear": "検索をクリア",
+      "noResults": "「{query}」に一致する結果がありません",
+      "resultCount": "{count} 件の結果",
+      "browseAll": "下のトピックを参照するか、検索を絞り込んでください。"
+    },
+    "categories": {
+      "all": "すべて",
+      "articles": "記事",
+      "faqs": "FAQ",
+      "documentation": "ドキュメント"
+    },
+    "articles": [
+      {
+        "id": "export-formats",
+        "title": "エクスポート形式",
+        "summary": "日本語または英語のPDF、Excel、Markdownエクスポート。",
+        "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。"
+      },
+      {
+        "id": "locale-switching",
+        "title": "言語の切り替え",
+        "summary": "ヘッダーのロケール切替で日本語・英語UIを使用します。",
+        "body": "右上ヘッダーのロケール切替をクリックして日本語と英語を切り替えます。ナビゲーションの選択は保持されます。翻訳がある場合、見積コンテンツはロケールごとに保存・表示できます。"
+      }
+    ],
+    "faqs": [
+      {
+        "id": "what-is-ai-estimate",
+        "question": "AI見積とは何ですか？",
+        "answer": "AI見積はソフトウェアプロジェクト見積を作成する社内ツールです。構造化されたプロジェクトフォームにクライアントとスコープの情報を入力し、必要に応じて要件文書をアップロードしてAI抽出を行い、確定的な計算エンジンでNRC、RC、初年度コストを円で算出します。"
+      },
+      {
+        "id": "who-can-use",
+        "question": "誰がこのシステムを利用できますか？",
+        "answer": "アクセスは認証情報に基づきます。アカウントは組織内で作成されます—付与されたメールアドレスとパスワードでサインインしてください。アカウントが必要な場合やログインできない場合は、管理者にお問い合わせください。"
+      },
+      {
+        "id": "supported-languages",
+        "question": "対応している言語は？",
+        "answer": "インターフェースは日本語と英語で利用できます。ヘッダーのロケール切替でUI言語を変更できます。計算後、どちらの言語でも見積をエクスポートできます。"
+      },
+      {
+        "id": "supported-documents",
+        "question": "どのような文書をアップロードできますか？",
+        "answer": "見積にPDFなど対応形式の文書をアップロードできます。AIが機能一覧と工数提案を抽出します。計算を実行する前に、必ずAI提案をレビュー・調整してください。"
+      },
+      {
+        "id": "export-options",
+        "question": "利用できるエクスポート形式は？",
+        "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。"
+      },
+      {
+        "id": "estimate-statuses",
+        "question": "見積ステータスの意味は？",
+        "answer": "下書き：フォーム入力中。抽出中：AIがアップロード文書を処理中。レビュー：機能の編集可能。計算済：コスト算出済。エクスポート済：少なくとも1回エクスポート済。"
+      },
+      {
+        "id": "login-trouble",
+        "question": "ログインできません。確認すべきことは？",
+        "answer": "メールアドレスとパスワードを確認してください。無効化されたアカウントはサインインできません。問題が続く場合は、管理者にアカウントが有効か確認し、必要なら資格情報のリセットを依頼してください。"
+      },
+      {
+        "id": "ai-extraction",
+        "question": "AIドキュメント抽出はどう動作しますか？",
+        "answer": "見積にPDFなど対応形式の文書をアップロードします。システムが抽出処理を行い、機能一覧と工数提案を返します。計算前に必ずAI提案をレビュー・調整してください。正確な見積にはレビュー工程が必要です。"
+      }
+    ],
+    "documentation": [
+      {
+        "id": "cost-overview",
+        "title": "NRC、RC、初年度コスト",
+        "summary": "非経常、経常、初年度合計の概要。",
+        "body": "NRC（非経常コスト）は要件からリリースまでの一回限りの工数に加え、セットアップ費用と予備費・間接費・税を含みます。RC（経常コスト）は保守サポートなどの月次項目を12倍した年間小計です。初年度コストはNRCと年間RC合計を合わせた1年目のプロジェクト全体像です。"
+      },
+      {
+        "id": "estimate-workflow",
+        "title": "見積ワークフロー",
+        "summary": "フォーム入力からエクスポートまでの一連の流れ。",
+        "body": "見積を作成しプロジェクトフォームを完成させます。必要に応じてAI抽出用に文書をアップロードします。機能一覧と工数をレビュー・編集します。アクティブなレートカードを確認します。計算を実行してフェーズ内訳、ガント、コストサマリーを生成します。クライアント提出の準備ができたら希望形式でエクスポートします。"
+      }
+    ]
   },
   "errors": {
     "AI_TIMEOUT": "AIリクエストがタイムアウトしました。もう一度お試しください。",
@@ -305,6 +1118,7 @@
   "form": {
     "selectPlaceholder": "選択してください",
     "required": "必須項目です",
+    "optionalWithDocuments": "ドキュメントがアップロードされています。プロジェクト名以外の項目は任意です。",
     "project_name": "プロジェクト名",
     "nature_of_work": "作業の性質",
     "scope_boundaries": "スコープ境界",
@@ -336,6 +1150,65 @@
       "japan": "主に国内",
       "offshore": "主にオフショア",
       "hybrid": "国内とオフショアの混合"
+    }
+  },
+  "welcome": {
+    "title": "ようこそ",
+    "description": "AIを活用したソフトウェアプロジェクト見積。",
+    "loginLink": "初めての方はこちら：ウェルカムガイド",
+    "heroCta": "サインイン",
+    "footerCta": "始める準備はできましたか？",
+    "footerCtaButton": "アカウントにサインイン",
+    "helpLink": "サインイン済みの方はヘルプでFAQとガイドをご覧ください。",
+    "userGuide": {
+      "eyebrow": "ワークフロー",
+      "title": "使い方",
+      "stepCta": "始める",
+      "intro": "クライアント要件からエクスポートまで、ソフトウェアプロジェクト見積を作成する手順です。",
+      "steps": [
+        {
+          "icon": "login",
+          "title": "サインイン",
+          "description": "メールアドレスとパスワードでログインし、システムにアクセスします。",
+          "href": "/login"
+        },
+        {
+          "icon": "rateCard",
+          "title": "レートカードを設定",
+          "description": "ロール、時間単価、フェーズ配分、間接費などを定義します。アクティブなレートカードが見積計算に適用されます。",
+          "href": "/rate-cards"
+        },
+        {
+          "icon": "create",
+          "title": "見積を作成",
+          "description": "新規見積を開始し、21項目のプロジェクトフォームにクライアントとスコープの情報を入力します。",
+          "href": "/estimates/new"
+        },
+        {
+          "icon": "upload",
+          "title": "ドキュメントをアップロード",
+          "description": "要件ドキュメントを添付します。AIが機能と工数の提案を自動抽出します。",
+          "href": null
+        },
+        {
+          "icon": "review",
+          "title": "機能をレビュー",
+          "description": "計算を実行する前に、抽出された機能、工数、前提条件を編集します。",
+          "href": null
+        },
+        {
+          "icon": "calculate",
+          "title": "コストを計算",
+          "description": "計算エンジンを実行し、NRC、RC、初年度合計を円で算出します。",
+          "href": null
+        },
+        {
+          "icon": "export",
+          "title": "結果をエクスポート",
+          "description": "日本語または英語でPDF、Excel、Markdownレポートをダウンロードします。",
+          "href": null
+        }
+      ]
     }
   }
 }

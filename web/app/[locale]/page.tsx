@@ -14,5 +14,5 @@ export default async function HomePage({
     redirect(`/${locale}/estimates`);
   }
 
-  redirect(`/${locale}/login`);
+  redirect(`/${locale}/welcome`);
 }

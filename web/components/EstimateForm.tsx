@@ -1,13 +1,14 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { apiJson } from "@/lib/api";
 import type { EstimateDetail } from "@/lib/estimate";
 import {
   FORM_FIELDS,
+  isFieldRequired,
   type FormFieldKey,
   type FormFieldValues,
   formValuesFromData,
@@ -15,7 +16,11 @@ import {
 
 type EstimateFormProps = {
   estimate: EstimateDetail;
-  locale: string;
+  hasUploadedDocuments?: boolean;
+};
+
+export type EstimateFormHandle = {
+  saveIfNeeded: () => Promise<boolean>;
 };
 
 const inputClassName =
@@ -34,8 +39,12 @@ function valuesEqual(a: FormFieldValues, b: FormFieldValues): boolean {
   return FORM_FIELDS.every((field) => a[field.key] === b[field.key]);
 }
 
-export default function EstimateForm({ estimate, locale }: EstimateFormProps) {
+const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function EstimateForm(
+  { estimate, hasUploadedDocuments = false },
+  ref,
+) {
   const router = useRouter();
+  const locale = useLocale();
   const tForm = useTranslations("form");
   const tEstimates = useTranslations("estimates");
 
@@ -86,7 +95,7 @@ export default function EstimateForm({ estimate, locale }: EstimateFormProps) {
     const nextErrors: Partial<Record<FormFieldKey, string>> = {};
 
     for (const field of FORM_FIELDS) {
-      if (!field.required) {
+      if (!isFieldRequired(field, hasUploadedDocuments)) {
         continue;
       }
       if (!nextValues[field.key].trim()) {
@@ -96,6 +105,78 @@ export default function EstimateForm({ estimate, locale }: EstimateFormProps) {
 
     return nextErrors;
   }
+
+  useEffect(() => {
+    if (!hasUploadedDocuments) {
+      return;
+    }
+    setErrors((current) => {
+      const next = { ...current };
+      let changed = false;
+      for (const field of FORM_FIELDS) {
+        if (field.key !== "project_name" && next[field.key]) {
+          delete next[field.key];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [hasUploadedDocuments]);
+
+  async function persistValues(nextValues: FormFieldValues): Promise<void> {
+    const formData = Object.fromEntries(
+      FORM_FIELDS.filter((field) => field.key !== "project_name").map((field) => [
+        field.key,
+        nextValues[field.key],
+      ]),
+    );
+
+    await apiJson<EstimateDetail>(
+      `/estimates/${estimate.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          project_name: nextValues.project_name.trim(),
+          form_data: formData,
+        }),
+      },
+      locale,
+    );
+
+    setSavedValues(nextValues);
+    setSaveState("saved");
+    router.refresh();
+  }
+
+  const saveIfNeeded = useCallback(async (): Promise<boolean> => {
+    if (valuesEqual(values, savedValues)) {
+      return true;
+    }
+
+    setSaveError(null);
+    const nextErrors = validate(values);
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      return false;
+    }
+
+    setSaving(true);
+    setSaveState("idle");
+
+    try {
+      await persistValues(values);
+      return true;
+    } catch (error) {
+      setSaveState("error");
+      setSaveError(error instanceof Error ? error.message : tEstimates("saveError"));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [hasUploadedDocuments, locale, savedValues, tEstimates, values]);
+
+  useImperativeHandle(ref, () => ({ saveIfNeeded }), [saveIfNeeded]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,25 +192,8 @@ export default function EstimateForm({ estimate, locale }: EstimateFormProps) {
     setSaving(true);
     setSaveState("idle");
 
-    const formData = Object.fromEntries(
-      FORM_FIELDS.filter((field) => field.key !== "project_name").map((field) => [
-        field.key,
-        values[field.key],
-      ]),
-    );
-
     try {
-      await apiJson<EstimateDetail>(`/estimates/${estimate.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          project_name: values.project_name.trim(),
-          form_data: formData,
-        }),
-      });
-
-      setSavedValues(values);
-      setSaveState("saved");
-      router.refresh();
+      await persistValues(values);
     } catch (error) {
       setSaveState("error");
       setSaveError(error instanceof Error ? error.message : tEstimates("saveError"));
@@ -191,17 +255,22 @@ export default function EstimateForm({ estimate, locale }: EstimateFormProps) {
         </div>
       </div>
 
+      {hasUploadedDocuments && (
+        <p className="mb-4 text-sm text-gray-600">{tForm("optionalWithDocuments")}</p>
+      )}
+
       <form id="estimate-form" onSubmit={handleSubmit} className="space-y-5">
         {FORM_FIELDS.map((field) => {
           const fieldId = `field-${field.key}`;
           const label = tForm(field.key);
           const hasError = Boolean(errors[field.key]);
+          const required = isFieldRequired(field, hasUploadedDocuments);
 
           return (
             <div key={field.key}>
               <label htmlFor={fieldId} className="mb-1 block text-sm font-medium">
                 {label}
-                {field.required && <span className="ml-1 text-red-500">*</span>}
+                {required && <span className="ml-1 text-red-500">*</span>}
               </label>
 
               {field.type === "textarea" && (
@@ -257,4 +326,6 @@ export default function EstimateForm({ estimate, locale }: EstimateFormProps) {
       </form>
     </div>
   );
-}
+});
+
+export default EstimateForm;

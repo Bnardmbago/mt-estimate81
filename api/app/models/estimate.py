@@ -1,9 +1,10 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -29,6 +30,7 @@ class EstimateStatus(str, enum.Enum):
 
 class ExportFormat(str, enum.Enum):
     PDF = "pdf"
+    PDF_QUOTATION = "pdf_quotation"
     XLSX = "xlsx"
     MD = "md"
 
@@ -45,10 +47,14 @@ class Estimate(Base):
     rate_card_version_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rate_card_versions.id"), nullable=True
     )
+    rate_card_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rate_cards.id"), nullable=True
+    )
     form_data: Mapped[dict] = mapped_column(JSONB, default=dict)
     extracted_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     maintenance_assumptions: Mapped[dict] = mapped_column(JSONB, default=dict)
     calculation_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    project_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -112,6 +118,7 @@ class FeatureItem(Base):
     hours: Mapped[float] = mapped_column(Numeric(10, 2))
     phase: Mapped[str] = mapped_column(String(50))
     role: Mapped[str] = mapped_column(String(50))
+    localizations: Mapped[dict] = mapped_column(JSONB, default=dict)
     is_ai_generated: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

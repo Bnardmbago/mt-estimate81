@@ -9,6 +9,8 @@ type SystemHealth = {
   hermes: string;
   ai_provider: string;
   ai_model: string;
+  openai_api_key_configured: boolean;
+  anthropic_api_key_configured: boolean;
   stuck_extractions: number;
   storage_usage_bytes: number;
   app_version: string;
@@ -105,9 +107,24 @@ export default function SystemHealthPanel() {
 
       <section className="rounded-lg border border-gray-200 p-4">
         <h3 className="mb-2 text-sm font-medium text-gray-500">{t("aiConfig")}</h3>
-        <p className="text-sm text-gray-700">
-          {health.ai_provider} / {health.ai_model}
-        </p>
+        <dl className="grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-gray-500">{t("provider")}</dt>
+            <dd className="capitalize">{health.ai_provider}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("model")}</dt>
+            <dd>{health.ai_model}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("openaiCredentials")}</dt>
+            <dd>{health.openai_api_key_configured ? t("configured") : t("notConfigured")}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("anthropicCredentials")}</dt>
+            <dd>{health.anthropic_api_key_configured ? t("configured") : t("notConfigured")}</dd>
+          </div>
+        </dl>
       </section>
     </div>
   );

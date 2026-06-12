@@ -301,7 +301,25 @@ All formats generated server-side, locale-aware, stored in file storage.
 
 ### 8.1 Report Sections (all formats)
 
-Project summary, input assumptions, extracted requirements, feature line items, effort summary (hours + effort-days), phase breakdown, role breakdown, NRC breakdown, RC breakdown, first-year total, risks/gaps, AI confidence notes, rate card reference.
+Executive-first layout with 17 sections, shared across PDF, Markdown, and Excel via `report_context`:
+
+1. Project Summary — estimate ID, export revision, estimate type, client, generated date  
+2. Executive Cost Summary — NRC, monthly RC, annual RC, first-year total, AI confidence score, accuracy level (page 1 in PDF)  
+3. Key Assumptions — subset of form fields (development model, team, location, integrations, security, compliance, constraints)  
+4. Input Assumptions — all 21 form fields  
+5. Extracted Requirements — functional/non-functional requirements, modules, roles, external systems  
+6. Feature Line Items — name, description, phase, role, hours, effort-days  
+7. Effort Summary — total hours/days, estimated duration, recommended team size  
+8. Phase Breakdown — hours, days, percentage  
+9. Role Breakdown — hours, rate, cost, labor subtotal  
+10. NRC Breakdown (Detailed) — categorized line items (PM, BA, Development, QA, DevOps, setup, contingency, overhead)  
+11. RC Breakdown (Detailed) — category, monthly, annual per line item  
+12. Cost Drivers — AI-suggested drivers with signed JPY impact  
+13. Risks & Gaps — risks, missing information, estimation warnings, assumption risks  
+14. Estimate Exclusions — out-of-scope items from AI extraction  
+15. AI Confidence Notes — score, factors, missing inputs, recommendations, free-text notes  
+16. Rate Card Reference — name, version, effective date, calculation policy version  
+17. Approval — static signature block (prepared / reviewed / approved)
 
 Currency: `¥X,XXX,XXX`. Dates: `2026年6月7日` (JA) or `June 7, 2026` (EN).
 
@@ -319,7 +337,7 @@ Stale export badge shown when calculation is newer than last export.
 
 ### 9.1 Admin Tabs
 
-1. **Rate cards** — edit roles, phases, rates, RC items, setup costs; save creates new immutable version
+1. **Rate cards** — dedicated Rate Card Management page (all authenticated users): create, edit, duplicate, usage list; cards lock after first use; duplicate for changes. Estimates require a selected rate card before Extract Requirements; that card drives calculation.
 2. **Users** — create, reset password, toggle admin, set locale
 3. **AI settings** — read-only display of provider/model from env; health indicator
 4. **System** — storage usage, Hermes/API/DB health, app version

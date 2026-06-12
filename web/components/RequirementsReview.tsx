@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { apiJson } from "@/lib/api";
 import type { EstimateDetail, ExtractedData } from "@/lib/estimate";
 
@@ -44,6 +44,7 @@ export default function RequirementsReview({
   initialData,
 }: RequirementsReviewProps) {
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("review");
   const [data, setData] = useState<ExtractedData>({ ...emptyData(), ...initialData });
   const [saving, setSaving] = useState(false);
@@ -95,10 +96,14 @@ export default function RequirementsReview({
     ) as ExtractedData;
 
     try {
-      await apiJson<EstimateDetail>(`/estimates/${estimateId}/extracted-data`, {
-        method: "PATCH",
-        body: JSON.stringify(payload),
-      });
+      await apiJson<EstimateDetail>(
+        `/estimates/${estimateId}/extracted-data`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        },
+        locale,
+      );
       setData(payload);
       setSaved(true);
       router.refresh();

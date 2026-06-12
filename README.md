@@ -12,13 +12,15 @@ Internal web application that helps a small team generate software project estim
 
 ## Quick Start (Docker)
 
+**Start Docker Desktop first** — `docker compose` fails if the daemon is not running (`Cannot connect to the Docker daemon`).
+
 ```bash
 # 1. Configure environment
 cp .env.example .env
 # Edit .env — set POSTGRES_PASSWORD, JWT_SECRET, and AI API keys
 
 # 2. Start all services
-docker compose up -d
+docker compose up -d --build
 
 # 3. Run database migrations
 docker compose exec api python -m alembic upgrade head
@@ -26,6 +28,8 @@ docker compose exec api python -m alembic upgrade head
 # 4. Seed admin user and default rate card
 docker compose exec api python scripts/seed_admin.py
 ```
+
+If you see `ModuleNotFoundError: No module named 'app'`, rebuild the API image first: `docker compose up -d --build api`
 
 Open the app at [http://localhost](http://localhost) (nginx) or [http://localhost:3000](http://localhost:3000) (web directly).
 
@@ -88,6 +92,16 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 Restart the API container (or uvicorn process) after changing provider settings.
 
+## PDF Exports
+
+One PDF export is available (Japanese or English via export locale):
+
+| Format | Description |
+|--------|-------------|
+| **PDF (complete project estimate)** | Full estimate report for internal review or clients who need full transparency — executive summary, assumptions, features, NRC/RC breakdown, timeline, risks, approval, etc. |
+
+Excel and Markdown exports include the same content as the PDF report.
+
 ## Services
 
 | Service | Port | Purpose |
@@ -96,7 +110,7 @@ Restart the API container (or uvicorn process) after changing provider settings.
 | web | 3000 | Next.js UI |
 | api | 8000 | FastAPI backend |
 | db | 5432 | PostgreSQL |
-| hermes | 8080 | Document text extraction |
+| hermes | 8080 | Local document text extraction sidecar (PDF, DOCX, XLSX) |
 
 ## Documentation
 

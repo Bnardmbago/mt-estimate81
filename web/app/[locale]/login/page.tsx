@@ -1,11 +1,13 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 export default function LoginPage() {
   const t = useTranslations("login");
+  const tWelcome = useTranslations("welcome");
   const router = useRouter();
   const params = useParams<{ locale: string }>();
   const [email, setEmail] = useState("");
@@ -43,7 +45,10 @@ export default function LoginPage() {
   return (
     <div className="mx-auto max-w-md">
       <h1 className="mb-6 text-2xl font-semibold">{t("title")}</h1>
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-900"
+      >
         <div>
           <label htmlFor="email" className="mb-1 block text-sm font-medium">
             {t("email")}
@@ -85,6 +90,14 @@ export default function LoginPage() {
           {loading ? "..." : t("submit")}
         </button>
       </form>
+      <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+        <Link
+          href={`/${params.locale}/welcome`}
+          className="font-medium text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+        >
+          {tWelcome("loginLink")} →
+        </Link>
+      </p>
     </div>
   );
 }

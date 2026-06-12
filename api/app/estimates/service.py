@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import Any
 
 from fastapi import HTTPException
@@ -6,18 +7,40 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.admin.discount_config import get_estimate_discount_rate
 from app.audit.service import log_change
+from app.calculation.calendar import default_project_start_date
 from app.calculation.engine import CalculationError, calculate_estimate
+from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline
 from app.calculation.schemas import FeatureItemInput as CalcFeatureItemInput
-from app.calculation.schemas import RateCardSettings
+from app.calculation.schemas import GanttFeatureItemInput, RateCardSettings
+from app.estimates.access import can_access_estimate, require_estimate_access
+from app.estimates.rate_card_stale import is_rate_card_stale_for_estimate
+from app.i18n.localized_content import (
+    normalize_locale,
+    resolve_feature_item_fields,
+    resolve_localized_dict,
+    store_feature_item_localization,
+    store_localized_dict,
+)
 from app.models.audit import AuditLog
 from app.models.estimate import Estimate, EstimateStatus, FeatureItem
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.rate_cards.service import (
+    create_rate_card_with_settings,
+    get_active_rate_card,
+    get_latest_version_for_card,
+    get_rate_card_for_user,
+)
+from app.storage.factory import get_storage_backend
 from app.schemas.estimate import (
+    CreateEstimateRateCardRequest,
     EstimateCreate,
+    EstimateDetail,
     EstimateUpdate,
     ExtractedDataUpdate,
+    FeatureItemResponse,
     FeatureItemsUpdate,
 )
 
@@ -27,9 +50,14 @@ async def create_estimate(
     user: User,
     data: EstimateCreate,
 ) -> Estimate:
+    client_name = (
+        data.client_name.strip()
+        if data.client_name and data.client_name.strip()
+        else user.default_client_name()
+    )
     estimate = Estimate(
         project_name=data.project_name,
-        client_name=data.client_name,
+        client_name=client_name,
         locale=data.locale,
         form_data=data.form_data,
         status=EstimateStatus.DRAFT.value,
@@ -45,7 +73,7 @@ async def create_estimate(
         action="created",
         changes={
             "project_name": data.project_name,
-            "client_name": data.client_name,
+            "client_name": client_name,
             "locale": data.locale,
             "status": EstimateStatus.DRAFT.value,
         },
@@ -54,8 +82,11 @@ async def create_estimate(
     return await get_estimate(db, estimate.id)
 
 
-async def list_estimates(db: AsyncSession) -> list[Estimate]:
-    result = await db.execute(select(Estimate).order_by(Estimate.updated_at.desc()))
+async def list_estimates(db: AsyncSession, user: User) -> list[Estimate]:
+    query = select(Estimate).order_by(Estimate.updated_at.desc())
+    if not user.is_admin:
+        query = query.where(Estimate.created_by == user.id)
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 
@@ -78,11 +109,83 @@ async def get_estimate(db: AsyncSession, estimate_id: uuid.UUID) -> Estimate:
     return estimate
 
 
+async def get_estimate_for_user(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+) -> Estimate:
+    estimate = await get_estimate(db, estimate_id)
+    require_estimate_access(estimate, user)
+    return estimate
+
+
+async def estimate_to_detail(
+    db: AsyncSession,
+    estimate: Estimate,
+    display_locale: str | None = None,
+) -> EstimateDetail:
+    rate_card_name = None
+    if estimate.rate_card_id:
+        card = await db.get(RateCard, estimate.rate_card_id)
+        if card:
+            rate_card_name = card.name
+
+    resolved_locale = normalize_locale(display_locale, estimate.locale)
+    fallback_locale = normalize_locale(estimate.locale, resolved_locale)
+    form_data = resolve_localized_dict(estimate.form_data, resolved_locale, fallback_locale)
+    extracted_data = None
+    if estimate.extracted_data is not None:
+        extracted_data = resolve_localized_dict(
+            estimate.extracted_data,
+            resolved_locale,
+            fallback_locale,
+        )
+
+    feature_items = []
+    for item in sorted(estimate.feature_items, key=lambda row: row.sort_order):
+        fields = resolve_feature_item_fields(
+            name=item.name,
+            description=item.description,
+            phase=item.phase,
+            role=item.role,
+            localizations=item.localizations,
+            display_locale=resolved_locale,
+            fallback_locale=fallback_locale,
+        )
+        feature_items.append(
+            FeatureItemResponse(
+                id=item.id,
+                sort_order=item.sort_order,
+                name=fields["name"],
+                description=fields["description"],
+                hours=float(item.hours),
+                phase=fields["phase"],
+                role=fields["role"],
+                is_ai_generated=item.is_ai_generated,
+                created_at=item.created_at,
+                updated_at=item.updated_at,
+            )
+        )
+
+    detail = EstimateDetail.model_validate(estimate, from_attributes=True)
+    rate_card_stale = await is_rate_card_stale_for_estimate(db, estimate)
+    return detail.model_copy(
+        update={
+            "rate_card_name": rate_card_name,
+            "form_data": form_data,
+            "extracted_data": extracted_data,
+            "feature_items": feature_items,
+            "rate_card_stale": rate_card_stale,
+        }
+    )
+
+
 async def update_estimate(
     db: AsyncSession,
     user: User,
     estimate_id: uuid.UUID,
     data: EstimateUpdate,
+    content_locale: str | None = None,
 ) -> Estimate:
     result = await db.execute(
         select(Estimate)
@@ -99,15 +202,52 @@ async def update_estimate(
             status_code=404,
             detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
         )
+    require_estimate_access(estimate, user)
 
     changes: dict[str, Any] = {}
     update_data = data.model_dump(exclude_unset=True)
+    form_data_payload = update_data.pop("form_data", None)
+
+    locked_statuses = {
+        EstimateStatus.CALCULATED.value,
+        EstimateStatus.EXPORTED.value,
+        EstimateStatus.COMPLETED.value,
+    }
+    if "rate_card_id" in update_data and estimate.status in locked_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Rate card cannot be changed after calculation",
+                "code": "RATE_CARD_LOCKED_ON_ESTIMATE",
+            },
+        )
+
+    if "rate_card_id" in update_data and update_data["rate_card_id"] is not None:
+        await get_rate_card_for_user(db, update_data["rate_card_id"], user)
 
     for field, new_value in update_data.items():
         old_value = getattr(estimate, field)
         if old_value != new_value:
-            changes[field] = {"old": old_value, "new": new_value}
+            def _audit_value(value: Any) -> Any:
+                if isinstance(value, uuid.UUID):
+                    return str(value)
+                return value
+
+            changes[field] = {
+                "old": _audit_value(old_value),
+                "new": _audit_value(new_value),
+            }
             setattr(estimate, field, new_value)
+
+    if form_data_payload is not None:
+        locale = normalize_locale(content_locale, estimate.locale)
+        stored_form_data = store_localized_dict(estimate.form_data, locale, form_data_payload)
+        if estimate.form_data != stored_form_data:
+            changes["form_data"] = {
+                "old": "updated",
+                "new": locale,
+            }
+            estimate.form_data = stored_form_data
 
     if changes:
         await log_change(
@@ -127,8 +267,9 @@ async def update_feature_items(
     user: User,
     estimate_id: uuid.UUID,
     data: FeatureItemsUpdate,
+    content_locale: str | None = None,
 ) -> Estimate:
-    estimate = await get_estimate(db, estimate_id)
+    estimate = await get_estimate_for_user(db, estimate_id, user)
 
     if estimate.status not in (
         EstimateStatus.REVIEW.value,
@@ -156,8 +297,17 @@ async def update_feature_items(
 
     items_by_id = {item.id: item for item in estimate.feature_items}
     updated_items: list[FeatureItem] = []
+    locale = normalize_locale(content_locale, estimate.locale)
 
     for index, item_data in enumerate(data.items):
+        localization = store_feature_item_localization(
+            None,
+            locale,
+            name=item_data.name,
+            description=item_data.description,
+            phase=item_data.phase,
+            role=item_data.role,
+        )
         if item_data.id and item_data.id in items_by_id:
             item = items_by_id[item_data.id]
             item.sort_order = index
@@ -167,6 +317,14 @@ async def update_feature_items(
             item.phase = item_data.phase
             item.role = item_data.role
             item.is_ai_generated = item_data.is_ai_generated
+            item.localizations = store_feature_item_localization(
+                item.localizations,
+                locale,
+                name=item_data.name,
+                description=item_data.description,
+                phase=item_data.phase,
+                role=item_data.role,
+            )
             updated_items.append(item)
         else:
             item = FeatureItem(
@@ -178,6 +336,7 @@ async def update_feature_items(
                 phase=item_data.phase,
                 role=item_data.role,
                 is_ai_generated=item_data.is_ai_generated,
+                localizations=localization,
             )
             db.add(item)
             updated_items.append(item)
@@ -198,8 +357,9 @@ async def update_extracted_data(
     user: User,
     estimate_id: uuid.UUID,
     data: ExtractedDataUpdate,
+    content_locale: str | None = None,
 ) -> Estimate:
-    estimate = await get_estimate(db, estimate_id)
+    estimate = await get_estimate_for_user(db, estimate_id, user)
 
     if estimate.status not in (
         EstimateStatus.REVIEW.value,
@@ -213,10 +373,11 @@ async def update_extracted_data(
             },
         )
 
-    current = dict(estimate.extracted_data or {})
+    locale = normalize_locale(content_locale, estimate.locale)
+    current = resolve_localized_dict(estimate.extracted_data, locale, estimate.locale)
     update_data = data.model_dump(exclude_unset=True)
     current.update(update_data)
-    estimate.extracted_data = current
+    estimate.extracted_data = store_localized_dict(estimate.extracted_data, locale, current)
 
     await log_change(
         db,
@@ -229,28 +390,102 @@ async def update_extracted_data(
     return await get_estimate(db, estimate_id)
 
 
-async def _get_active_rate_card_version(db: AsyncSession) -> RateCardVersion:
-    result = await db.execute(select(RateCard).where(RateCard.is_active.is_(True)))
-    rate_card = result.scalar_one_or_none()
+async def _get_active_rate_card_version(db: AsyncSession, user: User) -> RateCardVersion:
+    rate_card = await get_active_rate_card(db, user)
     if not rate_card:
         raise HTTPException(
             status_code=400,
             detail={"error": "No active rate card configured", "code": "RATE_CARD_NOT_FOUND"},
         )
+    return await get_latest_version_for_card(db, rate_card.id)
 
-    version_result = await db.execute(
-        select(RateCardVersion)
-        .where(RateCardVersion.rate_card_id == rate_card.id)
-        .order_by(RateCardVersion.version_number.desc())
-        .limit(1)
-    )
-    version = version_result.scalar_one_or_none()
-    if not version:
+
+async def _resolve_rate_card_version_for_gantt(
+    db: AsyncSession,
+    estimate: Estimate,
+    user: User,
+) -> RateCardVersion:
+    if estimate.rate_card_version_id:
+        version_result = await db.execute(
+            select(RateCardVersion).where(RateCardVersion.id == estimate.rate_card_version_id)
+        )
+        version = version_result.scalar_one_or_none()
+        if version:
+            return version
+    if estimate.rate_card_id:
+        await get_rate_card_for_user(db, estimate.rate_card_id, user)
+        return await get_latest_version_for_card(db, estimate.rate_card_id)
+    return await _get_active_rate_card_version(db, user)
+
+
+def _gantt_items_from_estimate(
+    estimate: Estimate,
+    display_locale: str | None = None,
+) -> list[GanttFeatureItem]:
+    resolved_locale = normalize_locale(display_locale, estimate.locale)
+    fallback_locale = normalize_locale(estimate.locale, resolved_locale)
+    items: list[GanttFeatureItem] = []
+    for item in sorted(estimate.feature_items, key=lambda row: row.sort_order):
+        fields = resolve_feature_item_fields(
+            name=item.name,
+            description=item.description,
+            phase=item.phase,
+            role=item.role,
+            localizations=item.localizations,
+            display_locale=resolved_locale,
+            fallback_locale=fallback_locale,
+        )
+        items.append(
+            GanttFeatureItem(
+                id=str(item.id),
+                sort_order=item.sort_order,
+                name=fields["name"],
+                hours=float(item.hours),
+                phase=fields["phase"],
+                role=fields["role"],
+            )
+        )
+    return items
+
+
+def _resolve_project_start_date(
+    estimate: Estimate,
+    override: date | None = None,
+) -> date:
+    if override is not None:
+        return override
+    if estimate.project_start_date is not None:
+        return estimate.project_start_date
+    return default_project_start_date()
+
+
+async def get_gantt_timeline(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+    start_date: date | None = None,
+    display_locale: str | None = None,
+) -> dict[str, Any]:
+    estimate = await get_estimate_for_user(db, estimate_id, user)
+
+    if not estimate.feature_items:
         raise HTTPException(
             status_code=400,
-            detail={"error": "Active rate card has no versions", "code": "RATE_CARD_NOT_FOUND"},
+            detail={
+                "error": "At least one feature item is required",
+                "code": "FEATURE_ITEMS_REQUIRED",
+            },
         )
-    return version
+
+    version = await _resolve_rate_card_version_for_gantt(db, estimate, user)
+    rate_settings = RateCardSettings.model_validate(version.settings)
+    resolved_start = _resolve_project_start_date(estimate, start_date)
+
+    return build_gantt_timeline(
+        _gantt_items_from_estimate(estimate, display_locale=display_locale),
+        [phase.name for phase in rate_settings.phases],
+        resolved_start,
+    )
 
 
 async def run_calculation(
@@ -258,8 +493,9 @@ async def run_calculation(
     user: User,
     estimate_id: uuid.UUID,
     recalculate_with_current_rates: bool = False,
+    project_start_date: date | None = None,
 ) -> Estimate:
-    estimate = await get_estimate(db, estimate_id)
+    estimate = await get_estimate_for_user(db, estimate_id, user)
 
     if estimate.status not in (
         EstimateStatus.REVIEW.value,
@@ -282,8 +518,7 @@ async def run_calculation(
             },
         )
 
-    is_owner = estimate.created_by == user.id
-    if recalculate_with_current_rates and not user.is_admin and not is_owner:
+    if recalculate_with_current_rates and not can_access_estimate(estimate, user):
         raise HTTPException(
             status_code=403,
             detail={
@@ -292,19 +527,30 @@ async def run_calculation(
             },
         )
 
+    if not estimate.rate_card_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "A rate card must be selected before calculation",
+                "code": "RATE_CARD_REQUIRED",
+            },
+        )
+
+    await get_rate_card_for_user(db, estimate.rate_card_id, user)
+
     if recalculate_with_current_rates:
-        version = await _get_active_rate_card_version(db)
+        version = await get_latest_version_for_card(db, estimate.rate_card_id)
         estimate.rate_card_version_id = version.id
     elif estimate.rate_card_version_id:
         version_result = await db.execute(
             select(RateCardVersion).where(RateCardVersion.id == estimate.rate_card_version_id)
         )
         version = version_result.scalar_one_or_none()
-        if not version:
-            version = await _get_active_rate_card_version(db)
+        if not version or version.rate_card_id != estimate.rate_card_id:
+            version = await get_latest_version_for_card(db, estimate.rate_card_id)
             estimate.rate_card_version_id = version.id
     else:
-        version = await _get_active_rate_card_version(db)
+        version = await get_latest_version_for_card(db, estimate.rate_card_id)
         estimate.rate_card_version_id = version.id
 
     feature_inputs = [
@@ -318,6 +564,29 @@ async def run_calculation(
     ]
     rate_settings = RateCardSettings.model_validate(version.settings)
     maintenance = dict(estimate.maintenance_assumptions or {})
+    extracted = (
+        resolve_localized_dict(estimate.extracted_data, estimate.locale, estimate.locale)
+        if estimate.extracted_data
+        else {}
+    )
+    cost_drivers = extracted.get("cost_drivers") or []
+    resolved_start = _resolve_project_start_date(estimate, project_start_date)
+    if project_start_date is not None or estimate.project_start_date is None:
+        estimate.project_start_date = resolved_start
+
+    gantt_feature_items = [
+        GanttFeatureItemInput(
+            id=str(item.id),
+            sort_order=item.sort_order,
+            name=item.name,
+            hours=float(item.hours),
+            phase=item.phase,
+            role=item.role,
+        )
+        for item in sorted(estimate.feature_items, key=lambda row: row.sort_order)
+    ]
+
+    discount_rate = await get_estimate_discount_rate(db)
 
     try:
         result = calculate_estimate(
@@ -325,6 +594,10 @@ async def run_calculation(
             rate_settings,
             maintenance,
             rate_card_version_id=str(version.id),
+            cost_drivers=cost_drivers,
+            project_start_date=resolved_start,
+            gantt_feature_items=gantt_feature_items,
+            discount_rate=discount_rate,
         )
     except CalculationError:
         raise
@@ -347,13 +620,12 @@ async def run_calculation(
     return await get_estimate(db, estimate_id)
 
 
-async def get_audit_log(db: AsyncSession, estimate_id: uuid.UUID) -> list[AuditLog]:
-    exists = await db.execute(select(Estimate.id).where(Estimate.id == estimate_id))
-    if not exists.scalar_one_or_none():
-        raise HTTPException(
-            status_code=404,
-            detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
-        )
+async def get_audit_log(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+) -> list[AuditLog]:
+    await get_estimate_for_user(db, estimate_id, user)
 
     result = await db.execute(
         select(AuditLog)
@@ -361,3 +633,76 @@ async def get_audit_log(db: AsyncSession, estimate_id: uuid.UUID) -> list[AuditL
         .order_by(AuditLog.created_at.asc())
     )
     return list(result.scalars().all())
+
+
+async def create_rate_card_for_estimate(
+    db: AsyncSession,
+    user: User,
+    estimate_id: uuid.UUID,
+    body: CreateEstimateRateCardRequest,
+) -> Estimate:
+    estimate = await get_estimate_for_user(db, estimate_id, user)
+
+    if estimate.status not in (EstimateStatus.DRAFT.value, EstimateStatus.REVIEW.value):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Rate cards can only be created for draft or review estimates",
+                "code": "INVALID_STATUS",
+            },
+        )
+
+    card, _version = await create_rate_card_with_settings(
+        db,
+        user=user,
+        name=body.name,
+        settings=body.settings,
+        activate=body.activate,
+    )
+    estimate.rate_card_id = card.id
+
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="rate_card_created",
+        changes={
+            "rate_card_id": str(card.id),
+            "rate_card_name": card.name,
+        },
+    )
+    await db.commit()
+    return await get_estimate(db, estimate.id)
+
+
+async def delete_estimate(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+) -> None:
+    result = await db.execute(
+        select(Estimate)
+        .where(Estimate.id == estimate_id)
+        .options(
+            selectinload(Estimate.documents),
+            selectinload(Estimate.exports),
+        )
+    )
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
+        )
+    require_estimate_access(estimate, user)
+
+    storage = get_storage_backend()
+    for document in estimate.documents:
+        if await storage.exists(document.storage_path):
+            await storage.delete(document.storage_path)
+    for export in estimate.exports:
+        if await storage.exists(export.storage_path):
+            await storage.delete(export.storage_path)
+
+    await db.delete(estimate)
+    await db.commit()

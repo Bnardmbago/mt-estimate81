@@ -11,6 +11,7 @@ from app.documents.extractor import SUPPORTED_FILE_TYPES, ExtractionError, extra
 from app.documents.hermes_client import HermesClient
 from app.exceptions import AppError
 from app.models.estimate import Estimate, EstimateDocument
+from app.models.user import User
 from app.storage.factory import get_storage_backend
 
 
@@ -83,8 +84,11 @@ async def upload_document(
     estimate_id: uuid.UUID,
     file: UploadFile,
     background_tasks: BackgroundTasks,
+    user: User,
 ) -> EstimateDocument:
-    await _get_estimate(db, estimate_id)
+    from app.estimates.service import get_estimate_for_user
+
+    await get_estimate_for_user(db, estimate_id, user)
 
     if not file.filename:
         raise AppError("Filename is required", "INVALID_FILE")
@@ -126,7 +130,11 @@ async def delete_document(
     db: AsyncSession,
     estimate_id: uuid.UUID,
     document_id: uuid.UUID,
+    user: User,
 ) -> None:
+    from app.estimates.service import get_estimate_for_user
+
+    await get_estimate_for_user(db, estimate_id, user)
     document = await _get_document(db, estimate_id, document_id)
     storage = get_storage_backend()
     await storage.delete(document.storage_path)
@@ -139,7 +147,11 @@ async def retry_document_extraction(
     estimate_id: uuid.UUID,
     document_id: uuid.UUID,
     background_tasks: BackgroundTasks,
+    user: User,
 ) -> EstimateDocument:
+    from app.estimates.service import get_estimate_for_user
+
+    await get_estimate_for_user(db, estimate_id, user)
     document = await _get_document(db, estimate_id, document_id)
     document.extraction_status = "pending"
     document.extracted_text = None

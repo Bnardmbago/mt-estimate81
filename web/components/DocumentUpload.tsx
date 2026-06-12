@@ -9,9 +9,13 @@ import type { EstimateDocument } from "@/lib/estimate";
 type DocumentUploadProps = {
   estimateId: string;
   initialDocuments: EstimateDocument[];
+  onDocumentsChange?: (documents: EstimateDocument[]) => void;
 };
 
 const SUPPORTED_EXTENSIONS = ["pdf", "docx", "xlsx", "txt", "md"];
+
+const textareaClassName =
+  "min-h-[10rem] w-full flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 const statusBadgeClassName: Record<string, string> = {
   pending: "bg-gray-100 text-gray-700",
@@ -28,6 +32,7 @@ function getFileExtension(filename: string): string {
 export default function DocumentUpload({
   estimateId,
   initialDocuments,
+  onDocumentsChange,
 }: DocumentUploadProps) {
   const router = useRouter();
   const t = useTranslations("documents");
@@ -37,10 +42,15 @@ export default function DocumentUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   useEffect(() => {
     setDocuments(initialDocuments);
   }, [initialDocuments]);
+
+  useEffect(() => {
+    onDocumentsChange?.(documents);
+  }, [documents, onDocumentsChange]);
 
   const hasProcessing = documents.some(
     (doc) => doc.extraction_status === "pending" || doc.extraction_status === "processing",
@@ -177,34 +187,50 @@ export default function DocumentUpload({
       <h2 className="mb-1 text-lg font-semibold">{t("title")}</h2>
       <p className="mb-4 text-sm text-gray-500">{t("description")}</p>
 
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`mb-4 cursor-pointer rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors ${
-          isDragging
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50"
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.docx,.xlsx,.txt,.md"
-          className="hidden"
-          onChange={(event) => {
-            if (event.target.files) {
-              void uploadFiles(event.target.files);
-              event.target.value = "";
-            }
-          }}
-        />
-        <p className="text-sm font-medium text-gray-700">
-          {uploading ? t("uploading") : t("dropzone")}
-        </p>
-        <p className="mt-1 text-xs text-gray-500">{t("supportedTypes")}</p>
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`flex cursor-pointer flex-col justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors ${
+            isDragging
+              ? "border-blue-500 bg-blue-50"
+              : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.docx,.xlsx,.txt,.md"
+            className="hidden"
+            onChange={(event) => {
+              if (event.target.files) {
+                void uploadFiles(event.target.files);
+                event.target.value = "";
+              }
+            }}
+          />
+          <p className="text-sm font-medium text-gray-700">
+            {uploading ? t("uploading") : t("dropzone")}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">{t("supportedTypes")}</p>
+        </div>
+
+        <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
+          <label htmlFor="ai-prompt" className="mb-1 text-sm font-medium text-gray-700">
+            {t("aiPromptLabel")}
+          </label>
+          <textarea
+            id="ai-prompt"
+            value={aiPrompt}
+            onChange={(event) => setAiPrompt(event.target.value)}
+            placeholder={t("aiPromptPlaceholder")}
+            rows={6}
+            className={textareaClassName}
+          />
+        </div>
       </div>
 
       {error && (

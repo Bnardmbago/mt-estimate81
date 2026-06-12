@@ -3,8 +3,17 @@ from typing import Any, Literal
 
 import anthropic
 
-from app.ai.prompts import build_system_prompt, build_user_prompt
-from app.ai.schemas import ExtractedRequirements
+from app.ai.prompts import (
+    build_rate_card_section_system_prompt,
+    build_rate_card_section_user_prompt,
+    build_rate_card_system_prompt,
+    build_rate_card_user_prompt,
+    build_system_prompt,
+    build_user_prompt,
+)
+from app.ai.schemas import ExtractedRequirements, GeneratedRateCardSuggestion
+from app.ai.section_schemas import section_suggestion_model, section_tool_name
+from app.schemas.rate_card import RateCardAiSection
 
 AI_TIMEOUT_SECONDS = 90.0
 
@@ -54,3 +63,103 @@ class AnthropicProvider:
             payload = json.loads(payload)
 
         return ExtractedRequirements.model_validate(payload)
+
+    async def generate_rate_card(
+        self,
+        *,
+        project_name: str,
+        client_name: str,
+        form_data: dict[str, Any],
+        document_texts: list[str],
+        locale: Literal["ja", "en"],
+    ) -> GeneratedRateCardSuggestion:
+        response = await self._client.messages.create(
+            model=self.model,
+            max_tokens=8192,
+            system=build_rate_card_system_prompt(locale),
+            messages=[
+                {
+                    "role": "user",
+                    "content": build_rate_card_user_prompt(
+                        project_name=project_name,
+                        client_name=client_name,
+                        form_data=form_data,
+                        document_texts=document_texts,
+                    ),
+                }
+            ],
+            tools=[
+                {
+                    "name": "generate_rate_card",
+                    "description": "Generate a recommended rate card for the project.",
+                    "input_schema": GeneratedRateCardSuggestion.model_json_schema(),
+                }
+            ],
+            tool_choice={"type": "tool", "name": "generate_rate_card"},
+        )
+
+        tool_block = next(
+            (block for block in response.content if block.type == "tool_use"),
+            None,
+        )
+        if tool_block is None:
+            raise ValueError("Anthropic returned no tool_use block")
+
+        payload = tool_block.input
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+
+        return GeneratedRateCardSuggestion.model_validate(payload)
+
+    async def suggest_rate_card_section(
+        self,
+        *,
+        section: RateCardAiSection,
+        prompt: str,
+        current_section: list[dict[str, Any]],
+        estimate_context: dict[str, Any],
+        document_texts: list[str],
+        locale: Literal["ja", "en"],
+        free_form: bool = False,
+    ):
+        model = section_suggestion_model(section)
+        tool_name = section_tool_name(section)
+        response = await self._client.messages.create(
+            model=self.model,
+            max_tokens=8192,
+            system=build_rate_card_section_system_prompt(locale, section, free_form=free_form),
+            messages=[
+                {
+                    "role": "user",
+                    "content": build_rate_card_section_user_prompt(
+                        prompt=prompt,
+                        section=section,
+                        current_section=current_section,
+                        estimate_context=estimate_context,
+                        document_texts=document_texts,
+                        free_form=free_form,
+                    ),
+                }
+            ],
+            tools=[
+                {
+                    "name": tool_name,
+                    "description": f"Suggest additions for rate card section {section}.",
+                    "input_schema": model.model_json_schema(),
+                }
+            ],
+            tool_choice={"type": "tool", "name": tool_name},
+        )
+
+        tool_block = next(
+            (block for block in response.content if block.type == "tool_use"),
+            None,
+        )
+        if tool_block is None:
+            raise ValueError("Anthropic returned no tool_use block")
+
+        payload = tool_block.input
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+
+        return model.model_validate(payload)

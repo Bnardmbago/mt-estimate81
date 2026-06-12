@@ -1,21 +1,24 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.admin.rate_cards import router as admin_rate_cards_router
+from app.admin.ai_settings import router as admin_ai_settings_router
+from app.admin.discount_settings import router as admin_discount_settings_router
+from app.admin.smtp_settings import router as admin_smtp_settings_router
 from app.admin.system import router as admin_system_router
 from app.admin.users import router as admin_users_router
 from app.auth.router import router as auth_router
+from app.calculation.engine import CalculationError
 from app.documents.router import router as documents_router
 from app.estimates.router import router as estimates_router
-from app.exports.router import router as exports_router
-from app.feedback.router import router as feedback_router
-from app.calculation.engine import CalculationError
 from app.exceptions import (
     AppError,
     app_error_handler,
     calculation_error_handler,
     http_exception_handler,
 )
+from app.exports.router import router as exports_router
+from app.feedback.router import router as feedback_router
+from app.rate_cards.router import router as rate_cards_router
 
 app = FastAPI(title="AI Estimate API", version="0.1.0")
 
@@ -27,7 +30,10 @@ app.include_router(auth_router)
 app.include_router(feedback_router)
 app.include_router(estimates_router)
 app.include_router(documents_router)
-app.include_router(admin_rate_cards_router)
+app.include_router(rate_cards_router)
+app.include_router(admin_ai_settings_router)
+app.include_router(admin_discount_settings_router)
+app.include_router(admin_smtp_settings_router)
 app.include_router(admin_users_router)
 app.include_router(admin_system_router)
 app.include_router(exports_router)

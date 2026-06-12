@@ -23,7 +23,7 @@ async def upload_document(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await service.upload_document(db, estimate_id, file, background_tasks)
+    return await service.upload_document(db, estimate_id, file, background_tasks, user)
 
 
 @router.delete("/{estimate_id}/documents/{document_id}", status_code=204)
@@ -33,7 +33,7 @@ async def delete_document(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    await service.delete_document(db, estimate_id, document_id)
+    await service.delete_document(db, estimate_id, document_id, user)
 
 
 @router.post(
@@ -52,4 +52,5 @@ async def retry_document_extraction(
         estimate_id,
         document_id,
         background_tasks,
+        user,
     )

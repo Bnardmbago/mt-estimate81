@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="{{ ctx.locale }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ ctx.labels.title }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 20mm; }
+    @font-face {
+      font-family: "Noto Sans JP";
+      src: local("Noto Sans CJK JP"), local("Noto Sans JP");
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: #111;
+      margin: 0;
+      padding: 0;
+    }
+    .top-row {
+      display: table;
+      width: 100%;
+      margin-bottom: 16pt;
+    }
+    .top-left {
+      display: table-cell;
+      vertical-align: top;
+      width: 58%;
+    }
+    .top-right {
+      display: table-cell;
+      vertical-align: top;
+      width: 42%;
+      text-align: right;
+    }
+    .title-bar {
+      background: #4A76A8;
+      color: #fff;
+      font-size: 20pt;
+      font-weight: 700;
+      padding: 10pt 28pt;
+      letter-spacing: 0.5em;
+      text-indent: 0.5em;
+      display: inline-block;
+      min-width: 180pt;
+      text-align: center;
+    }
+    .issue-date-box table {
+      border-collapse: collapse;
+      margin: 0 0 0 auto;
+    }
+    .issue-date-box th {
+      background: #4A76A8;
+      color: #fff;
+      font-weight: 600;
+      padding: 5pt 14pt;
+      border: 1px solid #4A76A8;
+      font-size: 10pt;
+      text-align: center;
+    }
+    .issue-date-box td {
+      padding: 6pt 14pt;
+      border: 1px solid #4A76A8;
+      font-size: 10pt;
+      background: #fff;
+      text-align: center;
+      min-width: 110pt;
+    }
+    .parties-row {
+      display: table;
+      width: 100%;
+      margin-bottom: 16pt;
+    }
+    .recipient {
+      display: table-cell;
+      vertical-align: top;
+      width: 52%;
+      padding-right: 16pt;
+    }
+    .sender {
+      display: table-cell;
+      vertical-align: top;
+      width: 48%;
+    }
+    .quote-ref {
+      font-size: 10pt;
+      margin-bottom: 6pt;
+      color: #333;
+    }
+    .recipient-name {
+      font-size: 15pt;
+      font-weight: 700;
+      margin-bottom: 10pt;
+      line-height: 1.35;
+    }
+    .subject-line {
+      font-size: 10pt;
+      margin-top: 8pt;
+      padding-top: 6pt;
+      border-top: 1px solid #d0d8e4;
+    }
+    .sender-block {
+      text-align: right;
+    }
+    .sender-info {
+      display: inline-block;
+      text-align: left;
+      max-width: 100%;
+      position: relative;
+      padding-right: 4pt;
+    }
+    .sender-name-row {
+      position: relative;
+      margin-bottom: 6pt;
+      padding-right: 36pt;
+    }
+    .sender-name {
+      font-weight: 700;
+      font-size: 11pt;
+      line-height: 1.4;
+    }
+    .sender-detail {
+      font-size: 10pt;
+      line-height: 1.55;
+    }
+    .sender-detail div { margin-bottom: 1pt; }
+    .sender-brand-row {
+      margin-top: 10pt;
+      display: table;
+    }
+    .sender-brand-logo {
+      display: table-cell;
+      vertical-align: middle;
+      padding-right: 8pt;
+    }
+    .sender-brand-logo img {
+      height: 36pt;
+      width: auto;
+      display: block;
+    }
+    .sender-brand-text {
+      display: table-cell;
+      vertical-align: middle;
+      font-size: 16pt;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #111;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16pt;
+    }
+    .summary-table th {
+      background: #4A76A8;
+      color: #fff;
+      font-weight: 600;
+      padding: 7pt 12pt;
+      border: 1px solid #4A76A8;
+      text-align: left;
+      width: 20%;
+      font-size: 10pt;
+      vertical-align: middle;
+    }
+    .summary-table td {
+      padding: 7pt 12pt;
+      border: 1px solid #4A76A8;
+      font-size: 10pt;
+      vertical-align: middle;
+    }
+    .summary-table .total-amount {
+      font-size: 18pt;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .payment-note {
+      font-size: 9pt;
+      color: #444;
+      margin-bottom: 4pt;
+      line-height: 1.45;
+    }
+    .invoice-wrap {
+      border: 1px solid #4A76A8;
+      margin-bottom: 18pt;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+    }
+    .items-table thead th {
+      background: #4A76A8;
+      color: #fff;
+      font-weight: 600;
+      padding: 7pt 8pt;
+      border: none;
+      border-bottom: 1px solid #4A76A8;
+      font-size: 10pt;
+      text-align: left;
+    }
+    .items-table thead th.col-qty,
+    .items-table thead th.col-unit { text-align: center; }
+    .items-table thead th.col-price,
+    .items-table thead th.col-sub { text-align: right; }
+    .items-table tbody td {
+      padding: 9pt 8pt;
+      border: none;
+      border-bottom: 1px solid #4A76A8;
+      font-size: 10pt;
+      vertical-align: middle;
+    }
+    .items-table tbody tr:nth-child(odd) td { background: #E8F1F8; }
+    .items-table tbody tr:nth-child(even) td { background: #fff; }
+    .items-table tbody tr.empty-row td {
+      height: 28pt;
+      background: #fff;
+    }
+    .items-table tbody tr.empty-row:nth-child(odd) td { background: #E8F1F8; }
+    .items-table .col-item { text-align: left; width: 46%; }
+    .items-table .col-qty { text-align: center; width: 8%; }
+    .items-table .col-unit { text-align: center; width: 8%; }
+    .items-table .col-price { text-align: right; width: 19%; }
+    .items-table .col-sub { text-align: right; width: 19%; }
+    .totals-row {
+      display: table;
+      width: 100%;
+      border-top: 1px solid #4A76A8;
+    }
+    .totals-spacer {
+      display: table-cell;
+      width: 54%;
+    }
+    .totals-cell {
+      display: table-cell;
+      width: 46%;
+      vertical-align: top;
+    }
+    .totals-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+    }
+    .totals-table th {
+      background: #4A76A8;
+      color: #fff;
+      font-weight: 600;
+      padding: 6pt 10pt;
+      border: 1px solid #4A76A8;
+      border-top: none;
+      text-align: left;
+      font-size: 10pt;
+      width: 42%;
+    }
+    .totals-table td {
+      padding: 6pt 10pt;
+      border: 1px solid #4A76A8;
+      border-top: none;
+      border-left: none;
+      text-align: right;
+      font-size: 10pt;
+      background: #fff;
+    }
+    .totals-table tr.grand-total th,
+    .totals-table tr.grand-total td {
+      font-weight: 700;
+      font-size: 11pt;
+    }
+    .tax-target-note {
+      font-size: 8pt;
+      color: #555;
+      display: block;
+      margin-top: 2pt;
+      text-align: right;
+    }
+    .footer-row {
+      display: table;
+      width: 100%;
+      margin-top: 4pt;
+    }
+    .footer-bank {
+      display: table-cell;
+      vertical-align: top;
+      width: 55%;
+      padding-right: 16pt;
+      font-size: 10pt;
+    }
+    .footer-bank h3,
+    .footer-remarks h3 {
+      font-size: 10pt;
+      font-weight: 700;
+      margin: 0 0 6pt;
+    }
+    .bank-text {
+      white-space: pre-wrap;
+      margin: 0;
+      line-height: 1.55;
+    }
+    .footer-remarks {
+      display: table-cell;
+      vertical-align: top;
+      width: 45%;
+      font-size: 10pt;
+    }
+    .remarks-box {
+      border: 1px solid #4A76A8;
+      padding: 10pt 12pt;
+      min-height: 56pt;
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
+    .footer-remarks-only {
+      margin-top: 14pt;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-row">
+    <div class="top-left">
+      <div class="title-bar">{{ ctx.labels.title }}</div>
+    </div>
+    <div class="top-right">
+      <div class="issue-date-box">
+        <table>
+          <tr>
+            <th colspan="1">{{ ctx.labels.issue_date }}</th>
+          </tr>
+          <tr>
+            <td>{{ ctx.issue_date }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="parties-row">
+    <div class="recipient">
+      <div class="quote-ref">{{ ctx.labels.quote_prefix }}：{{ ctx.quote_number }}</div>
+      <div class="recipient-name">{{ ctx.client_name }}</div>
+      <div class="subject-line">{{ ctx.subject_line }}</div>
+    </div>
+    <div class="sender">
+      <div class="sender-block">
+        <div class="sender-info">
+          <div class="sender-name-row">
+            <div class="sender-name">{{ ctx.company.name }}</div>
+          </div>
+          <div class="sender-detail">
+            {% if ctx.company.postal_code %}<div>〒{{ ctx.company.postal_code }}</div>{% endif %}
+            {% if ctx.company.address %}<div>{{ ctx.company.address }}</div>{% endif %}
+            {% if ctx.company.tel %}<div>{{ ctx.labels.tel }}：{{ ctx.company.tel }}</div>{% endif %}
+            {% if ctx.company.email %}<div>{{ ctx.company.email }}</div>{% endif %}
+            {% if ctx.company.registration_number %}
+              <div>{{ ctx.labels.registration_number }}：{{ ctx.company.registration_number }}</div>
+            {% endif %}
+          </div>
+          <div class="sender-brand-row">
+            <div class="sender-brand-logo">
+              <img src="{{ ctx.logo_path }}" alt="">
+            </div>
+            {% if ctx.company.brand %}
+              <div class="sender-brand-text">{{ ctx.company.brand }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="summary-table">
+    <tr>
+      <th>{{ ctx.labels.payment_terms }}</th>
+      <td>
+        <div class="payment-note">{{ ctx.validity_note }}</div>
+        {{ ctx.payment_terms }}
+      </td>
+    </tr>
+    <tr>
+      <th>{{ ctx.labels.validity }}</th>
+      <td>{{ ctx.validity_text }}（{{ ctx.validity_date }}）</td>
+    </tr>
+    <tr>
+      <th>{{ ctx.labels.total_amount }}</th>
+      <td class="total-amount">{{ format_currency(ctx.grand_total_jpy) }}</td>
+    </tr>
+  </table>
+
+  <div class="invoice-wrap">
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="col-item">{{ ctx.labels.item }}</th>
+          <th class="col-qty">{{ ctx.labels.quantity }}</th>
+          <th class="col-unit">{{ ctx.labels.unit }}</th>
+          <th class="col-price">{{ ctx.labels.unit_price }}</th>
+          <th class="col-sub">{{ ctx.labels.subtotal_col }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in ctx.line_items %}
+          <tr>
+            <td class="col-item">{{ row.name }}</td>
+            <td class="col-qty">{{ row.quantity }}</td>
+            <td class="col-unit">{{ row.unit }}</td>
+            <td class="col-price">{{ format_currency(row.unit_price_jpy) }}</td>
+            <td class="col-sub">{{ format_currency(row.subtotal_jpy) }}</td>
+          </tr>
+        {% endfor %}
+        {% set min_rows = 6 %}
+        {% set empty_count = min_rows - ctx.line_items|length %}
+        {% if empty_count > 0 %}
+          {% for i in range(empty_count) %}
+            <tr class="empty-row">
+              <td class="col-item">&nbsp;</td>
+              <td class="col-qty"></td>
+              <td class="col-unit"></td>
+              <td class="col-price"></td>
+              <td class="col-sub"></td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+    <div class="totals-row">
+      <div class="totals-spacer"></div>
+      <div class="totals-cell">
+        <table class="totals-table">
+          <tr>
+            <th>{{ ctx.labels.subtotal }}</th>
+            <td>{{ format_currency(ctx.subtotal_jpy) }}</td>
+          </tr>
+          <tr>
+            <th>{{ ctx.labels.tax }}</th>
+            <td>{{ format_currency(ctx.tax_jpy) }}</td>
+          </tr>
+          <tr class="grand-total">
+            <th>{{ ctx.labels.grand_total }}</th>
+            <td>{{ format_currency(ctx.grand_total_jpy) }}</td>
+          </tr>
+          <tr>
+            <th>{{ ctx.tax_percent_label }}</th>
+            <td>
+              {{ format_currency(ctx.subtotal_jpy) }}
+              <span class="tax-target-note">{{ ctx.labels.tax_target_note }}</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if ctx.bank_details %}
+  <div class="footer-row">
+    <div class="footer-bank">
+      <h3>{{ ctx.labels.bank_details }}</h3>
+      <p class="bank-text">{{ ctx.bank_details }}</p>
+    </div>
+    <div class="footer-remarks">
+      <h3>{{ ctx.labels.remarks }}</h3>
+      <div class="remarks-box">{{ ctx.remarks }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="footer-remarks-only">
+    <h3>{{ ctx.labels.remarks }}</h3>
+    <div class="remarks-box">{{ ctx.remarks }}</div>
+  </div>
+  {% endif %}
+</body>
+</html>

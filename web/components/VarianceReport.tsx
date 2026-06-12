@@ -168,29 +168,3 @@ export default function VarianceReport({
     </div>
   );
 }
-
-export function SingleEstimateVariance({
-  variance,
-  locale,
-}: {
-  variance: VarianceSummary;
-  locale: string;
-}) {
-  const row: VarianceDashboardRow = {
-    estimate_id: "",
-    project_name: "",
-    client_name: "",
-    completed_at: "",
-    actuals_entered_at: null,
-    variance,
-    variance_notes: null,
-  };
-
-  return (
-    <VarianceReport
-      rows={[row]}
-      locale={locale}
-      showProjectLink={false}
-    />
-  );
-}

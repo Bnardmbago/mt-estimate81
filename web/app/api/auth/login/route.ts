@@ -18,9 +18,10 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ user: data.user });
+  const cookieSecure = process.env.COOKIE_SECURE === "true";
   response.cookies.set("access_token", data.access_token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: cookieSecure,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 8,

@@ -10,7 +10,10 @@ from sqlalchemy.pool import StaticPool
 from app.auth.service import create_access_token, hash_password
 from app.database import Base, get_db
 from app.main import app
+from app.models.rate_card import RateCard, RateCardVersion
+from app.models.system_config import SystemConfig
 from app.models.user import User
+from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 
 TEST_DATABASE_URL = "sqlite+aiosqlite://"
 
@@ -72,6 +75,50 @@ async def test_user(db_session: AsyncSession) -> User:
 
 
 @pytest.fixture
+async def other_user(db_session: AsyncSession) -> User:
+    user = User(
+        id=uuid.uuid4(),
+        email="other@example.com",
+        password_hash=hash_password("otherpass"),
+        display_name="Other User",
+        is_admin=False,
+        preferred_locale="en",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def other_headers(other_user: User) -> dict[str, str]:
+    token = create_access_token({"sub": str(other_user.id), "is_admin": other_user.is_admin})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+async def admin_user(db_session: AsyncSession) -> User:
+    user = User(
+        id=uuid.uuid4(),
+        email="admin@example.com",
+        password_hash=hash_password("adminpass"),
+        display_name="Admin User",
+        is_admin=True,
+        preferred_locale="en",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def admin_headers(admin_user: User) -> dict[str, str]:
+    token = create_access_token({"sub": str(admin_user.id), "is_admin": admin_user.is_admin})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
 def auth_headers(client: AsyncClient) -> dict[str, str]:
     user = client.test_user  # type: ignore[attr-defined]
     token = create_access_token({"sub": str(user.id), "is_admin": user.is_admin})
@@ -93,6 +140,7 @@ async def client(test_engine) -> AsyncGenerator[AsyncClient, None]:
 
     async with session_factory() as session:
         session.add(user)
+        session.add(SystemConfig(id=1))
         await session.commit()
         await session.refresh(user)
 
@@ -108,3 +156,40 @@ async def client(test_engine) -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+async def _create_rate_card_for_user(
+    db_session: AsyncSession,
+    user: User,
+    *,
+    name: str = "Test Rates",
+    is_active: bool = True,
+) -> RateCardVersion:
+    rate_card = RateCard(
+        name=name,
+        is_active=is_active,
+        created_by=user.id,
+    )
+    db_session.add(rate_card)
+    await db_session.flush()
+
+    version = RateCardVersion(
+        rate_card_id=rate_card.id,
+        version_number=1,
+        settings=DEFAULT_RATE_CARD_SETTINGS,
+    )
+    db_session.add(version)
+    await db_session.commit()
+    await db_session.refresh(version)
+    return version
+
+
+@pytest.fixture
+async def user_owned_rate_card(db_session: AsyncSession, client: AsyncClient) -> RateCardVersion:
+    user = client.test_user  # type: ignore[attr-defined]
+    return await _create_rate_card_for_user(db_session, user)
+
+
+@pytest.fixture
+async def active_rate_card(user_owned_rate_card: RateCardVersion) -> RateCardVersion:
+    return user_owned_rate_card

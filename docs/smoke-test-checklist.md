@@ -77,6 +77,10 @@ For one calculated estimate, generate each export in **Japanese** and **English*
 | Excel | [ ] | [ ] | [ ] | [ ] |
 | Markdown | [ ] | [ ] | [ ] | [ ] |
 
+- [ ] PDF page 1 shows Project Summary + Executive Cost Summary (NRC, RC, first-year total, confidence)
+- [ ] Excel workbook has Executive, Features, Phase, Role, NRC, RC, Assumptions, and Risks & Reference sheets
+- [ ] Markdown export includes all 17 report sections in executive-first order
+
 - [ ] Stale export badge appears when estimate is recalculated after export
 
 ---
@@ -86,7 +90,7 @@ For one calculated estimate, generate each export in **Japanese** and **English*
 - [ ] Mark a calculated estimate as completed
 - [ ] Enter actual effort hours, NRC, and monthly RC
 - [ ] Variance percentages compute correctly (green ±10%, amber ±10–25%, red >±25%)
-- [ ] Variance dashboard lists completed estimates; sort and filter work
+- [ ] KPI dashboard shows live cards, pipeline chart, accuracy trend, and variance drill-down; auto-refresh works
 
 ---
 

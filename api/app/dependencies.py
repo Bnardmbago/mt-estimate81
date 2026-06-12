@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy import select
@@ -54,6 +54,11 @@ async def get_current_user(
             status_code=401,
             detail={"error": "User not found", "code": "AUTH_INVALID"},
         )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "Account is disabled", "code": "USER_DISABLED"},
+        )
     return user
 
 
@@ -64,3 +69,23 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
             detail={"error": "Admin access required", "code": "ADMIN_REQUIRED"},
         )
     return user
+
+
+def get_display_locale(
+    display_locale: str | None = Query(default=None),
+    x_display_locale: str | None = Header(default=None, alias="X-Display-Locale"),
+) -> str | None:
+    for candidate in (display_locale, x_display_locale):
+        if candidate in ("ja", "en"):
+            return candidate
+    return None
+
+
+def get_content_locale(
+    x_content_locale: str | None = Header(default=None, alias="X-Content-Locale"),
+    content_locale: str | None = Query(default=None),
+) -> str | None:
+    for candidate in (x_content_locale, content_locale):
+        if candidate in ("ja", "en"):
+            return candidate
+    return None

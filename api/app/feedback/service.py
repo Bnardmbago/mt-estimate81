@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit.service import log_change
-from app.estimates.service import get_estimate
+from app.estimates.access import require_estimate_access
+from app.estimates.service import get_estimate, get_estimate_for_user
 from app.models.estimate import Actuals, Estimate, EstimateStatus
 from app.models.user import User
 from app.schemas.feedback import ActualsInput
@@ -63,7 +64,7 @@ async def complete_estimate(
     user: User,
     estimate_id,
 ) -> Estimate:
-    estimate = await get_estimate(db, estimate_id)
+    estimate = await get_estimate_for_user(db, estimate_id, user)
 
     if estimate.status not in (
         EstimateStatus.CALCULATED.value,
@@ -116,6 +117,7 @@ async def upsert_actuals(
             status_code=404,
             detail={"error": "Estimate not found", "code": "ESTIMATE_NOT_FOUND"},
         )
+    require_estimate_access(estimate, user)
 
     if estimate.status not in (
         EstimateStatus.CALCULATED.value,
@@ -167,58 +169,3 @@ async def upsert_actuals(
     await db.refresh(actuals)
     return actuals
 
-
-async def list_variance_dashboard(
-    db: AsyncSession,
-    *,
-    client: str | None = None,
-    date_from: datetime | None = None,
-    date_to: datetime | None = None,
-    sort_metric: str = "effort_hours",
-    sort_order: str = "desc",
-) -> list[dict[str, Any]]:
-    result = await db.execute(
-        select(Estimate)
-        .where(Estimate.status == EstimateStatus.COMPLETED.value)
-        .options(selectinload(Estimate.actuals))
-        .order_by(Estimate.updated_at.desc())
-    )
-    estimates = list(result.scalars().all())
-
-    rows: list[dict[str, Any]] = []
-    for estimate in estimates:
-        if client and client.lower() not in estimate.client_name.lower():
-            continue
-
-        entered_at = estimate.actuals.entered_at if estimate.actuals else estimate.updated_at
-        if date_from and entered_at < date_from:
-            continue
-        if date_to and entered_at > date_to:
-            continue
-
-        variance = None
-        if estimate.calculation_result and estimate.actuals:
-            estimated = extract_estimated(estimate.calculation_result)
-            actual = extract_actual(estimate.actuals)
-            variance = compute_variance(estimated, actual)
-
-        row = {
-            "estimate_id": estimate.id,
-            "project_name": estimate.project_name,
-            "client_name": estimate.client_name,
-            "completed_at": estimate.updated_at,
-            "actuals_entered_at": estimate.actuals.entered_at if estimate.actuals else None,
-            "variance": variance,
-            "variance_notes": estimate.actuals.variance_notes if estimate.actuals else None,
-        }
-        if variance and sort_metric in variance:
-            row["_sort_pct"] = abs(variance[sort_metric]["variance_pct"])
-        else:
-            row["_sort_pct"] = -1.0
-        rows.append(row)
-
-    reverse = sort_order.lower() != "asc"
-    rows.sort(key=lambda item: item["_sort_pct"], reverse=reverse)
-    for row in rows:
-        row.pop("_sort_pct", None)
-    return rows

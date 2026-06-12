@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
 import type { CalculationResult } from "@/lib/estimate";
 import VarianceReport, { type VarianceSummary } from "@/components/VarianceReport";
 
 type ActualsFormProps = {
   estimateId: string;
-  locale: string;
   status: string;
   calculationResult: CalculationResult;
   initialActuals?: {
@@ -34,11 +33,11 @@ type ActualsResponse = {
 
 export default function ActualsForm({
   estimateId,
-  locale,
   status,
   calculationResult,
   initialActuals,
 }: ActualsFormProps) {
+  const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("variance");
   const canEnterActuals =

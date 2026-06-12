@@ -1,9 +1,18 @@
 {
   "nav": {
     "estimates": "Estimates",
-    "variance": "Variance",
+    "rateCards": "Rate Cards",
     "admin": "Admin",
-    "logout": "Logout"
+    "welcome": "Welcome",
+    "help": "Help",
+    "logout": "Logout",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "toggle": "Toggle color theme"
   },
   "login": {
     "title": "Login",
@@ -15,6 +24,9 @@
   "estimates": {
     "new": "New Estimate",
     "list": "Estimates",
+    "project": "Project",
+    "statusLabel": "Status",
+    "updated": "Updated",
     "empty": "No estimates yet",
     "back": "Back to list",
     "client": "Client",
@@ -24,6 +36,15 @@
     "unsaved": "Unsaved changes",
     "saveError": "Failed to save estimate",
     "notFound": "Estimate not found",
+    "loadError": "Could not load this estimate",
+    "loadErrorDetail": "The server returned an error (HTTP {status}). Try refreshing or return to the list.",
+    "actions": "Actions",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete \"{project}\"? This cannot be undone.",
+    "deleteConfirmAction": "Delete",
+    "deleteCancel": "Cancel",
+    "deleteError": "Failed to delete estimate",
     "status": {
       "draft": "Draft",
       "extracting": "Extracting",
@@ -37,7 +58,9 @@
     "title": "Documents",
     "description": "Upload project documents for text extraction.",
     "dropzone": "Drag and drop files here, or click to browse",
-    "supportedTypes": "Supported: PDF, DOCX, XLSX, TXT, MD",
+    "supportedTypes": "Supported formats: PDF, DOCX, XLSX, TXT, MD.",
+    "aiPromptLabel": "Ai additional specification suggestion",
+    "aiPromptPlaceholder": "Enter your project specification details...",
     "uploading": "Uploading…",
     "uploadError": "Failed to upload document",
     "unsupportedType": "Unsupported file type: {type}",
@@ -64,6 +87,52 @@
     "progressDocuments": "Processing documents ({done}/{total})…",
     "progressAi": "Analyzing requirements with AI…",
     "extractError": "Failed to start extraction",
+    "saveFormBeforeExtract": "Save the form first. Fill in all required fields before extracting requirements, or upload documents to make form fields optional.",
+    "rateCardLabel": "Rate card",
+    "rateCardRequired": "Select a rate card before extracting requirements.",
+    "rateCardLoading": "Loading rate cards…",
+    "rateCardEmpty": "No rate cards available. Create one on the Rate Cards page.",
+    "rateCardManageLink": "Manage rate cards",
+    "rateCardSaving": "Saving selection…",
+    "rateCardSaveError": "Failed to save rate card selection",
+    "rateCardAutoRegenerateHint": "Edit the rate card anytime while the estimate is in review. Re-running Extract Requirements keeps your rate card edits and refreshes requirements from the form and documents.",
+    "reExtractTitle": "Re-run extraction",
+    "reExtractDescription": "Re-extract requirements using your current rate card (including any edits you made). The rate card itself is not overwritten.",
+    "rateCardStaleTitle": "Rate card has changed",
+    "rateCardStaleDescription": "The linked rate card was updated after the last extraction. Re-run extraction below to refresh requirements and feature items.",
+    "rateCardPanel": {
+      "autoTitle": "Project rate card",
+      "autoDescription": "A rate card is created automatically from your form and documents when you extract requirements. It includes role rates, NRC setup costs, and monthly RC items.",
+      "autoPending": "No rate card yet — click Extract Requirements to generate one automatically.",
+      "editRateCard": "Edit rate card",
+      "editableHint": "Edit the rate card anytime. Re-run extraction on the estimate to apply changes to requirements.",
+      "title": "Select rate card",
+      "description": "Choose an existing rate card or generate a new one from this project's form and documents before extracting requirements.",
+      "modeSelectExisting": "Existing rate card",
+      "modeCreateNew": "Generate new rate card",
+      "existingHint": "Choose from rate cards already configured in the system.",
+      "existingLabel": "Existing rate card",
+      "generateOnExtractHint": "A rate card will be generated from your form and documents when you click Extract Requirements.",
+      "generateReadyHint": "Click Extract Requirements to analyze \"{project}\" and generate a rate card for review.",
+      "noExistingCards": "No rate cards exist yet. Use Generate new rate card or Manage rate cards to create one.",
+      "manageRateCards": "Manage rate cards",
+      "selectPlaceholder": "Choose a rate card…",
+      "createDescription": "Analyze the estimate form and uploaded documents to generate a recommended rate card named after this project.",
+      "generateButton": "Generate from project information",
+      "generating": "Generating rate card…",
+      "generateError": "Failed to generate rate card",
+      "saveGeneratedError": "Failed to save generated rate card",
+      "loadOptionsError": "Could not load rate cards. You can still generate a new rate card.",
+      "selectedCard": "Assigned: {name}",
+      "reviewModalTitle": "Review generated rate card",
+      "reviewModalDescription": "Review and edit the generated values before saving. Defaults are used when project information is insufficient.",
+      "usedDefaultsNotice": "Some values use predefined defaults because project information was limited.",
+      "productivityDefaultHours": "Default hours per feature",
+      "reviewCancel": "Cancel",
+      "reviewSave": "Save rate card",
+      "reviewSaveAndExtract": "Save and extract requirements",
+      "reviewSaving": "Saving…"
+    },
     "requirementsTitle": "Extracted Requirements",
     "requirementsDescription": "Review and edit the AI-extracted requirement lists.",
     "featuresTitle": "Feature Items",
@@ -98,8 +167,12 @@
   },
   "export": {
     "title": "Export",
-    "description": "Generate PDF, Excel, or Markdown reports in the estimate locale.",
-    "formatPdf": "PDF",
+    "description": "Choose export language and formats. The PDF is a complete project estimate report; Excel and Markdown include the same content.",
+    "localeLabel": "Export language",
+    "localeJa": "Japanese",
+    "localeEn": "English",
+    "formatsLabel": "Formats",
+    "formatPdf": "PDF (complete project estimate)",
     "formatXlsx": "Excel",
     "formatMd": "Markdown",
     "exportButton": "Export",
@@ -109,24 +182,60 @@
     "download": "Download",
     "loading": "Loading exports…",
     "empty": "No exports yet",
-    "staleBadge": "Stale — recalculate or re-export"
+    "staleBadge": "Stale — recalculate or re-export",
+    "emailTitle": "Send by email",
+    "emailDescription": "Select exports below and send them as attachments.",
+    "emailToLabel": "Recipient email",
+    "emailMessageLabel": "Message (optional)",
+    "emailMessagePlaceholder": "Add a note for the recipient…",
+    "emailSelectLabel": "Include",
+    "emailSendButton": "Send email",
+    "emailSending": "Sending…",
+    "emailSuccess": "Email sent successfully",
+    "emailError": "Failed to send email",
+    "emailSelectRequired": "Select at least one export to send",
+    "includedDataTitle": "Calculation data included in export",
+    "includedDataDescription": "PDF, Excel, and Markdown exports include the same calculation breakdown shown below.",
+    "preview": "Preview",
+    "previewTitle": "Export preview",
+    "previewClose": "Close",
+    "previewPrint": "Print",
+    "previewLoading": "Loading preview…",
+    "previewError": "Failed to load preview",
+    "previewXlsxHint": "Excel files cannot be previewed in the browser. Download the file to open it.",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteConfirm": "Delete this export file?",
+    "deleteConfirmAction": "Delete",
+    "deleteCancel": "Cancel",
+    "deleteError": "Failed to delete export"
   },
   "calculation": {
     "title": "Calculation Results",
     "description": "NRC and RC breakdown from feature items and rate card.",
     "calculateTitle": "Calculate Estimate",
-    "calculateDescription": "Run the calculation engine using feature items and the active rate card.",
+    "calculateDescription": "Run the calculation engine using feature items and the selected rate card.",
+    "rateCardLabel": "Rate card",
+    "rateCardFrozenHint": "Uses the rate card version frozen at calculate time.",
+    "viewRateCard": "View rate card",
+    "rateCardRequired": "Select a rate card before calculating.",
     "calculateButton": "Calculate",
     "calculating": "Calculating…",
     "calculateError": "Calculation failed",
     "recalculateWithCurrentRates": "Recalculate with current rates",
     "totalHours": "Total effort hours",
     "totalDays": "Total effort days",
+    "developmentApproach": "Development approach",
+    "developmentApproachMultiplier": "Effort multiplier",
     "daysFormula": "Person-days = hours ÷ 8",
     "phaseBreakdown": "Phase breakdown",
     "roleBreakdown": "Role breakdown",
     "phase": "Phase",
     "role": "Role",
+    "personnel": "Developers",
+    "personnelFormula": "ceil(role hours ÷ (estimated duration days × 8)), minimum 1",
+    "developers": "Developers",
+    "developersFormula": "ceil(role hours ÷ (estimated duration days × 8)), minimum 1",
     "hours": "Hours",
     "percentage": "%",
     "rate": "Hourly rate",
@@ -137,6 +246,7 @@
     "nrcFormula": "NRC = labor + setup + contingency + overhead",
     "labor": "Labor",
     "setup": "Setup costs",
+    "setupTotal": "Setup total",
     "contingency": "Contingency",
     "contingencyFormula": "Contingency = labor × contingency rate",
     "overhead": "Overhead",
@@ -148,11 +258,37 @@
     "maintenanceFormula": "Maintenance = monthly support hours × support role hourly rate",
     "monthlyTotal": "Monthly total",
     "annualTotal": "Annual total",
+    "totalDevelopmentCost": "Total Development Cost (deployment and Delivery acceptance)",
+    "totalDevelopmentCostFormula": "NRC total through deployment and delivery acceptance",
     "firstYearTotal": "First year total",
     "firstYearFormula": "First year = NRC + annual RC"
   },
+  "gantt": {
+    "title": "Project Timeline (Gantt)",
+    "description": "Sequential schedule derived from extracted feature items and rate-card phase order.",
+    "assumption": "Working days Mon–Fri only; tasks run one after another; no public holidays.",
+    "startDate": "Project start date",
+    "saveStartDate": "Save start date",
+    "refresh": "Refresh timeline",
+    "refreshing": "Refreshing…",
+    "saving": "Saving…",
+    "saved": "Start date saved",
+    "saveError": "Failed to save start date",
+    "loadError": "Failed to load timeline",
+    "loading": "Loading timeline…",
+    "empty": "No schedulable feature items yet.",
+    "projectStart": "Project start",
+    "projectEnd": "Project end",
+    "totalWorkingDays": "Total working days",
+    "task": "Task",
+    "phase": "Phase",
+    "role": "Role",
+    "hours": "Hours",
+    "endDate": "End date",
+    "durationDays": "Duration (days)"
+  },
   "variance": {
-    "dashboardTitle": "Variance Dashboard",
+    "dashboardTitle": "Real-Time KPI Management",
     "dashboardDescription": "Compare estimated vs actual effort and cost for completed projects.",
     "actualsTitle": "Actuals & Completion",
     "actualsDescription": "Enter actual project results and mark the estimate complete.",
@@ -195,19 +331,16 @@
       "notes": "Notes"
     }
   },
-  "admin": {
-    "title": "Admin",
-    "tabs": {
-      "rateCards": "Rate cards",
-      "users": "Users",
-      "aiSettings": "AI settings",
-      "system": "System"
-    },
-    "rateCards": {
-      "loading": "Loading rate card…",
+  "rateCards": {
+    "pageTitle": "Rate Card Management",
+    "pageDescription": "Create and manage rate cards used for estimate calculation.",
+    "loading": "Loading rate card…",
       "loadError": "Failed to load rate card",
-      "version": "Version {number}",
-      "save": "Save new version",
+      "saveCard": "Save card",
+      "saveCardInUseConfirm": "This rate card is used by existing estimates. Save anyway?",
+      "saveCardConfirmYes": "Yes, save",
+      "saveCardConfirmNo": "Cancel",
+      "cardActionsTitle": "Rate card",
       "saving": "Saving…",
       "saved": "Saved",
       "saveError": "Failed to save rate card",
@@ -219,16 +352,180 @@
       "phases": "Phases",
       "phaseName": "Phase",
       "percentage": "Percentage (%)",
+      "phaseMeaning": "Meaning",
+      "phaseMeanings": {
+        "requirement": "Gathering and clarifying requirements",
+        "design": "Architecture, UI/UX, and technical design",
+        "development": "Building and coding",
+        "testing": "QA, UAT, and bug fixing",
+        "deployment": "Release, go-live, and handover"
+      },
+      "phaseLabels": {
+        "requirement": "Requirements",
+        "design": "Design",
+        "development": "Development",
+        "testing": "Testing",
+        "deployment": "Deployment"
+      },
+      "roleNames": {
+        "pm": "PM",
+        "project_manager": "Project Manager",
+        "developer": "Developer",
+        "senior_developer": "Senior Developer",
+        "frontend_developer": "Frontend Developer",
+        "backend_developer": "Backend Developer",
+        "full_stack_developer": "Full Stack Developer",
+        "qa": "QA",
+        "qa_engineer": "QA Engineer",
+        "designer": "Designer",
+        "ui_designer": "UI Designer",
+        "ux_designer": "UX Designer",
+        "architect": "Architect",
+        "devops": "DevOps",
+        "business_analyst": "Business Analyst",
+        "tech_lead": "Tech Lead"
+      },
+      "setupItemNames": {
+        "infrastructure": "Infrastructure",
+        "tooling": "Tooling",
+        "third_party": "Third party"
+      },
       "contingency": "Contingency (%)",
       "overhead": "Overhead (%)",
       "tax": "Tax (%)",
-      "setupCosts": "Setup costs",
-      "infrastructure": "Infrastructure",
-      "tooling": "Tooling",
-      "thirdParty": "Third party",
+      "setupCosts": "Setup costs (NRC)",
+      "setupCostsHint": "These one-time setup items are included in NRC when calculating estimates.",
+      "setupTotal": "Setup costs total",
+      "monthlyRcHint": "Monthly RC subtotal excludes maintenance support hours from individual estimates.",
+      "monthlyRcSubtotal": "Monthly RC subtotal",
+      "annualRcSubtotal": "Annual RC subtotal (×12)",
+      "addItem": "Add item",
+      "removeItem": "Remove",
+      "cardName": "Rate card name",
+      "selectCard": "Rate card",
+      "activeCard": "active",
+      "createCard": "Create card",
+      "createCardConfirm": "Create",
+      "createCardCancel": "Cancel",
+      "creatingCard": "Creating…",
+      "createCardError": "Failed to create rate card",
+      "switchCardError": "Failed to switch rate card",
+      "newCardName": "New card name",
+      "newCardDefaultName": "New Rate Card",
+      "noCards": "No rate cards yet. Create one to get started.",
+      "loadVersion": "Load version",
+      "versionOption": "Version {number}{label}",
+      "versionLabel": "Version label",
+      "versionLabelPlaceholder": "e.g. Q3 2026 client rates",
+      "unsavedChanges": "Unsaved edits",
+      "dailyRateFormula": "Hourly rate × 8",
+      "resetDailyRate": "Reset from hourly",
       "monthlyRcItems": "Monthly RC items",
       "itemName": "Item",
-      "amount": "Amount (¥)"
+      "amount": "Amount (¥)",
+      "deleteCard": "Delete card",
+      "deleteCardConfirm": "Delete \"{name}\"? This cannot be undone.",
+      "deleteCardConfirmYes": "Yes, delete card",
+      "deleteCardConfirmNo": "Cancel",
+      "deletingCard": "Deleting…",
+      "deleteCardError": "Failed to delete rate card",
+      "deleteCardInUse": "Cannot delete: this rate card is used by one or more estimates.",
+      "deleteLastCardHint": "At least one rate card must remain.",
+      "estimateCountBadge": "{count} estimates",
+      "lockedBanner": "This rate card is locked because {count} exported or completed estimate(s) use it. Duplicate the card to make changes.",
+      "lockedSaveError": "This rate card is locked. Duplicate it to make changes.",
+      "duplicateCard": "Duplicate card",
+      "duplicateModalTitle": "Duplicate rate card",
+      "duplicateModalDescription": "Create an editable copy with a new name. The copy becomes the active rate card for new estimates.",
+      "duplicateOriginalName": "Original name",
+      "duplicateNewName": "New name",
+      "duplicateDefaultName": "{name} (Copy)",
+      "duplicateConfirm": "Duplicate",
+      "duplicateCancel": "Cancel",
+      "duplicating": "Duplicating…",
+      "duplicateError": "Failed to duplicate rate card",
+      "usageTitle": "Estimates using this rate card",
+      "usageLoading": "Loading estimates…",
+      "usageEmpty": "No estimates have used this rate card yet.",
+      "usageProject": "Project",
+      "usageClient": "Client",
+      "usageStatus": "Status",
+      "usageUpdated": "Last updated",
+      "ai": {
+        "suggest": "AI suggest",
+        "noEstimatesHint": "Link a project to this rate card to use project-specific context in AI suggestions.",
+        "noLinkOption": "No link — free-form",
+        "modalTitle": "AI suggest — {section}",
+        "modalDescription": "Optionally link a project for estimate context, or choose free-form and describe what you need in your prompt.",
+        "estimateLabel": "Linked project",
+        "promptLabel": "Your prompt",
+        "promptPlaceholder": "e.g. Add a DevOps role for cloud infrastructure based on the integration requirements",
+        "generate": "Generate suggestions",
+        "generating": "Generating…",
+        "apply": "Apply suggestions",
+        "cancel": "Cancel",
+        "error": "AI suggestion failed. Try again or check AI settings.",
+        "previewTitle": "Suggestions for {project}",
+        "previewTitleNoLink": "Free-form suggestions",
+        "noSuggestions": "No new items to add. Try a different prompt or project.",
+        "replaceAllPhasesHint": "These suggestions replace all phase percentages. Applying will overwrite the current phase table.",
+        "sections": {
+          "roles": "Roles",
+          "phases": "Phases",
+          "setup_cost_items": "Setup costs (NRC)",
+          "monthly_rc_items": "Monthly RC items"
+        }
+      },
+      "developmentApproach": "Development Approach",
+      "developmentApproachHint": "Applied as an effort multiplier when calculating time, team size, and labor cost on estimates.",
+      "developmentApproachOptions": {
+        "traditional": {
+          "label": "Traditional Development",
+          "description": "Manual software development with minimal AI assistance."
+        },
+        "ai_assisted": {
+          "label": "AI-Assisted Development",
+          "description": "Development primarily supported by AI coding tools (e.g., GitHub Copilot, Cursor AI, Claude Code)."
+        },
+        "hybrid": {
+          "label": "Hybrid Development",
+          "description": "Combination of traditional development practices and AI-assisted development."
+        },
+        "low_code": {
+          "label": "Low-Code / No-Code Development",
+          "description": "Development using low-code or no-code platforms with minimal custom coding."
+        }
+      },
+      "allCardsList": {
+        "title": "All rate cards",
+        "description": "Click a rate card to view and edit its details.",
+        "loading": "Loading rate cards…",
+        "empty": "No rate cards yet.",
+        "name": "Rate card name",
+        "developmentApproach": "Development approach",
+        "status": "Status",
+        "estimates": "Estimates",
+        "estimateCount": "{count}",
+        "statusActive": "Active",
+        "statusInactive": "Inactive",
+        "statusLocked": "Locked",
+        "backToList": "← All rate cards",
+        "detailTitle": "Rate card details",
+        "detailDescription": "View and edit this rate card's roles, rates, and cost assumptions."
+      }
+  },
+  "admin": {
+    "title": "Admin",
+    "loading": "Loading…",
+    "loadError": "Could not load the admin page.",
+    "tabs": {
+      "users": "Users",
+      "discountSettings": "Estimate discount",
+      "aiSettings": "AI settings",
+      "smtpSettings": "SMTP settings",
+      "formulas": "Formulas",
+      "help": "Help",
+      "system": "System"
     },
     "users": {
       "loading": "Loading users…",
@@ -237,10 +534,20 @@
       "listTitle": "Users",
       "email": "Email",
       "displayName": "Display name",
+      "companyName": "Company name",
+      "companyNamePlaceholder": "Default client name on new estimates",
       "password": "Password",
       "locale": "Locale",
       "localeJa": "Japanese",
       "localeEn": "English",
+      "currency": "Currency",
+      "currencyJPY": "Yen (JPY)",
+      "currencyUSD": "US Dollar (USD)",
+      "currencyPHP": "Philippine Peso (PHP)",
+      "isActive": "Active",
+      "status": "Status",
+      "activeYes": "Active",
+      "activeNo": "Disabled",
       "isAdmin": "Admin",
       "adminYes": "Yes",
       "adminNo": "No",
@@ -248,6 +555,14 @@
       "creating": "Creating…",
       "createError": "Failed to create user",
       "updateError": "Failed to update user",
+      "editTitle": "Edit user",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving…",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "deleteConfirm": "Delete user {email}? This cannot be undone.",
+      "deleteError": "Failed to delete user",
       "actions": "Actions",
       "resetPassword": "Reset password",
       "newPassword": "New password",
@@ -258,12 +573,77 @@
     "aiSettings": {
       "loading": "Loading AI settings…",
       "loadError": "Failed to load AI settings",
-      "readOnlyNote": "AI provider and model are configured via environment variables and cannot be changed here.",
+      "description": "Choose the active AI provider and model, and store API credentials for OpenAI and Anthropic.",
       "provider": "Provider",
+      "providerOpenai": "OpenAI (GPT)",
+      "providerAnthropic": "Anthropic (Claude)",
       "model": "Model",
+      "openaiApiKey": "OpenAI API key",
+      "anthropicApiKey": "Anthropic API key",
+      "apiKeyPlaceholder": "Enter a new key to update",
+      "apiKeyConfigured": "Configured ({hint})",
+      "apiKeyNotConfigured": "Not configured",
+      "save": "Save settings",
+      "saving": "Saving…",
+      "saved": "AI settings saved",
+      "saveError": "Failed to save AI settings",
+      "testConnection": "Test connection",
+      "testing": "Testing…",
+      "testSuccess": "Connection successful",
+      "testFailed": "Connection failed: {message}",
+      "testNoKey": "Enter an API key or save one first",
+      "testError": "Connection test failed",
       "hermesHealth": "Hermes service",
       "statusOk": "Healthy",
       "statusIssue": "Issue detected"
+    },
+    "discountSettings": {
+      "loading": "Loading discount settings…",
+      "loadError": "Failed to load discount settings",
+      "description": "Internal discount applied to calculated estimate costs. End users and clients never see this rate or any discount breakdown.",
+      "rateLabel": "Discount rate",
+      "rateHint": "Applied to each calculated cost item during estimate calculation. Example: 30% discount on ¥1,000 yields ¥700.",
+      "applicationTitle": "How it is applied in calculation",
+      "applicationIntro": "At the end of each estimate calculation, the engine multiplies NRC components by (1 − discount rate). Recurring costs are not discounted.",
+      "applicationPoints": [
+        "NRC labor, setup, contingency, and overhead are multiplied by the discount multiplier.",
+        "Role rates in the breakdown are recalculated from the discounted labor costs.",
+        "Monthly and annual RC totals are unchanged.",
+        "First-year total is recalculated as discounted NRC total + annual RC.",
+        "End users and exports never show the discount rate or a discount breakdown."
+      ],
+      "invalidRate": "Enter a whole-number percentage between 0 and 100.",
+      "save": "Save settings",
+      "saving": "Saving…",
+      "saved": "Discount settings saved",
+      "saveError": "Failed to save discount settings"
+    },
+    "smtpSettings": {
+      "loading": "Loading SMTP settings…",
+      "loadError": "Failed to load SMTP settings",
+      "description": "Configure SMTP for export email delivery. Values are stored in the database and override .env defaults.",
+      "envFallbackHint": "Some values are still using .env defaults. Save settings here to store them in the database.",
+      "smtpHost": "SMTP host",
+      "smtpPort": "SMTP port",
+      "smtpUser": "SMTP user",
+      "smtpPassword": "SMTP password",
+      "smtpFrom": "From address",
+      "smtpUseTls": "Use TLS (STARTTLS)",
+      "passwordPlaceholder": "Enter a new password to update",
+      "passwordConfigured": "Configured ({hint})",
+      "passwordNotConfigured": "Not configured",
+      "configuredStatus": "Email delivery",
+      "statusConfigured": "Configured",
+      "statusNotConfigured": "Not configured",
+      "save": "Save settings",
+      "saving": "Saving…",
+      "saved": "SMTP settings saved",
+      "saveError": "Failed to save SMTP settings",
+      "testConnection": "Test connection",
+      "testing": "Testing…",
+      "testSuccess": "Connection successful",
+      "testFailed": "Connection failed: {message}",
+      "testError": "Connection test failed"
     },
     "system": {
       "loading": "Loading system health…",
@@ -275,10 +655,443 @@
       "stuckExtractions": "Stuck extractions (>10 min)",
       "stuckWarning": "Some estimates have been extracting for more than 10 minutes.",
       "aiConfig": "AI configuration",
+      "provider": "Provider",
+      "model": "Model",
+      "openaiCredentials": "OpenAI credentials",
+      "anthropicCredentials": "Anthropic credentials",
+      "configured": "Configured",
+      "notConfigured": "Not configured",
       "statusOk": "OK",
       "statusError": "Error",
       "statusUnreachable": "Unreachable"
+    },
+    "formulas": {
+      "title": "Formulas",
+      "intro": "Reference for how estimates, rate cards, variance, and KPIs are calculated. Estimates use the selected rate card version when set; otherwise the active rate card for the current user. Administrators can access all rate cards.",
+      "columns": {
+        "metric": "Metric",
+        "formula": "Formula",
+        "notes": "Notes"
+      },
+      "effort": {
+        "title": "Effort units",
+        "description": "Derived from feature items on the estimate.",
+        "rows": [
+          {
+            "metric": "Rate card resolution",
+            "formula": "estimate.rate_card_id → that card's version; else user's active rate card",
+            "notes": "Frozen rate_card_version_id on recalculate unless recalculate_with_current_rates=true"
+          },
+          {
+            "metric": "Total effort (hours)",
+            "formula": "Σ (feature item hours × development_approach effort multiplier)",
+            "notes": "Effort multiplier: traditional 1.0, AI-assisted 0.75, hybrid 0.875, low-code 0.55"
+          },
+          {
+            "metric": "Total effort (days)",
+            "formula": "total_hours ÷ 8",
+            "notes": "8 hours per effort day (HOURS_PER_EFFORT_DAY)"
+          },
+          {
+            "metric": "Phase hours",
+            "formula": "total_hours × phase.percentage",
+            "notes": "One row per phase; percentages should sum to 100%"
+          },
+          {
+            "metric": "Role hours",
+            "formula": "Σ hours where role = R",
+            "notes": "Grouped by role from feature items (after effort multiplier)"
+          },
+          {
+            "metric": "Personnel count (per role)",
+            "formula": "ceil(role_hours ÷ capacity), min 1",
+            "notes": "capacity = max(estimated_duration_days × 8, 8); uses gantt duration when available"
+          },
+          {
+            "metric": "Recommended team size",
+            "formula": "ceil(active_roles × team_size_multiplier), min 1",
+            "notes": "Team size multiplier: traditional 1.0, AI-assisted 0.85, hybrid 0.90, low-code 0.70"
+          },
+          {
+            "metric": "Development approach",
+            "formula": "Rate card setting (required)",
+            "notes": "traditional | ai_assisted | hybrid | low_code — affects effort and team size multipliers"
+          }
+        ]
+      },
+      "nrc": {
+        "title": "Non-recurring cost (NRC)",
+        "description": "One-time project costs in JPY.",
+        "rows": [
+          {
+            "metric": "Labor",
+            "formula": "Σ (role_hours × hourly_rate_jpy)",
+            "notes": "Per role from rate card"
+          },
+          {
+            "metric": "Setup",
+            "formula": "Σ setup_cost_items.amount_jpy",
+            "notes": "Line items on rate card (NRC setup)"
+          },
+          {
+            "metric": "Contingency",
+            "formula": "labor × contingency_rate",
+            "notes": "Rate from rate card (e.g. 0.10 = 10%)"
+          },
+          {
+            "metric": "Overhead",
+            "formula": "labor × overhead_rate",
+            "notes": "Rate from rate card"
+          },
+          {
+            "metric": "NRC total",
+            "formula": "labor + setup + contingency + overhead",
+            "notes": "tax_rate on rate card is stored but not applied in calculation"
+          }
+        ]
+      },
+      "rc": {
+        "title": "Recurring cost (RC)",
+        "description": "Monthly and annual recurring costs in JPY.",
+        "rows": [
+          {
+            "metric": "Maintenance",
+            "formula": "monthly_support_hours × support_role hourly rate",
+            "notes": "Support role and hours from estimate maintenance settings"
+          },
+          {
+            "metric": "Monthly RC items",
+            "formula": "Σ monthly_rc_items.amount_jpy",
+            "notes": "Line items on rate card"
+          },
+          {
+            "metric": "Monthly total",
+            "formula": "maintenance + Σ monthly RC items",
+            "notes": ""
+          },
+          {
+            "metric": "Annual total",
+            "formula": "monthly_total × 12",
+            "notes": ""
+          },
+          {
+            "metric": "First year total",
+            "formula": "NRC total + annual RC",
+            "notes": "Before admin discount; see Discount section"
+          }
+        ]
+      },
+      "discount": {
+        "title": "Admin estimate discount",
+        "description": "Internal discount configured under Admin → Estimate discount. Hidden from end users and exports.",
+        "rows": [
+          {
+            "metric": "Discount multiplier",
+            "formula": "1 − estimate_discount_rate",
+            "notes": "Applied at end of calculation (e.g. 0.30 rate → 0.70 multiplier)"
+          },
+          {
+            "metric": "NRC labor, setup, contingency, overhead",
+            "formula": "amount_jpy × multiplier",
+            "notes": "Role rates in breakdown are recalculated from discounted costs"
+          },
+          {
+            "metric": "RC monthly and annual",
+            "formula": "unchanged",
+            "notes": "Discount does not affect recurring costs"
+          },
+          {
+            "metric": "First year total (after discount)",
+            "formula": "discounted NRC total + annual RC",
+            "notes": "Recalculated after NRC discount is applied"
+          }
+        ]
+      },
+      "gantt": {
+        "title": "Gantt timeline",
+        "description": "Optional schedule built when a project start date is provided on calculate.",
+        "rows": [
+          {
+            "metric": "Gantt timeline",
+            "formula": "build_gantt_timeline(feature items, phases, project_start_date)",
+            "notes": "Phase-ordered tasks on a working-day calendar"
+          },
+          {
+            "metric": "Estimated duration (days)",
+            "formula": "gantt.total_working_days when present, else total_effort_days",
+            "notes": "Used for personnel count and recommended team sizing context"
+          }
+        ]
+      },
+      "rateCard": {
+        "title": "Rate card",
+        "description": "Defaults, validation, and access rules for rate cards.",
+        "rows": [
+          {
+            "metric": "Ownership",
+            "formula": "created_by == user.id",
+            "notes": "Non-admins list, edit, and assign only their own cards"
+          },
+          {
+            "metric": "Active card",
+            "formula": "one is_active per owner",
+            "notes": "Administrators: global active card behavior"
+          },
+          {
+            "metric": "Locked card",
+            "formula": "used by ≥ 1 estimate",
+            "notes": "Duplicate to create an editable copy without affecting past estimates"
+          },
+          {
+            "metric": "Estimate assignment",
+            "formula": "user may set rate_card_id on owned estimates only",
+            "notes": "Administrators may assign any card"
+          },
+          {
+            "metric": "Daily rate",
+            "formula": "hourly_rate_jpy × 8",
+            "notes": "Default when daily rate is blank; editable with reset"
+          },
+          {
+            "metric": "Phase percentages",
+            "formula": "Σ phase.percentage = 1.0",
+            "notes": "Must sum to 100% (1.0) before save"
+          },
+          {
+            "metric": "Setup items total",
+            "formula": "Σ setup_cost_items.amount_jpy",
+            "notes": "Shown in rate card editor NRC setup section"
+          },
+          {
+            "metric": "Monthly RC total",
+            "formula": "Σ monthly_rc_items.amount_jpy",
+            "notes": "Shown in rate card editor RC section"
+          },
+          {
+            "metric": "Development approach",
+            "formula": "Required rate card setting",
+            "notes": "Influences effort and team size multipliers on estimates"
+          }
+        ]
+      },
+      "variance": {
+        "title": "Variance (actual vs estimated)",
+        "description": "After an estimate is completed with actuals entered.",
+        "rows": [
+          {
+            "metric": "Variance %",
+            "formula": "(actual − estimated) ÷ estimated × 100",
+            "notes": "If estimated is 0, variance is 0%"
+          },
+          {
+            "metric": "Severity: green",
+            "formula": "|variance %| ≤ 10",
+            "notes": "On target"
+          },
+          {
+            "metric": "Severity: amber",
+            "formula": "10 < |variance %| ≤ 25",
+            "notes": "Moderate deviation"
+          },
+          {
+            "metric": "Severity: red",
+            "formula": "|variance %| > 25",
+            "notes": "Large deviation"
+          },
+          {
+            "metric": "Compared fields",
+            "formula": "effort_hours, effort_days, nrc_jpy, rc_monthly_jpy",
+            "notes": "Each field gets its own variance row"
+          }
+        ]
+      }
+    },
+    "help": {
+      "title": "Resources",
+      "description": "Browse guides, FAQs, and reference docs for the full estimate workflow—rate card setup, AI document extraction, cost calculation, and export in Japanese or English.",
+      "search": {
+        "placeholder": "Search guides, FAQs, and documentation…",
+        "clear": "Clear search",
+        "noResults": "No results for \"{query}\"",
+        "resultCount": "{count} results",
+        "browseAll": "Browse all topics below or refine your search."
+      },
+      "categories": {
+        "all": "All",
+        "articles": "Articles",
+        "faqs": "FAQs",
+        "documentation": "Documentation"
+      },
+      "articles": [
+        {
+          "id": "rate-cards-basics",
+          "title": "Rate card basics",
+          "summary": "How rate cards define roles, phases, and rates used in every estimate.",
+          "body": "Rate cards store hourly and daily rates by role, phase percentages, contingency, overhead, tax, setup costs, and monthly recurring items. The active rate card is applied when you calculate an estimate. Each user manages their own rate cards; administrators can access all cards. Cards used by existing estimates become locked—you can duplicate them to make changes without affecting past estimates."
+        },
+        {
+          "id": "export-formats",
+          "title": "Export formats",
+          "summary": "PDF, Excel, and Markdown exports in Japanese or English.",
+          "body": "After calculation, export the estimate from the detail page. PDF is suited for client delivery, Excel for further analysis, and Markdown for documentation. Display locale controls the language of labels and formatted content in the export."
+        },
+        {
+          "id": "locale-switching",
+          "title": "Switching language",
+          "summary": "Use the locale switcher in the header for Japanese or English UI.",
+          "body": "Click the locale switcher in the top-right header to toggle between Japanese and English. The app remembers your choice for navigation. Estimate content can be stored and displayed per locale where translations exist."
+        }
+      ],
+      "faqs": [
+        {
+          "id": "what-is-ai-estimate",
+          "question": "What is AI Estimate?",
+          "answer": "AI Estimate is an internal tool for creating software project estimates. Enter client and scope details in a structured project form, optionally upload requirement documents for AI extraction, and run a deterministic calculation engine to produce NRC, RC, and first-year cost totals in JPY."
+        },
+        {
+          "id": "who-can-use",
+          "question": "Who can use the system?",
+          "answer": "Access is credential-based. Accounts are created by your organization—sign in with the email and password provided to you. If you need an account or cannot log in, contact your administrator."
+        },
+        {
+          "id": "supported-languages",
+          "question": "What languages are supported?",
+          "answer": "The interface is available in Japanese and English. Use the locale switcher in the header to change the UI language. After calculation, you can export estimates in either language."
+        },
+        {
+          "id": "supported-documents",
+          "question": "What documents can I upload?",
+          "answer": "Upload PDF and other supported document formats on an estimate. AI extracts a feature list with suggested effort hours. Always review and adjust AI suggestions before running the calculation."
+        },
+        {
+          "id": "export-options",
+          "question": "What export formats are available?",
+          "answer": "After calculation, export your estimate as PDF for client delivery, Excel for further analysis, or Markdown for documentation. Exports are available in Japanese or English."
+        },
+        {
+          "id": "estimate-statuses",
+          "question": "What do estimate statuses mean?",
+          "answer": "Draft: form in progress. Extracting: AI is processing uploaded documents. Review: features ready for your edits. Calculated: costs have been computed. Exported: results have been exported at least once."
+        },
+        {
+          "id": "login-trouble",
+          "question": "I cannot log in. What should I check?",
+          "answer": "Verify your email and password. Disabled accounts cannot sign in. If problems persist, ask an administrator to confirm your account is active and reset your credentials if needed."
+        },
+        {
+          "id": "ai-extraction",
+          "question": "How does AI document extraction work?",
+          "answer": "Upload PDF or other supported documents on an estimate. The system sends them for extraction and returns a feature list with suggested hours. Always review and adjust AI suggestions before calculating—the review step is required for accurate estimates."
+        }
+      ],
+      "documentation": [
+        {
+          "id": "cost-overview",
+          "title": "NRC, RC, and first-year cost",
+          "summary": "Overview of non-recurring, recurring, and combined first-year totals.",
+          "body": "NRC (non-recurring cost) covers one-time effort: requirements through deployment, plus setup costs and applied contingency, overhead, and tax. RC (recurring cost) covers monthly items such as maintenance support multiplied over twelve months for the annual subtotal. First-year cost combines NRC with the annual RC total for a single-year project view."
+        },
+        {
+          "id": "estimate-workflow",
+          "title": "Estimate workflow",
+          "summary": "End-to-end flow from form entry to exported deliverable.",
+          "body": "Create an estimate and complete the project form. Optionally upload documents for AI extraction. Review and edit the feature list and hours. Select or confirm the active rate card. Run calculation to generate phase breakdown, Gantt timeline, and cost summary. Export in your preferred format when ready for client delivery."
+        },
+        {
+          "id": "rate-card-fields",
+          "title": "Rate card fields reference",
+          "summary": "What each section of a rate card controls in calculations.",
+          "body": "Roles define hourly and daily rates per team member type. Phases split effort across requirements, design, development, testing, and deployment—the percentages must sum to 100%. Contingency, overhead, and tax are applied as multipliers. Setup costs are one-time NRC line items. Monthly RC items add recurring charges. Development approach affects productivity assumptions used in effort calculations."
+        }
+      ]
     }
+  },
+  "help": {
+    "title": "Help",
+    "description": "Quick answers and guides for creating estimates, uploading documents, calculating costs, and exporting results.",
+    "search": {
+      "placeholder": "Search guides, FAQs, and documentation…",
+      "clear": "Clear search",
+      "noResults": "No results for \"{query}\"",
+      "resultCount": "{count} results",
+      "browseAll": "Browse all topics below or refine your search."
+    },
+    "categories": {
+      "all": "All",
+      "articles": "Articles",
+      "faqs": "FAQs",
+      "documentation": "Documentation"
+    },
+    "articles": [
+      {
+        "id": "export-formats",
+        "title": "Export formats",
+        "summary": "PDF, Excel, and Markdown exports in Japanese or English.",
+        "body": "After calculation, export the estimate from the detail page. PDF is suited for client delivery, Excel for further analysis, and Markdown for documentation. Display locale controls the language of labels and formatted content in the export."
+      },
+      {
+        "id": "locale-switching",
+        "title": "Switching language",
+        "summary": "Use the locale switcher in the header for Japanese or English UI.",
+        "body": "Click the locale switcher in the top-right header to toggle between Japanese and English. The app remembers your choice for navigation. Estimate content can be stored and displayed per locale where translations exist."
+      }
+    ],
+    "faqs": [
+      {
+        "id": "what-is-ai-estimate",
+        "question": "What is AI Estimate?",
+        "answer": "AI Estimate is an internal tool for creating software project estimates. Enter client and scope details in a structured project form, optionally upload requirement documents for AI extraction, and run a deterministic calculation engine to produce NRC, RC, and first-year cost totals in JPY."
+      },
+      {
+        "id": "who-can-use",
+        "question": "Who can use the system?",
+        "answer": "Access is credential-based. Accounts are created by your organization—sign in with the email and password provided to you. If you need an account or cannot log in, contact your administrator."
+      },
+      {
+        "id": "supported-languages",
+        "question": "What languages are supported?",
+        "answer": "The interface is available in Japanese and English. Use the locale switcher in the header to change the UI language. After calculation, you can export estimates in either language."
+      },
+      {
+        "id": "supported-documents",
+        "question": "What documents can I upload?",
+        "answer": "Upload PDF and other supported document formats on an estimate. AI extracts a feature list with suggested effort hours. Always review and adjust AI suggestions before running the calculation."
+      },
+      {
+        "id": "export-options",
+        "question": "What export formats are available?",
+        "answer": "After calculation, export your estimate as PDF for client delivery, Excel for further analysis, or Markdown for documentation. Exports are available in Japanese or English."
+      },
+      {
+        "id": "estimate-statuses",
+        "question": "What do estimate statuses mean?",
+        "answer": "Draft: form in progress. Extracting: AI is processing uploaded documents. Review: features ready for your edits. Calculated: costs have been computed. Exported: results have been exported at least once."
+      },
+      {
+        "id": "login-trouble",
+        "question": "I cannot log in. What should I check?",
+        "answer": "Verify your email and password. Disabled accounts cannot sign in. If problems persist, ask an administrator to confirm your account is active and reset your credentials if needed."
+      },
+      {
+        "id": "ai-extraction",
+        "question": "How does AI document extraction work?",
+        "answer": "Upload PDF or other supported documents on an estimate. The system sends them for extraction and returns a feature list with suggested hours. Always review and adjust AI suggestions before calculating—the review step is required for accurate estimates."
+      }
+    ],
+    "documentation": [
+      {
+        "id": "cost-overview",
+        "title": "NRC, RC, and first-year cost",
+        "summary": "Overview of non-recurring, recurring, and combined first-year totals.",
+        "body": "NRC (non-recurring cost) covers one-time effort: requirements through deployment, plus setup costs and applied contingency, overhead, and tax. RC (recurring cost) covers monthly items such as maintenance support multiplied over twelve months for the annual subtotal. First-year cost combines NRC with the annual RC total for a single-year project view."
+      },
+      {
+        "id": "estimate-workflow",
+        "title": "Estimate workflow",
+        "summary": "End-to-end flow from form entry to exported deliverable.",
+        "body": "Create an estimate and complete the project form. Optionally upload documents for AI extraction. Review and edit the feature list and hours. Select or confirm the active rate card. Run calculation to generate phase breakdown, Gantt timeline, and cost summary. Export in your preferred format when ready for client delivery."
+      }
+    ]
   },
   "errors": {
     "AI_TIMEOUT": "AI request timed out. Please try again.",
@@ -305,6 +1118,7 @@
   "form": {
     "selectPlaceholder": "Select…",
     "required": "This field is required",
+    "optionalWithDocuments": "A document has been uploaded. All form fields except project name are optional.",
     "project_name": "Project name",
     "nature_of_work": "Nature of work",
     "scope_boundaries": "Scope boundaries",
@@ -336,6 +1150,65 @@
       "japan": "Mainly in Japan",
       "offshore": "Mainly offshore",
       "hybrid": "Mix of Japan and offshore"
+    }
+  },
+  "welcome": {
+    "title": "Welcome",
+    "description": "AI-powered software project estimation.",
+    "loginLink": "New here? Explore the welcome guide",
+    "heroCta": "Sign in",
+    "footerCta": "Ready to get started?",
+    "footerCtaButton": "Sign in to your account",
+    "helpLink": "Signed in? Visit Help for FAQs and guides.",
+    "userGuide": {
+      "eyebrow": "Workflow",
+      "title": "How it works",
+      "stepCta": "Get started",
+      "intro": "Follow these steps to create a software project estimate from client requirements through to export.",
+      "steps": [
+        {
+          "icon": "login",
+          "title": "Sign in",
+          "description": "Log in with your email and password to access the system.",
+          "href": "/login"
+        },
+        {
+          "icon": "rateCard",
+          "title": "Set up rate cards",
+          "description": "Define roles, hourly rates, phase splits, and overhead settings. Activate a rate card to apply it when you calculate estimates.",
+          "href": "/rate-cards"
+        },
+        {
+          "icon": "create",
+          "title": "Create an estimate",
+          "description": "Start a new estimate and fill in the 21-field project form with client and scope details.",
+          "href": "/estimates/new"
+        },
+        {
+          "icon": "upload",
+          "title": "Upload documents",
+          "description": "Attach requirement documents. AI extracts features and suggested effort hours automatically.",
+          "href": null
+        },
+        {
+          "icon": "review",
+          "title": "Review features",
+          "description": "Edit extracted features, hours, and assumptions before running the calculation.",
+          "href": null
+        },
+        {
+          "icon": "calculate",
+          "title": "Calculate costs",
+          "description": "Run the calculation engine to produce NRC, RC, and first-year totals in JPY.",
+          "href": null
+        },
+        {
+          "icon": "export",
+          "title": "Export results",
+          "description": "Download PDF, Excel, or Markdown reports in Japanese or English.",
+          "href": null
+        }
+      ]
     }
   }
 }

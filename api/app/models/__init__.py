@@ -10,6 +10,7 @@ from app.models.estimate import (
     FeatureItem,
 )
 from app.models.rate_card import RateCard, RateCardVersion
+from app.models.system_config import SystemConfig
 from app.models.user import User
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "ExportFormat",
     "Actuals",
     "AuditLog",
+    "SystemConfig",
 ]

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.admin.ai_config import get_ai_config
 from app.dependencies import get_db, require_admin
 from app.documents.hermes_client import HermesClient
 from app.models.estimate import Estimate, EstimateStatus
@@ -20,6 +20,8 @@ class SystemHealthResponse(BaseModel):
     hermes: str
     ai_provider: str
     ai_model: str
+    openai_api_key_configured: bool
+    anthropic_api_key_configured: bool
     stuck_extractions: int
     storage_usage_bytes: int
     app_version: str = "0.1.0"
@@ -56,12 +58,15 @@ async def system_health(
 
     storage = get_storage_backend()
     stuck = await count_estimates_stuck_extracting(db)
+    ai_config = await get_ai_config(db)
 
     return SystemHealthResponse(
         database=database,
         hermes=await hermes.ping(),
-        ai_provider=settings.ai_provider,
-        ai_model=settings.ai_model,
+        ai_provider=ai_config.ai_provider,
+        ai_model=ai_config.ai_model,
+        openai_api_key_configured=bool(ai_config.openai_api_key),
+        anthropic_api_key_configured=bool(ai_config.anthropic_api_key),
         stuck_extractions=stuck,
         storage_usage_bytes=await storage.usage(),
     )

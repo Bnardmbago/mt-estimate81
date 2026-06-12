@@ -12,23 +12,28 @@ from app.ai.schemas import ExtractedRequirements
 from app.audit.service import log_change
 from app.documents.service import run_extraction as run_document_extraction
 from app.exceptions import AppError
+from app.i18n.localized_content import (
+    normalize_locale,
+    resolve_localized_dict,
+    store_feature_item_localization,
+    store_localized_dict,
+)
+from app.estimates.access import require_estimate_access
+from app.models.audit import AuditLog
 from app.models.estimate import Estimate, EstimateDocument, EstimateStatus, FeatureItem
-from app.models.rate_card import RateCard, RateCardVersion
+from app.models.user import User
+from app.estimates.rate_card_stale import RATE_CARD_FINGERPRINT_KEY
+from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
 
 
-async def _get_rate_card_roles(db: AsyncSession) -> list[dict[str, Any]] | None:
-    result = await db.execute(
-        select(RateCardVersion)
-        .join(RateCard)
-        .where(RateCard.is_active.is_(True))
-        .order_by(RateCardVersion.created_at.desc())
-        .limit(1)
-    )
-    version = result.scalar_one_or_none()
-    if not version:
-        return None
-    roles = version.settings.get("roles")
-    return roles if isinstance(roles, list) else None
+async def _get_rate_card_roles(
+    db: AsyncSession,
+    rate_card_id: uuid.UUID,
+    user: User,
+) -> list[dict[str, Any]] | None:
+    from app.rate_cards.service import get_rate_card_roles
+
+    return await get_rate_card_roles(db, rate_card_id, user)
 
 
 async def _extract_pending_documents(db: AsyncSession, estimate_id: uuid.UUID) -> None:
@@ -66,12 +71,13 @@ def _is_timeout_error(exc: BaseException) -> bool:
 
 
 async def _call_ai_provider(
+    db: AsyncSession,
     form_data: dict[str, Any],
     document_texts: list[str],
     locale: Literal["ja", "en"],
     rate_card_roles: list[dict[str, Any]] | None,
 ) -> ExtractedRequirements:
-    provider = get_ai_provider()
+    provider = await get_ai_provider(db)
     last_error: ValidationError | None = None
 
     for _ in range(2):
@@ -117,6 +123,16 @@ def _build_extracted_data(result: ExtractedRequirements, skipped_docs: list[str]
         "risks": result.risks,
         "gaps": result.gaps,
         "confidence_notes": confidence_notes,
+        "confidence_score": result.confidence_score,
+        "accuracy_level": result.accuracy_level,
+        "confidence_factors": result.confidence_factors,
+        "missing_inputs": result.missing_inputs,
+        "recommendations": result.recommendations,
+        "estimation_warnings": result.estimation_warnings,
+        "assumption_risks": result.assumption_risks,
+        "estimate_exclusions": result.estimate_exclusions,
+        "estimate_type": result.estimate_type,
+        "cost_drivers": [item.model_dump() for item in result.cost_drivers],
     }
 
 
@@ -124,6 +140,7 @@ async def run_extraction(
     db: AsyncSession,
     estimate_id: uuid.UUID,
     user_id: uuid.UUID,
+    content_locale: str | None = None,
 ) -> None:
     result = await db.execute(
         select(Estimate)
@@ -137,12 +154,45 @@ async def run_extraction(
     if not estimate:
         return
 
-    if estimate.status not in (EstimateStatus.DRAFT.value, EstimateStatus.REVIEW.value):
+    user = await db.get(User, user_id)
+    if user is None:
+        return
+    require_estimate_access(estimate, user)
+
+    if estimate.status not in (
+        EstimateStatus.DRAFT.value,
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+        EstimateStatus.EXPORTED.value,
+    ):
+        return
+
+    from app.rate_cards.generation import ensure_rate_card_for_estimate
+
+    await ensure_rate_card_for_estimate(
+        db,
+        estimate_id,
+        user_id,
+        regenerate=False,
+    )
+
+    result = await db.execute(
+        select(Estimate)
+        .where(Estimate.id == estimate_id)
+        .options(
+            selectinload(Estimate.feature_items),
+            selectinload(Estimate.documents),
+        )
+    )
+    estimate = result.scalar_one_or_none()
+    if not estimate:
         return
 
     await db.execute(delete(FeatureItem).where(FeatureItem.estimate_id == estimate_id))
     estimate.extracted_data = None
     estimate.maintenance_assumptions = {}
+    estimate.calculation_result = None
+    estimate.rate_card_version_id = None
 
     estimate.status = EstimateStatus.EXTRACTING.value
     await log_change(
@@ -167,11 +217,20 @@ async def run_extraction(
         )
         estimate = result.scalar_one()
         document_texts, skipped_docs = _collect_document_texts(list(estimate.documents))
-        rate_card_roles = await _get_rate_card_roles(db)
-        locale: Literal["ja", "en"] = "ja" if estimate.locale == "ja" else "en"
+        if not estimate.rate_card_id:
+            raise AppError(
+                "A rate card must be selected before extraction",
+                "RATE_CARD_REQUIRED",
+                status_code=400,
+            )
+        rate_card_roles = await _get_rate_card_roles(db, estimate.rate_card_id, user)
+        locale: Literal["ja", "en"] = normalize_locale(content_locale, estimate.locale)  # type: ignore[assignment]
+        estimate.locale = locale
+        form_data = resolve_localized_dict(estimate.form_data, locale, estimate.locale)
 
         ai_result = await _call_ai_provider(
-            estimate.form_data,
+            db,
+            form_data,
             document_texts,
             locale,
             rate_card_roles,
@@ -190,12 +249,35 @@ async def run_extraction(
                     phase=item.phase,
                     role=item.role,
                     is_ai_generated=True,
+                    localizations=store_feature_item_localization(
+                        None,
+                        locale,
+                        name=item.name,
+                        description=item.description,
+                        phase=item.phase,
+                        role=item.role,
+                    ),
                 )
             )
 
-        estimate.extracted_data = _build_extracted_data(ai_result, skipped_docs)
-        estimate.maintenance_assumptions = ai_result.maintenance_assumptions.model_dump()
+        extracted_payload = _build_extracted_data(ai_result, skipped_docs)
+        estimate.extracted_data = store_localized_dict(
+            estimate.extracted_data,
+            locale,
+            extracted_payload,
+        )
+        maintenance_assumptions = ai_result.maintenance_assumptions.model_dump()
         estimate.status = EstimateStatus.REVIEW.value
+
+        rate_card_fingerprint = None
+        if estimate.rate_card_id:
+            rate_card_fingerprint = await get_latest_rate_card_fingerprint(
+                db,
+                estimate.rate_card_id,
+            )
+        if rate_card_fingerprint:
+            maintenance_assumptions[RATE_CARD_FINGERPRINT_KEY] = rate_card_fingerprint
+        estimate.maintenance_assumptions = maintenance_assumptions
 
         await log_change(
             db,
@@ -205,6 +287,7 @@ async def run_extraction(
             changes={
                 "status": EstimateStatus.REVIEW.value,
                 "feature_item_count": len(ai_result.feature_items),
+                "rate_card_fingerprint": rate_card_fingerprint,
             },
         )
         await db.commit()
@@ -214,27 +297,60 @@ async def run_extraction(
         estimate = result.scalar_one_or_none()
         if estimate:
             estimate.status = EstimateStatus.DRAFT.value
+            friendly_error = _friendly_extraction_error(str(exc))
             await log_change(
                 db,
                 estimate_id=estimate.id,
                 user_id=user_id,
                 action="extraction_failed",
-                changes={"status": EstimateStatus.DRAFT.value, "error": str(exc)},
+                changes={"status": EstimateStatus.DRAFT.value, "error": friendly_error},
             )
             await db.commit()
-        raise
 
 
-async def get_extraction_status(db: AsyncSession, estimate_id: uuid.UUID) -> dict[str, Any]:
+def _friendly_extraction_error(message: str) -> str:
+    lowered = message.lower()
+    if "invalid api key" in lowered or "authentication" in lowered or "401" in message:
+        return "Invalid API key. Check Admin → AI settings."
+    if "invalid schema" in lowered or "response_format" in lowered:
+        return "AI configuration error. Contact your administrator."
+    if "timeout" in lowered:
+        return "AI request timed out. Please try again."
+    if len(message) > 240:
+        return message[:240] + "…"
+    return message
+
+
+async def _get_last_extraction_error(db: AsyncSession, estimate_id: uuid.UUID) -> str | None:
     result = await db.execute(
-        select(Estimate)
-        .where(Estimate.id == estimate_id)
-        .options(selectinload(Estimate.documents))
+        select(AuditLog)
+        .where(
+            AuditLog.estimate_id == estimate_id,
+            AuditLog.action.in_(
+                ("extraction_failed", "extraction_completed", "extraction_started")
+            ),
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(1)
     )
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        raise AppError("Estimate not found", "ESTIMATE_NOT_FOUND", status_code=404)
+    entry = result.scalar_one_or_none()
+    if not entry or entry.action != "extraction_failed":
+        return None
 
+    error = entry.changes.get("error")
+    if not isinstance(error, str) or not error.strip():
+        return "Extraction failed"
+    return _friendly_extraction_error(error)
+
+
+async def get_extraction_status(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user: User,
+) -> dict[str, Any]:
+    from app.estimates.service import get_estimate_for_user
+
+    estimate = await get_estimate_for_user(db, estimate_id, user)
     documents = list(estimate.documents)
     documents_done = sum(
         1 for doc in documents if doc.extraction_status in ("done", "failed")
@@ -250,4 +366,7 @@ async def get_extraction_status(db: AsyncSession, estimate_id: uuid.UUID) -> dic
     return {
         "status": estimate.status,
         "extraction_progress": extraction_progress,
+        "extraction_error": await _get_last_extraction_error(db, estimate_id)
+        if estimate.status == EstimateStatus.DRAFT.value
+        else None,
     }

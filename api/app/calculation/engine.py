@@ -1,6 +1,36 @@
-from app.calculation.schemas import CalculationResult, FeatureItemInput, RateCardSettings
+import math
+from datetime import date
+
+from app.calculation.development_approach import coerce_development_approach, get_approach_factors
+from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline
+from app.calculation.line_items import (
+    build_nrc_line_items,
+    build_rc_line_items,
+    enrich_phase_breakdown,
+)
+from app.calculation.discount import apply_estimate_discount
+from app.calculation.schemas import (
+    CalculationResult,
+    FeatureItemInput,
+    GanttFeatureItemInput,
+    RateCardSettings,
+)
+from app.rate_cards.normalize import setup_items_total
 
 HOURS_PER_EFFORT_DAY = 8
+
+
+def role_personnel_count(
+    hours: float,
+    *,
+    estimated_duration_days: float,
+    total_days: float,
+) -> int:
+    if hours <= 0:
+        return 0
+    duration_days = estimated_duration_days if estimated_duration_days > 0 else total_days
+    capacity = max(duration_days * HOURS_PER_EFFORT_DAY, HOURS_PER_EFFORT_DAY)
+    return max(1, math.ceil(hours / capacity))
 
 
 class CalculationError(Exception):
@@ -14,7 +44,17 @@ def calculate_estimate(
     rate_card: RateCardSettings,
     maintenance: dict,
     rate_card_version_id: str,
+    *,
+    cost_drivers: list[dict] | None = None,
+    project_start_date: date | None = None,
+    gantt_feature_items: list[GanttFeatureItemInput] | None = None,
+    discount_rate: float = 0.0,
 ) -> CalculationResult:
+    approach = coerce_development_approach(rate_card.development_approach)
+    approach_factors = get_approach_factors(approach)
+    effort_multiplier = approach_factors.effort_multiplier
+    team_size_multiplier = approach_factors.team_size_multiplier
+
     role_rates = {role.name: role.hourly_rate_jpy for role in rate_card.roles}
     role_hours: dict[str, float] = {}
     total_hours = 0.0
@@ -22,24 +62,62 @@ def calculate_estimate(
     for item in feature_items:
         if item.role not in role_rates:
             raise CalculationError(f"Unknown role '{item.role}'", feature_item_name=item.name)
-        total_hours += float(item.hours)
-        role_hours[item.role] = role_hours.get(item.role, 0) + float(item.hours)
+        adjusted_hours = round(float(item.hours) * effort_multiplier, 2)
+        total_hours += adjusted_hours
+        role_hours[item.role] = role_hours.get(item.role, 0) + adjusted_hours
 
     total_days = total_hours / HOURS_PER_EFFORT_DAY
 
-    phase_breakdown = [
-        {
-            "phase": phase.name,
-            "hours": round(total_hours * phase.percentage, 2),
-            "percentage": phase.percentage,
-        }
-        for phase in rate_card.phases
-    ]
+    phase_breakdown = enrich_phase_breakdown(
+        [
+            {
+                "phase": phase.name,
+                "hours": round(total_hours * phase.percentage, 2),
+                "percentage": phase.percentage,
+            }
+            for phase in rate_card.phases
+        ]
+    )
+
+    gantt: dict = {}
+    estimated_duration_days = total_days
+    if project_start_date is not None:
+        gantt_items = gantt_feature_items or [
+            GanttFeatureItemInput(
+                name=item.name,
+                hours=round(float(item.hours) * effort_multiplier, 2),
+                phase=item.phase,
+                role=item.role,
+            )
+            for item in feature_items
+        ]
+        gantt = build_gantt_timeline(
+            [
+                GanttFeatureItem(
+                    id=item.id,
+                    sort_order=item.sort_order,
+                    name=item.name,
+                    hours=float(item.hours),
+                    phase=item.phase,
+                    role=item.role,
+                )
+                for item in gantt_items
+            ],
+            [phase.name for phase in rate_card.phases],
+            project_start_date,
+        )
+        if gantt["total_working_days"] > 0:
+            estimated_duration_days = float(gantt["total_working_days"])
 
     role_breakdown = [
         {
             "role": role,
             "hours": hours,
+            "personnel_count": role_personnel_count(
+                hours,
+                estimated_duration_days=estimated_duration_days,
+                total_days=total_days,
+            ),
             "rate_jpy": role_rates[role],
             "cost_jpy": int(hours * role_rates[role]),
         }
@@ -49,7 +127,8 @@ def calculate_estimate(
     labor_jpy = sum(entry["cost_jpy"] for entry in role_breakdown)
     contingency_jpy = int(labor_jpy * rate_card.contingency_rate)
     overhead_jpy = int(labor_jpy * rate_card.overhead_rate)
-    setup_jpy = sum(rate_card.setup_costs.model_dump().values())
+    setup_items = [item.model_dump() for item in rate_card.setup_cost_items]
+    setup_jpy = setup_items_total(rate_card.setup_cost_items)
     nrc_total = labor_jpy + setup_jpy + contingency_jpy + overhead_jpy
 
     support_role = maintenance.get("support_role", "developer")
@@ -57,13 +136,29 @@ def calculate_estimate(
     monthly_rc_items = [item.model_dump() for item in rate_card.monthly_rc_items]
     monthly_rc = sum(item.amount_jpy for item in rate_card.monthly_rc_items) + maintenance_jpy
 
-    return CalculationResult(
+    active_roles = len([role for role, hours in role_hours.items() if hours > 0])
+    base_team_size = max(active_roles, 1)
+    recommended_team_size = max(1, math.ceil(base_team_size * team_size_multiplier))
+    nrc_line_items = build_nrc_line_items(
+        role_breakdown,
+        rate_card.setup_cost_items,
+        contingency_jpy,
+        overhead_jpy,
+    )
+    rc_line_items = build_rc_line_items(monthly_rc_items, maintenance_jpy)
+
+    result = CalculationResult(
         total_effort_hours=total_hours,
         total_effort_days=total_days,
+        estimated_duration_days=estimated_duration_days,
+        recommended_team_size=recommended_team_size,
+        development_approach=approach.value,
+        development_approach_effort_multiplier=effort_multiplier,
         phase_breakdown=phase_breakdown,
         role_breakdown=role_breakdown,
         nrc={
             "labor_jpy": labor_jpy,
+            "setup_items": setup_items,
             "setup_jpy": setup_jpy,
             "contingency_jpy": contingency_jpy,
             "overhead_jpy": overhead_jpy,
@@ -75,6 +170,11 @@ def calculate_estimate(
             "monthly_total_jpy": monthly_rc,
             "annual_total_jpy": monthly_rc * 12,
         },
+        nrc_line_items=nrc_line_items,
+        rc_line_items=rc_line_items,
+        cost_drivers=cost_drivers or [],
         first_year_total_jpy=nrc_total + monthly_rc * 12,
         rate_card_version_id=rate_card_version_id,
+        gantt=gantt,
     )
+    return apply_estimate_discount(result, rate_card, discount_rate)

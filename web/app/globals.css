@@ -3,5 +3,82 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+}
+
+@layer base {
+  .dark input:not([type="checkbox"]):not([type="radio"]),
+  .dark select,
+  .dark textarea {
+    @apply border-gray-600 bg-gray-900 text-gray-100;
+  }
+}
+
+@layer components {
+  .header-btn {
+    @apply inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap
+      rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium leading-none
+      text-gray-900 shadow-sm transition
+      hover:bg-gray-100 hover:text-blue-600
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+      disabled:pointer-events-none disabled:opacity-50
+      dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100
+      dark:hover:bg-gray-800 dark:hover:text-blue-400
+      dark:focus-visible:ring-offset-gray-900;
+  }
+
+  .header-btn-active {
+    @apply border-blue-300 bg-blue-50 text-blue-700
+      dark:border-blue-700 dark:bg-blue-950/50 dark:text-blue-300;
+  }
+
+  .header-btn-icon {
+    @apply header-btn w-9 px-0;
+  }
+}
+
+@layer utilities {
+  .dark .bg-white {
+    @apply bg-gray-900;
+  }
+
+  .dark .bg-gray-50 {
+    @apply bg-gray-950;
+  }
+
+  .dark .bg-gray-100 {
+    @apply bg-gray-800;
+  }
+
+  .dark .border-gray-200 {
+    @apply border-gray-700;
+  }
+
+  .dark .border-gray-300 {
+    @apply border-gray-600;
+  }
+
+  .dark .border-gray-100 {
+    @apply border-gray-800;
+  }
+
+  .dark .text-gray-900 {
+    color: rgb(243 244 246);
+  }
+
+  .dark .text-gray-800 {
+    color: rgb(229 231 235);
+  }
+
+  .dark .text-gray-700 {
+    color: rgb(209 213 219);
+  }
+
+  .dark .text-gray-600 {
+    color: rgb(156 163 175);
+  }
+
+  .dark .shadow-sm {
+    @apply shadow-none;
+  }
 }
