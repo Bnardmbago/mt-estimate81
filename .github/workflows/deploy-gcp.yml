@@ -1,0 +1,80 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AR_REPO: ai-estimate
+  DEPLOY_USER: github-deploy
+  DEPLOY_PATH: /opt/ai-estimate
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push images
+        run: |
+          REGISTRY="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}"
+          SHA="${{ github.sha }}"
+          for svc in api web hermes; do
+            docker build -t "${REGISTRY}/${svc}:${SHA}" -t "${REGISTRY}/${svc}:latest" "./${svc}"
+            docker push "${REGISTRY}/${svc}:${SHA}"
+            docker push "${REGISTRY}/${svc}:latest"
+          done
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          VM_IP="$(gcloud compute instances describe "${{ vars.GCP_VM_INSTANCE }}" \
+            --zone="${{ vars.GCP_VM_ZONE }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --format='get(networkInterfaces[0].accessConfigs[0].natIP)')"
+          ssh-keyscan -H "${VM_IP}" >> ~/.ssh/known_hosts
+          echo "VM_IP=${VM_IP}" >> "${GITHUB_ENV}"
+
+      - name: Sync deploy config to VM
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ env.DEPLOY_USER }}@${{ env.VM_IP }}" \
+            "mkdir -p ${DEPLOY_PATH}/deploy ${DEPLOY_PATH}/nginx"
+          scp -i ~/.ssh/deploy_key deploy/docker-compose.prod.yml \
+            "${{ env.DEPLOY_USER }}@${{ env.VM_IP }}:${DEPLOY_PATH}/deploy/docker-compose.prod.yml"
+          scp -i ~/.ssh/deploy_key -r nginx \
+            "${{ env.DEPLOY_USER }}@${{ env.VM_IP }}:${DEPLOY_PATH}/"
+
+      - name: Deploy on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ env.DEPLOY_USER }}@${{ env.VM_IP }}" <<EOF
+            set -e
+            cd ${DEPLOY_PATH}/deploy
+            export IMAGE_REGISTRY="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.AR_REPO }}"
+            export IMAGE_TAG="${{ github.sha }}"
+            ACCESS_TOKEN="\$(curl -sf -H 'Metadata-Flavor: Google' \
+              http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token \
+              | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"access_token\"])')"
+            echo "\${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-stdin \
+              "https://${{ vars.GCP_REGION }}-docker.pkg.dev"
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          EOF
