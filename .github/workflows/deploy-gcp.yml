@@ -72,7 +72,7 @@ jobs:
             export IMAGE_TAG="${{ github.sha }}"
             ACCESS_TOKEN="\$(curl -sf -H 'Metadata-Flavor: Google' \
               http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token \
-              | python3 -c 'import sys,json; print(json.load(sys.stdin)[\"access_token\"])')"
+              | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')"
             echo "\${ACCESS_TOKEN}" | docker login -u oauth2accesstoken --password-stdin \
               "https://${{ vars.GCP_REGION }}-docker.pkg.dev"
             docker compose -f docker-compose.prod.yml pull
