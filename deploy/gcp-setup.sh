@@ -43,11 +43,16 @@ gcloud artifacts repositories create "${AR_REPO}" \
   --description="AI Estimate MVP container images"
 
 echo "==> Creating deploy service account..."
-gcloud iam service-accounts describe "${SA_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" >/dev/null 2>&1 || \
-gcloud iam service-accounts create "${SA_NAME}" \
-  --display-name="GitHub Actions deploy"
-
 SA_EMAIL="${SA_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+if ! gcloud iam service-accounts describe "${SA_EMAIL}" >/dev/null 2>&1; then
+  gcloud iam service-accounts create "${SA_NAME}" \
+    --display-name="GitHub Actions deploy"
+  echo "    Waiting for service account to propagate..."
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    gcloud iam service-accounts describe "${SA_EMAIL}" >/dev/null 2>&1 && break
+    sleep 3
+  done
+fi
 
 for role in \
   roles/artifactregistry.writer \
