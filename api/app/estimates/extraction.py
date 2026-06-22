@@ -136,6 +136,49 @@ def _build_extracted_data(result: ExtractedRequirements, skipped_docs: list[str]
     }
 
 
+async def begin_extraction(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> Literal["accepted", "already_running"]:
+    """Mark an estimate as extracting before background work starts."""
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one_or_none()
+    if not estimate:
+        raise AppError("Estimate not found", "NOT_FOUND", status_code=404)
+
+    user = await db.get(User, user_id)
+    if user is None:
+        raise AppError("User not found", "NOT_FOUND", status_code=404)
+    require_estimate_access(estimate, user)
+
+    if estimate.status == EstimateStatus.EXTRACTING.value:
+        return "already_running"
+
+    if estimate.status not in (
+        EstimateStatus.DRAFT.value,
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+        EstimateStatus.EXPORTED.value,
+    ):
+        raise AppError(
+            "Extraction can only be started from draft, review, calculated, or exported",
+            "INVALID_STATUS",
+            status_code=400,
+        )
+
+    estimate.status = EstimateStatus.EXTRACTING.value
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user_id,
+        action="extraction_started",
+        changes={"status": EstimateStatus.EXTRACTING.value},
+    )
+    await db.commit()
+    return "accepted"
+
+
 async def run_extraction(
     db: AsyncSession,
     estimate_id: uuid.UUID,
@@ -159,12 +202,7 @@ async def run_extraction(
         return
     require_estimate_access(estimate, user)
 
-    if estimate.status not in (
-        EstimateStatus.DRAFT.value,
-        EstimateStatus.REVIEW.value,
-        EstimateStatus.CALCULATED.value,
-        EstimateStatus.EXPORTED.value,
-    ):
+    if estimate.status != EstimateStatus.EXTRACTING.value:
         return
 
     from app.rate_cards.generation import ensure_rate_card_for_estimate
@@ -193,15 +231,6 @@ async def run_extraction(
     estimate.maintenance_assumptions = {}
     estimate.calculation_result = None
     estimate.rate_card_version_id = None
-
-    estimate.status = EstimateStatus.EXTRACTING.value
-    await log_change(
-        db,
-        estimate_id=estimate.id,
-        user_id=user_id,
-        action="extraction_started",
-        changes={"status": EstimateStatus.EXTRACTING.value},
-    )
     await db.commit()
 
     try:

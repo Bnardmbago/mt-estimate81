@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
@@ -98,6 +98,7 @@ export default function EstimateExtraction({
   const [projectStartDate, setProjectStartDate] = useState<string | null>(
     estimate.project_start_date ?? null,
   );
+  const extractionPendingRef = useRef(false);
 
   useEffect(() => {
     setStatus(estimate.status);
@@ -139,18 +140,29 @@ export default function EstimateExtraction({
         return;
       }
 
-      setExtracting(false);
-
-      if (response.extraction_error) {
-        setError(response.extraction_error);
+      if (!extractionPendingRef.current) {
+        return;
       }
 
-      if (response.status === "review") {
+      if (response.status === "review" || response.status === "calculated" || response.status === "exported") {
+        extractionPendingRef.current = false;
+        setExtracting(false);
         setError(null);
+        router.refresh();
+        return;
       }
 
-      router.refresh();
+      if (response.status === "draft" && response.extraction_error) {
+        extractionPendingRef.current = false;
+        setExtracting(false);
+        setError(response.extraction_error);
+        router.refresh();
+        return;
+      }
+
+      // Background work still settling; keep polling.
     } catch (pollError) {
+      extractionPendingRef.current = false;
       setExtracting(false);
       setError(pollError instanceof Error ? pollError.message : t("extractError"));
     }
@@ -170,14 +182,20 @@ export default function EstimateExtraction({
   }, [status, extracting, pollStatus]);
 
   async function handleExtract() {
+    if (extracting || extractionPendingRef.current) {
+      return;
+    }
+
     setError(null);
 
     const formSaved = await formRef?.current?.saveIfNeeded();
     if (formSaved === false) {
       setError(t("saveFormBeforeExtract"));
+      document.getElementById("estimate-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
+    extractionPendingRef.current = true;
     setExtracting(true);
     setStatus("extracting");
 
@@ -197,6 +215,7 @@ export default function EstimateExtraction({
 
       await pollStatus();
     } catch (extractError) {
+      extractionPendingRef.current = false;
       setExtracting(false);
       setStatus(estimate.status);
       setError(extractError instanceof Error ? extractError.message : t("extractError"));

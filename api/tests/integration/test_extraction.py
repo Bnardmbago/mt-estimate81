@@ -1,6 +1,6 @@
-from unittest.mock import AsyncMock, patch
-
+import asyncio
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -427,7 +427,12 @@ async def test_extraction_populates_feature_items(
 async def test_extraction_status_during_extract(
     client: AsyncClient,
     auth_headers: dict[str, str],
+    active_rate_card: RateCardVersion,
+    mock_ai_provider,
+    monkeypatch: pytest.MonkeyPatch,
 ):
+    monkeypatch.setenv("EXTRACT_SYNC", "0")
+
     create = await client.post(
         "/estimates",
         json={
@@ -438,11 +443,26 @@ async def test_extraction_status_during_extract(
         headers=auth_headers,
     )
     estimate_id = create.json()["id"]
+    await assign_rate_card(client, estimate_id, active_rate_card, auth_headers)
+
+    hang = asyncio.Event()
+
+    async def slow_run_extraction(*args, **kwargs):
+        await hang.wait()
+
+    with patch(
+        "app.estimates.extraction.run_extraction",
+        new=AsyncMock(side_effect=slow_run_extraction),
+    ):
+        extract = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
+        assert extract.status_code == 202
 
     status = await client.get(f"/estimates/{estimate_id}/status", headers=auth_headers)
     assert status.status_code == 200
-    assert status.json()["status"] == "draft"
-    assert status.json()["extraction_progress"] is None
+    assert status.json()["status"] == "extracting"
+    assert status.json()["extraction_progress"] is not None
+
+    hang.set()
 
 
 @pytest.mark.asyncio

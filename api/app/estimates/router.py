@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import SessionLocal
 from app.dependencies import get_content_locale, get_current_user, get_db, get_display_locale
 from app.estimates import ai_suggest_form, extraction, service
-from app.models.estimate import EstimateStatus
 from app.models.user import User
 from app.schemas.estimate import (
     AuditLogEntry,
@@ -104,21 +103,10 @@ async def start_extraction(
     user: User = Depends(get_current_user),
     content_locale: str | None = Depends(get_content_locale),
 ):
-    estimate = await service.get_estimate_for_user(db, estimate_id, user)
+    begin_result = await extraction.begin_extraction(db, estimate_id, user.id)
 
-    if estimate.status not in (
-        EstimateStatus.DRAFT.value,
-        EstimateStatus.REVIEW.value,
-        EstimateStatus.CALCULATED.value,
-        EstimateStatus.EXPORTED.value,
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Extraction can only be started from draft, review, calculated, or exported",
-                "code": "INVALID_STATUS",
-            },
-        )
+    if begin_result == "already_running":
+        return {"status": "already_running"}
 
     if os.environ.get("EXTRACT_SYNC") == "1":
         await extraction.run_extraction(db, estimate_id, user.id, content_locale=content_locale)
