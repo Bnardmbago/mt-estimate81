@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 import anthropic
 
+from app.ai.rate_limit_retry import with_rate_limit_retry
 from app.ai.openai_schema import build_form_fields_suggestion_schema
 from app.ai.prompts import (
     build_form_fields_system_prompt,
@@ -31,6 +32,12 @@ class AnthropicProvider:
         self.model = model
         self._client = anthropic.AsyncAnthropic(api_key=api_key, timeout=AI_TIMEOUT_SECONDS)
 
+    async def _create_message(self, **kwargs: Any):
+        async def _call():
+            return await self._client.messages.create(**kwargs)
+
+        return await with_rate_limit_retry(_call)
+
     async def extract_requirements(
         self,
         form_data: dict[str, Any],
@@ -39,7 +46,7 @@ class AnthropicProvider:
         *,
         rate_card_roles: list[dict[str, Any]] | None = None,
     ) -> ExtractedRequirements:
-        response = await self._client.messages.create(
+        response = await self._create_message(
             model=self.model,
             max_tokens=8192,
             system=build_system_prompt(locale),
@@ -81,7 +88,7 @@ class AnthropicProvider:
         document_texts: list[str],
         locale: Literal["ja", "en"],
     ) -> GeneratedRateCardSuggestion:
-        response = await self._client.messages.create(
+        response = await self._create_message(
             model=self.model,
             max_tokens=8192,
             system=build_rate_card_system_prompt(locale),
@@ -132,7 +139,7 @@ class AnthropicProvider:
     ):
         model = section_suggestion_model(section)
         tool_name = section_tool_name(section)
-        response = await self._client.messages.create(
+        response = await self._create_message(
             model=self.model,
             max_tokens=8192,
             system=build_rate_card_section_system_prompt(locale, section, free_form=free_form),
@@ -185,7 +192,7 @@ class AnthropicProvider:
     ) -> EstimateFormFieldsSuggestion:
         field_keys = schema_field_keys(form_schema)
         field_metadata = field_metadata_for_prompt(form_schema)
-        response = await self._client.messages.create(
+        response = await self._create_message(
             model=self.model,
             max_tokens=8192,
             system=build_form_fields_system_prompt(locale, field_metadata),

@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from openai import AsyncOpenAI
 
+from app.ai.rate_limit_retry import with_rate_limit_retry
 from app.ai.openai_schema import build_form_fields_suggestion_schema, build_openai_strict_schema
 from app.ai.prompts import (
     build_form_fields_system_prompt,
@@ -31,6 +32,12 @@ class OpenAIProvider:
         self.model = model
         self._client = AsyncOpenAI(api_key=api_key, timeout=AI_TIMEOUT_SECONDS)
 
+    async def _create_completion(self, **kwargs: Any):
+        async def _call():
+            return await self._client.chat.completions.create(**kwargs)
+
+        return await with_rate_limit_retry(_call)
+
     async def extract_requirements(
         self,
         form_data: dict[str, Any],
@@ -39,7 +46,7 @@ class OpenAIProvider:
         *,
         rate_card_roles: list[dict[str, Any]] | None = None,
     ) -> ExtractedRequirements:
-        response = await self._client.chat.completions.create(
+        response = await self._create_completion(
             model=self.model,
             messages=[
                 {"role": "system", "content": build_system_prompt(locale)},
@@ -74,7 +81,7 @@ class OpenAIProvider:
         document_texts: list[str],
         locale: Literal["ja", "en"],
     ) -> GeneratedRateCardSuggestion:
-        response = await self._client.chat.completions.create(
+        response = await self._create_completion(
             model=self.model,
             messages=[
                 {"role": "system", "content": build_rate_card_system_prompt(locale)},
@@ -118,7 +125,7 @@ class OpenAIProvider:
     ):
         model = section_suggestion_model(section)
         tool_name = section_tool_name(section)
-        response = await self._client.chat.completions.create(
+        response = await self._create_completion(
             model=self.model,
             messages=[
                 {
@@ -169,7 +176,7 @@ class OpenAIProvider:
     ) -> EstimateFormFieldsSuggestion:
         field_keys = schema_field_keys(form_schema)
         field_metadata = field_metadata_for_prompt(form_schema)
-        response = await self._client.chat.completions.create(
+        response = await self._create_completion(
             model=self.model,
             messages=[
                 {
