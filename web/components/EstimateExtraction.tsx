@@ -133,6 +133,15 @@ export default function EstimateExtraction({
         return;
       }
 
+      if (response.status === "draft" && response.extraction_error) {
+        extractionPendingRef.current = false;
+        setExtracting(false);
+        setStatus("draft");
+        setError(response.extraction_error);
+        router.refresh();
+        return;
+      }
+
       if (!extractionPendingRef.current) {
         return;
       }

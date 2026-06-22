@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import datetime, timedelta
 from typing import Any, Literal
 
 from pydantic import ValidationError
@@ -24,6 +25,41 @@ from app.models.estimate import Estimate, EstimateDocument, EstimateStatus, Feat
 from app.models.user import User
 from app.estimates.rate_card_stale import RATE_CARD_FINGERPRINT_KEY
 from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
+
+STUCK_EXTRACTION_MINUTES = 10
+STUCK_EXTRACTION_ERROR = (
+    "Extraction was interrupted or timed out. Please try again."
+)
+
+
+def is_extraction_stuck(estimate: Estimate, *, minutes: int = STUCK_EXTRACTION_MINUTES) -> bool:
+    if estimate.status != EstimateStatus.EXTRACTING.value:
+        return False
+    threshold = datetime.utcnow() - timedelta(minutes=minutes)
+    updated_at = estimate.updated_at
+    if updated_at.tzinfo is not None:
+        updated_at = updated_at.replace(tzinfo=None)
+    return updated_at < threshold
+
+
+async def _recover_stuck_extraction(
+    db: AsyncSession,
+    estimate: Estimate,
+    user_id: uuid.UUID,
+) -> None:
+    estimate.status = EstimateStatus.DRAFT.value
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user_id,
+        action="extraction_failed",
+        changes={
+            "status": EstimateStatus.DRAFT.value,
+            "error": STUCK_EXTRACTION_ERROR,
+            "recovered": True,
+        },
+    )
+    await db.commit()
 
 
 async def _get_rate_card_roles(
@@ -187,7 +223,10 @@ async def begin_extraction(
     require_estimate_access(estimate, user)
 
     if estimate.status == EstimateStatus.EXTRACTING.value:
-        return "already_running"
+        if is_extraction_stuck(estimate):
+            await _recover_stuck_extraction(db, estimate, user_id)
+        else:
+            return "already_running"
 
     if estimate.status not in (
         EstimateStatus.DRAFT.value,
@@ -368,6 +407,11 @@ async def run_extraction(
 
 def _friendly_extraction_error(message: str) -> str:
     lowered = message.lower()
+    if "rate limit" in lowered or "error code: 429" in lowered or "429" in message:
+        return (
+            "AI rate limit reached. Wait a minute and try again, "
+            "or switch to gpt-4o-mini in Admin → AI settings."
+        )
     if "invalid api key" in lowered or "authentication" in lowered or "401" in message:
         return "Invalid API key. Check Admin → AI settings."
     if "invalid schema" in lowered or "response_format" in lowered:
@@ -409,6 +453,15 @@ async def get_extraction_status(
     from app.estimates.service import get_estimate_for_user
 
     estimate = await get_estimate_for_user(db, estimate_id, user)
+
+    if is_extraction_stuck(estimate):
+        await _recover_stuck_extraction(db, estimate, user.id)
+        return {
+            "status": EstimateStatus.DRAFT.value,
+            "extraction_progress": None,
+            "extraction_error": STUCK_EXTRACTION_ERROR,
+        }
+
     documents = list(estimate.documents)
     documents_done = sum(
         1 for doc in documents if doc.extraction_status in ("done", "failed")

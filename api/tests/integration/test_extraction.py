@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -421,6 +422,42 @@ async def test_extraction_populates_feature_items(
     actions = [entry["action"] for entry in audit.json()]
     assert "extraction_started" in actions
     assert "extraction_completed" in actions
+
+
+@pytest.mark.asyncio
+async def test_stuck_extraction_status_recovers_to_draft(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    db_session: AsyncSession,
+    active_rate_card: RateCardVersion,
+):
+    create = await client.post(
+        "/estimates",
+        json={
+            "project_name": "Stuck Test",
+            "client_name": "ACME",
+            "locale": "en",
+        },
+        headers=auth_headers,
+    )
+    estimate_id = create.json()["id"]
+    await assign_rate_card(client, estimate_id, active_rate_card, auth_headers)
+
+    estimate = await db_session.get(Estimate, uuid.UUID(estimate_id))
+    assert estimate is not None
+    estimate.status = EstimateStatus.EXTRACTING.value
+    estimate.updated_at = datetime.utcnow() - timedelta(minutes=15)
+    await db_session.commit()
+
+    status = await client.get(f"/estimates/{estimate_id}/status", headers=auth_headers)
+    assert status.status_code == 200
+    body = status.json()
+    assert body["status"] == "draft"
+    assert body["extraction_error"]
+
+    retry = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
+    assert retry.status_code == 202
+    assert retry.json()["status"] == "accepted"
 
 
 @pytest.mark.asyncio

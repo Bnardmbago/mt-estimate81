@@ -34,8 +34,15 @@ async def _run_extraction_background(
     user_id: uuid.UUID,
     content_locale: str | None = None,
 ) -> None:
-    async with SessionLocal() as db:
-        await extraction.run_extraction(db, estimate_id, user_id, content_locale=content_locale)
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        async with SessionLocal() as db:
+            await extraction.run_extraction(db, estimate_id, user_id, content_locale=content_locale)
+    except Exception:
+        logger.exception("Extraction background task failed for estimate %s", estimate_id)
+        raise
 
 
 @router.post("", response_model=EstimateDetail, status_code=201)
