@@ -23,7 +23,8 @@
     "email": "メール",
     "password": "パスワード",
     "submit": "ログイン",
-    "error": "ログインに失敗しました"
+    "error": "ログインに失敗しました",
+    "signInToContinue": "続行するにはサインインしてください。"
   },
   "estimates": {
     "new": "新規見積",

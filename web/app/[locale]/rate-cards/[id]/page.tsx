@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import RateCardEditor from "@/components/rate-cards/RateCardEditor";
+import { loginUrl } from "@/lib/authRedirect";
 
 export default async function RateCardDetailPage({
   params,
@@ -10,12 +11,13 @@ export default async function RateCardDetailPage({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
+  const returnTo = `/${locale}/rate-cards/${id}`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
   const t = await getTranslations("rateCards");
 
   if (!token) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, returnTo));
   }
 
   return (

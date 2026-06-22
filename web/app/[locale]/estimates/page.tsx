@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import EstimatesList from "@/components/EstimatesList";
+import { loginUrl } from "@/lib/authRedirect";
 import { fetchEstimates } from "@/lib/estimate";
 
 export default async function EstimatesPage({
@@ -11,18 +12,19 @@ export default async function EstimatesPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const returnTo = `/${locale}/estimates`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
 
   if (!token) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, returnTo));
   }
 
   const t = await getTranslations("estimates");
   const estimates = await fetchEstimates(token.value);
 
   if (estimates === null) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, returnTo));
   }
 
   return (

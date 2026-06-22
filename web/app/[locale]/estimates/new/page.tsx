@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import NewEstimateForm from "@/components/NewEstimateForm";
+import { loginUrl } from "@/lib/authRedirect";
 import { createEstimate } from "@/lib/estimate";
 
 export default async function NewEstimatePage({
@@ -14,11 +15,14 @@ export default async function NewEstimatePage({
 }) {
   const { locale } = await params;
   const { template } = await searchParams;
+  const returnTo = template
+    ? `/${locale}/estimates/new?template=${encodeURIComponent(template)}`
+    : `/${locale}/estimates/new`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
 
   if (!token) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, returnTo));
   }
 
   if (template) {

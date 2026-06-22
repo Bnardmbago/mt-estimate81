@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import EstimateDetailContent from "@/components/EstimateDetailContent";
+import { loginUrl } from "@/lib/authRedirect";
 import { fetchEstimateResult } from "@/lib/estimate";
 
 export const dynamic = "force-dynamic";
@@ -13,18 +14,19 @@ export default async function EstimateDetailPage({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
+  const returnTo = `/${locale}/estimates/${id}`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
   const t = await getTranslations("estimates");
 
   if (!token) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, returnTo));
   }
 
   const result = await fetchEstimateResult(id, token.value, locale);
 
   if (result.status === "unauthorized") {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, returnTo));
   }
 
   if (result.status === "not_found") {
