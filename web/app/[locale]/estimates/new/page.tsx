@@ -1,13 +1,19 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import NewEstimateForm from "@/components/NewEstimateForm";
 import { createEstimate } from "@/lib/estimate";
 
 export default async function NewEstimatePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ template?: string }>;
 }) {
   const { locale } = await params;
+  const { template } = await searchParams;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
 
@@ -15,11 +21,30 @@ export default async function NewEstimatePage({
     redirect(`/${locale}/login`);
   }
 
-  const estimate = await createEstimate(locale, token.value);
+  if (template) {
+    const estimate = await createEstimate(locale, token.value, template);
 
-  if (!estimate) {
-    redirect(`/${locale}/estimates`);
+    if (!estimate) {
+      redirect(`/${locale}/estimates`);
+    }
+
+    redirect(`/${locale}/estimates/${estimate.id}`);
   }
 
-  redirect(`/${locale}/estimates/${estimate.id}`);
+  const t = await getTranslations("estimates");
+
+  return (
+    <div>
+      <div className="mb-6">
+        <Link
+          href={`/${locale}/estimates`}
+          className="mb-2 inline-block text-sm text-gray-500 hover:text-blue-600"
+        >
+          ← {t("back")}
+        </Link>
+        <h1 className="text-2xl font-semibold">{t("newEstimateTitle")}</h1>
+      </div>
+      <NewEstimateForm />
+    </div>
+  );
 }

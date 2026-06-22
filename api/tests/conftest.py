@@ -1,5 +1,7 @@
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
+from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -9,7 +11,10 @@ from sqlalchemy.pool import StaticPool
 
 from app.auth.service import create_access_token, hash_password
 from app.database import Base, get_db
+from app.estimates.form_fields import build_default_template_fields
+from app.fx import init_fx_service
 from app.main import app
+from app.models.form_template import FormTemplate
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.system_config import SystemConfig
 from app.models.user import User
@@ -35,6 +40,25 @@ try:
         return "CHAR(36)"
 except ImportError:
     pass
+
+
+@pytest.fixture(autouse=True)
+async def init_test_fx_service(test_engine):
+    session_factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    fx = init_fx_service(session_factory, refresh_interval_seconds=3600)
+    now = datetime.now(timezone.utc)
+    seeded_rates = {
+        ("JPY", "USD"): Decimal("0.0067"),
+        ("USD", "JPY"): Decimal("150"),
+        ("JPY", "PHP"): Decimal("0.39"),
+        ("PHP", "JPY"): Decimal("2.56"),
+        ("USD", "PHP"): Decimal("58"),
+        ("PHP", "USD"): Decimal("0.017"),
+    }
+    for pair, rate in seeded_rates.items():
+        fx._memory_cache[pair] = (rate, now)
+    fx._last_refresh_at = now
+    yield
 
 
 @pytest.fixture
@@ -141,6 +165,16 @@ async def client(test_engine) -> AsyncGenerator[AsyncClient, None]:
     async with session_factory() as session:
         session.add(user)
         session.add(SystemConfig(id=1))
+        session.add(
+            FormTemplate(
+                name="Default",
+                description="Default questionnaire template",
+                fields=build_default_template_fields(),
+                nature_of_work_category="general",
+                language="both",
+                is_default=True,
+            )
+        )
         await session.commit()
         await session.refresh(user)
 

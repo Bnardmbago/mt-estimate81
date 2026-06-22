@@ -72,8 +72,8 @@ def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dic
         roles.append(
             {
                 "name": role.name.strip(),
-                "hourly_rate_jpy": hourly,
-                "daily_rate_jpy": hourly * HOURS_PER_DAY,
+                "hourly_rate": hourly,
+                "daily_rate": hourly * HOURS_PER_DAY,
             }
         )
 
@@ -91,12 +91,12 @@ def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dic
                 "hours_per_feature_default": int(suggestion.productivity.hours_per_feature_default),
             },
             "setup_cost_items": [
-                {"name": item.name.strip(), "amount_jpy": int(item.amount_jpy)}
+                {"name": item.name.strip(), "amount": int(item.amount_jpy)}
                 for item in suggestion.setup_cost_items
                 if item.name.strip()
             ],
             "monthly_rc_items": [
-                {"name": item.name.strip(), "amount_jpy": int(item.amount_jpy)}
+                {"name": item.name.strip(), "amount": int(item.amount_jpy)}
                 for item in suggestion.monthly_rc_items
                 if item.name.strip()
             ],

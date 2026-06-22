@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
-import { isKnownPhaseKey, KNOWN_PHASE_KEYS, useDisplayLabels } from "@/lib/displayI18n";
+import { isKnownPhaseKey, KNOWN_PHASE_KEYS, moneySymbol, useDisplayLabels } from "@/lib/displayI18n";
 import RateCardList from "@/components/rate-cards/RateCardList";
 import RateCardSectionAiModal from "@/components/rate-cards/RateCardSectionAiModal";
 import {
@@ -32,10 +32,18 @@ function normalizePhaseKey(name: string): (typeof KNOWN_PHASE_KEYS)[number] | nu
     : null;
 }
 
+const REGION_OPTIONS = ["japan", "philippines", "usa"] as const;
+const CURRENCY_OPTIONS = ["JPY", "USD", "PHP"] as const;
+
+type Region = (typeof REGION_OPTIONS)[number];
+type Currency = (typeof CURRENCY_OPTIONS)[number];
+
 type RoleRate = {
   name: string;
-  hourly_rate_jpy: number;
-  daily_rate_jpy: number;
+  hourly_rate: number;
+  daily_rate: number;
+  hourly_rate_jpy?: number;
+  daily_rate_jpy?: number;
 };
 
 type PhasePercentage = {
@@ -45,7 +53,8 @@ type PhasePercentage = {
 
 type LineItem = {
   name: string;
-  amount_jpy: number;
+  amount: number;
+  amount_jpy?: number;
 };
 
 type RateCardSettings = {
@@ -58,6 +67,8 @@ type RateCardSettings = {
   setup_cost_items: LineItem[];
   productivity: { hours_per_feature_default: number };
   tax_rate: number;
+  region: Region;
+  currency: Currency;
 };
 
 type ActiveRateCard = {
@@ -130,15 +141,17 @@ function defaultDailyRate(hourlyRate: number): number {
 }
 
 function normalizeRole(role: RoleRate): RoleRate {
-  const hourly = Number(role.hourly_rate_jpy) || 0;
+  const hourly = Number(role.hourly_rate ?? role.hourly_rate_jpy) || 0;
   const daily =
-    role.daily_rate_jpy === undefined || role.daily_rate_jpy === null
-      ? defaultDailyRate(hourly)
-      : Number(role.daily_rate_jpy);
+    role.daily_rate !== undefined && role.daily_rate !== null
+      ? Number(role.daily_rate)
+      : role.daily_rate_jpy !== undefined && role.daily_rate_jpy !== null
+        ? Number(role.daily_rate_jpy)
+        : defaultDailyRate(hourly);
   return {
     ...role,
-    hourly_rate_jpy: hourly,
-    daily_rate_jpy: daily,
+    hourly_rate: hourly,
+    daily_rate: daily,
   };
 }
 
@@ -146,10 +159,17 @@ function detectManualDailyRateIndexes(roles: RoleRate[]): Set<number> {
   return new Set(
     roles
       .map((role, index) =>
-        role.daily_rate_jpy !== defaultDailyRate(role.hourly_rate_jpy) ? index : -1,
+        role.daily_rate !== defaultDailyRate(role.hourly_rate) ? index : -1,
       )
       .filter((index) => index >= 0),
   );
+}
+
+function normalizeLineItem(item: LineItem): LineItem {
+  return {
+    ...item,
+    amount: Number(item.amount ?? item.amount_jpy) || 0,
+  };
 }
 
 function normalizeSettings(raw: RateCardSettings): RateCardSettings {
@@ -159,22 +179,24 @@ function normalizeSettings(raw: RateCardSettings): RateCardSettings {
 
   if (setupCostItems.length === 0 && legacySetup) {
     setupCostItems = [
-      { name: "Infrastructure", amount_jpy: legacySetup.infrastructure_jpy ?? 0 },
-      { name: "Tooling", amount_jpy: legacySetup.tooling_jpy ?? 0 },
-      { name: "Third party", amount_jpy: legacySetup.third_party_jpy ?? 0 },
+      { name: "Infrastructure", amount: legacySetup.infrastructure_jpy ?? 0 },
+      { name: "Tooling", amount: legacySetup.tooling_jpy ?? 0 },
+      { name: "Third party", amount: legacySetup.third_party_jpy ?? 0 },
     ];
   }
 
   return {
     ...raw,
+    region: REGION_OPTIONS.includes(raw.region as Region) ? raw.region : "philippines",
+    currency: CURRENCY_OPTIONS.includes(raw.currency as Currency) ? raw.currency : "JPY",
     development_approach: DEVELOPMENT_APPROACH_OPTIONS.includes(
       raw.development_approach as DevelopmentApproach,
     )
       ? (raw.development_approach as DevelopmentApproach)
       : "traditional",
     roles: (raw.roles ?? []).map(normalizeRole),
-    setup_cost_items: setupCostItems,
-    monthly_rc_items: raw.monthly_rc_items ?? [],
+    setup_cost_items: setupCostItems.map(normalizeLineItem),
+    monthly_rc_items: (raw.monthly_rc_items ?? []).map(normalizeLineItem),
   };
 }
 
@@ -184,7 +206,7 @@ export default function RateCardEditor({
 }: RateCardEditorProps) {
   const t = useTranslations("rateCards");
   const locale = useLocale();
-  const { formatJpy, translateRole, translateSetupItem } = useDisplayLabels();
+  const { formatJpy, formatMoney, translateRole, translateSetupItem } = useDisplayLabels();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteCardConfirm, setDeleteCardConfirm] = useState(false);
@@ -212,6 +234,8 @@ export default function RateCardEditor({
   const [dirty, setDirty] = useState(false);
   const [manualDailyRates, setManualDailyRates] = useState<Set<number>>(new Set());
   const [aiModalSection, setAiModalSection] = useState<RateCardAiSection | null>(null);
+  const [fxLastUpdated, setFxLastUpdated] = useState<string | null>(null);
+  const [applyingRegional, setApplyingRegional] = useState(false);
 
   const loadUsage = useCallback(async (cardId: string) => {
     setLoadingUsage(true);
@@ -288,6 +312,17 @@ export default function RateCardEditor({
     void load();
   }, [applyActiveCard, initialCardId, loadCards, loadUsage, t]);
 
+  useEffect(() => {
+    void apiJson<{ rates: Record<string, string | number | null> }>("/rate-cards/fx-rates")
+      .then((data) => {
+        const fetchedAt = data.rates.fetched_at;
+        setFxLastUpdated(typeof fetchedAt === "string" ? fetchedAt : null);
+      })
+      .catch(() => {
+        setFxLastUpdated(null);
+      });
+  }, []);
+
   async function switchCard(selectedCardId: string) {
     if (selectedCardId === rateCardId) {
       return;
@@ -352,7 +387,19 @@ export default function RateCardEditor({
     setSaved(false);
   }
 
-  function updateRole(index: number, field: "name" | "hourly_rate_jpy", value: string) {
+  function updateRegion(region: Region) {
+    if (!settings) return;
+    setSettings({ ...settings, region });
+    markDirty();
+  }
+
+  function updateCurrency(currency: Currency) {
+    if (!settings) return;
+    setSettings({ ...settings, currency });
+    markDirty();
+  }
+
+  function updateRole(index: number, field: "name" | "hourly_rate", value: string) {
     if (!settings) return;
     const roles = [...settings.roles];
     const role = { ...roles[index] };
@@ -360,9 +407,9 @@ export default function RateCardEditor({
       role.name = value;
     } else {
       const hourly = value === "" ? 0 : Number(value);
-      role.hourly_rate_jpy = hourly;
+      role.hourly_rate = hourly;
       if (!manualDailyRates.has(index)) {
-        role.daily_rate_jpy = defaultDailyRate(hourly);
+        role.daily_rate = defaultDailyRate(hourly);
       }
     }
     roles[index] = role;
@@ -375,7 +422,7 @@ export default function RateCardEditor({
     const roles = [...settings.roles];
     const role = {
       ...roles[index],
-      daily_rate_jpy: value === "" ? 0 : Number(value),
+      daily_rate: value === "" ? 0 : Number(value),
     };
     roles[index] = role;
     setSettings({ ...settings, roles });
@@ -391,7 +438,7 @@ export default function RateCardEditor({
     if (!settings) return;
     const roles = [...settings.roles];
     const role = { ...roles[index] };
-    role.daily_rate_jpy = defaultDailyRate(role.hourly_rate_jpy);
+    role.daily_rate = defaultDailyRate(role.hourly_rate);
     roles[index] = role;
     setSettings({ ...settings, roles });
     setManualDailyRates((current) => {
@@ -405,7 +452,7 @@ export default function RateCardEditor({
   function isDailyRateCustom(index: number, role: RoleRate): boolean {
     return (
       manualDailyRates.has(index) ||
-      role.daily_rate_jpy !== defaultDailyRate(role.hourly_rate_jpy)
+      role.daily_rate !== defaultDailyRate(role.hourly_rate)
     );
   }
 
@@ -427,7 +474,7 @@ export default function RateCardEditor({
       ...settings,
       roles: [
         ...settings.roles,
-        { name: "", hourly_rate_jpy: 0, daily_rate_jpy: 0 },
+        { name: "", hourly_rate: 0, daily_rate: 0 },
       ],
     });
     markDirty();
@@ -502,7 +549,7 @@ export default function RateCardEditor({
     if (field === "name") {
       item.name = value;
     } else {
-      item.amount_jpy = Number(value);
+      item.amount = Number(value);
     }
     items[index] = item;
     setSettings({ ...settings, [collection]: items });
@@ -513,7 +560,7 @@ export default function RateCardEditor({
     if (!settings) return;
     setSettings({
       ...settings,
-      [collection]: [...settings[collection], { name: "", amount_jpy: 0 }],
+      [collection]: [...settings[collection], { name: "", amount: 0 }],
     });
     markDirty();
   }
@@ -538,12 +585,46 @@ export default function RateCardEditor({
         .filter((role) => role.name.trim())
         .map((role) => ({
           ...role,
-          daily_rate_jpy: role.daily_rate_jpy ?? defaultDailyRate(role.hourly_rate_jpy),
+          daily_rate: role.daily_rate ?? defaultDailyRate(role.hourly_rate),
         })),
       phases: settings.phases.filter((phase) => phase.name.trim()),
       setup_cost_items: settings.setup_cost_items.filter((item) => item.name.trim()),
       monthly_rc_items: settings.monthly_rc_items.filter((item) => item.name.trim()),
     };
+  }
+
+  async function handleApplyRegionalRates() {
+    if (!settings || fieldsDisabled) return;
+
+    const hasEditedRates = settings.roles.some((role) => role.hourly_rate > 0);
+    if (hasEditedRates && !window.confirm(t("applyRegionalRatesConfirm"))) {
+      return;
+    }
+
+    setApplyingRegional(true);
+    setError(null);
+    try {
+      const response = await apiJson<{ settings: RateCardSettings }>(
+        "/rate-cards/apply-regional-standard",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            settings: buildSettingsPayload(),
+            region: settings.region,
+          }),
+        },
+      );
+      const normalized = normalizeSettings(response.settings);
+      setSettings(normalized);
+      setManualDailyRates(detectManualDailyRateIndexes(normalized.roles));
+      markDirty();
+    } catch (applyError) {
+      setError(
+        applyError instanceof Error ? applyError.message : t("applyRegionalRatesError"),
+      );
+    } finally {
+      setApplyingRegional(false);
+    }
   }
 
   function openDuplicateModal() {
@@ -647,11 +728,11 @@ export default function RateCardEditor({
   }
 
   const setupTotal = useMemo(
-    () => settings?.setup_cost_items.reduce((sum, item) => sum + item.amount_jpy, 0) ?? 0,
+    () => settings?.setup_cost_items.reduce((sum, item) => sum + item.amount, 0) ?? 0,
     [settings],
   );
   const monthlyRcSubtotal = useMemo(
-    () => settings?.monthly_rc_items.reduce((sum, item) => sum + item.amount_jpy, 0) ?? 0,
+    () => settings?.monthly_rc_items.reduce((sum, item) => sum + item.amount, 0) ?? 0,
     [settings],
   );
   function handleApplyAiSuggestion(response: RateCardAiSuggestResponse) {
@@ -803,6 +884,15 @@ export default function RateCardEditor({
 
   const phaseSum = settings.phases.reduce((sum, phase) => sum + phase.percentage, 0);
   const canSaveSettings = Math.abs(phaseSum - 1) <= 0.001;
+  const currencySymbol = moneySymbol(settings.currency);
+  const fxUpdatedLabel = fxLastUpdated
+    ? t("fxLastUpdated", {
+        date: new Date(fxLastUpdated).toLocaleString(
+          locale === "ja" ? "ja-JP" : "en-US",
+          { dateStyle: "medium", timeStyle: "short" },
+        ),
+      })
+    : t("fxLastUpdatedUnknown");
   const canSaveCard =
     canSaveSettings && dirty && !saving && !deletingCard && !switchingCard && !creating && !isLocked;
   const canDeleteCard = cards.length > 1 && !deletingCard && !creating && !switchingCard && !saving;
@@ -1122,6 +1212,48 @@ export default function RateCardEditor({
         </div>
       )}
 
+      <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-gray-700">{t("regionLabel")}</span>
+            <select
+              value={settings.region}
+              onChange={(event) => updateRegion(event.target.value as Region)}
+              disabled={fieldsDisabled}
+              className={`${inputClassName} disabled:bg-gray-100 disabled:text-gray-600`}
+            >
+              <option value="japan">{t("regionJapan")}</option>
+              <option value="philippines">{t("regionPhilippines")}</option>
+              <option value="usa">{t("regionUsa")}</option>
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-gray-700">{t("currencyLabel")}</span>
+            <select
+              value={settings.currency}
+              onChange={(event) => updateCurrency(event.target.value as Currency)}
+              disabled={fieldsDisabled}
+              className={`${inputClassName} disabled:bg-gray-100 disabled:text-gray-600`}
+            >
+              <option value="JPY">{t("currencyJPY")}</option>
+              <option value="USD">{t("currencyUSD")}</option>
+              <option value="PHP">{t("currencyPHP")}</option>
+            </select>
+          </label>
+          <div className="flex flex-col justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => void handleApplyRegionalRates()}
+              disabled={fieldsDisabled || applyingRegional}
+              className="rounded border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            >
+              {applyingRegional ? t("applyingRegionalRates") : t("applyRegionalRates")}
+            </button>
+            <p className="text-xs text-gray-500">{fxUpdatedLabel}</p>
+          </div>
+        </div>
+      </section>
+
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-medium">{t("roles")}</h3>
@@ -1132,8 +1264,12 @@ export default function RateCardEditor({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-700">{t("roleName")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("hourlyRate")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("dailyRate")}</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700">
+                  {t("hourlyRate", { symbol: currencySymbol })}
+                </th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700">
+                  {t("dailyRate", { symbol: currencySymbol })}
+                </th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -1153,9 +1289,9 @@ export default function RateCardEditor({
                   <td className="px-3 py-2">
                     <input
                       type="number"
-                      value={role.hourly_rate_jpy}
+                      value={role.hourly_rate}
                       onChange={(event) =>
-                        updateRole(index, "hourly_rate_jpy", event.target.value)
+                        updateRole(index, "hourly_rate", event.target.value)
                       }
                       disabled={fieldsDisabled}
                       className={`${inputClassName} disabled:bg-gray-50 disabled:text-gray-600`}
@@ -1165,7 +1301,7 @@ export default function RateCardEditor({
                     <input
                       type="number"
                       min="0"
-                      value={role.daily_rate_jpy}
+                      value={role.daily_rate}
                       onChange={(event) => updateRoleDailyRate(index, event.target.value)}
                       disabled={fieldsDisabled}
                       className={`${inputClassName} disabled:bg-gray-50 disabled:text-gray-600`}
@@ -1324,7 +1460,9 @@ export default function RateCardEditor({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-700">{t("itemName")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("amount")}</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700">
+                  {t("amount", { symbol: currencySymbol })}
+                </th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -1347,9 +1485,9 @@ export default function RateCardEditor({
                     <input
                       type="number"
                       min="0"
-                      value={item.amount_jpy}
+                      value={item.amount}
                       onChange={(event) =>
-                        updateLineItem("setup_cost_items", index, "amount_jpy", event.target.value)
+                        updateLineItem("setup_cost_items", index, "amount", event.target.value)
                       }
                       disabled={fieldsDisabled}
                       className={`${inputClassName} disabled:bg-gray-50 disabled:text-gray-600`}
@@ -1370,7 +1508,7 @@ export default function RateCardEditor({
               ))}
               <tr className="bg-gray-50 font-semibold">
                 <td className="px-3 py-2">{t("setupTotal")}</td>
-                <td className="px-3 py-2">{formatJpy(setupTotal)}</td>
+                <td className="px-3 py-2">{formatMoney(setupTotal, settings.currency)}</td>
                 <td />
               </tr>
             </tbody>
@@ -1389,7 +1527,9 @@ export default function RateCardEditor({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-700">{t("itemName")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("amount")}</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-700">
+                  {t("amount", { symbol: currencySymbol })}
+                </th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -1411,9 +1551,9 @@ export default function RateCardEditor({
                     <input
                       type="number"
                       min="0"
-                      value={item.amount_jpy}
+                      value={item.amount}
                       onChange={(event) =>
-                        updateLineItem("monthly_rc_items", index, "amount_jpy", event.target.value)
+                        updateLineItem("monthly_rc_items", index, "amount", event.target.value)
                       }
                       disabled={fieldsDisabled}
                       className={`${inputClassName} disabled:bg-gray-50 disabled:text-gray-600`}
@@ -1434,12 +1574,12 @@ export default function RateCardEditor({
               ))}
               <tr className="bg-gray-50 font-semibold">
                 <td className="px-3 py-2">{t("monthlyRcSubtotal")}</td>
-                <td className="px-3 py-2">{formatJpy(monthlyRcSubtotal)}</td>
+                <td className="px-3 py-2">{formatMoney(monthlyRcSubtotal, settings.currency)}</td>
                 <td />
               </tr>
               <tr className="bg-indigo-50 font-semibold text-indigo-900">
                 <td className="px-3 py-2">{t("annualRcSubtotal")}</td>
-                <td className="px-3 py-2">{formatJpy(monthlyRcSubtotal * 12)}</td>
+                <td className="px-3 py-2">{formatMoney(monthlyRcSubtotal * 12, settings.currency)}</td>
                 <td />
               </tr>
             </tbody>

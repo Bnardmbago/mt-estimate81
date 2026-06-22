@@ -10,6 +10,7 @@ import { formatLocalTimestamp, parseUtcTimestamp } from "@/lib/datetime";
 import type { ExportRecord } from "@/lib/estimate";
 
 type ExportFormat = "pdf" | "xlsx" | "md";
+type PdfVersion = "pdf" | "pdf_quotation" | "pdf_preliminary";
 type ExportLocale = "ja" | "en";
 
 type ExportPanelProps = {
@@ -28,6 +29,29 @@ type PreviewTarget = {
 };
 
 const FORMAT_OPTIONS: ExportFormat[] = ["pdf", "xlsx", "md"];
+
+const PDF_VERSION_OPTIONS: PdfVersion[] = ["pdf", "pdf_quotation", "pdf_preliminary"];
+
+const pdfVersionLabelKey: Record<
+  PdfVersion,
+  "pdfVersionReport" | "pdfVersionQuotation" | "pdfVersionPreliminary"
+> = {
+  pdf: "pdfVersionReport",
+  pdf_quotation: "pdfVersionQuotation",
+  pdf_preliminary: "pdfVersionPreliminary",
+};
+
+function exportFormatLabel(
+  format: string,
+  t: (key: string) => string,
+): string {
+  if (format === "pdf") return t("pdfVersionReport");
+  if (format === "pdf_quotation") return t("pdfVersionQuotation");
+  if (format === "pdf_preliminary") return t("pdfVersionPreliminary");
+  if (format === "xlsx") return t("formatXlsx");
+  if (format === "md") return t("formatMd");
+  return format.toUpperCase();
+}
 
 const formatLabelKey: Record<ExportFormat, "formatPdf" | "formatXlsx" | "formatMd"> = {
   pdf: "formatPdf",
@@ -71,6 +95,7 @@ export default function ExportPanel({
   const [selectedFormats, setSelectedFormats] = useState<Set<ExportFormat>>(
     () => new Set(["pdf"]),
   );
+  const [pdfVersion, setPdfVersion] = useState<PdfVersion>("pdf");
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -170,9 +195,10 @@ export default function ExportPanel({
       let lastCreated: PreviewTarget | null = null;
 
       for (const format of selectedFormats) {
+        const exportFormat = format === "pdf" ? pdfVersion : format;
         const response = await apiFetch(`/estimates/${estimateId}/export`, {
           method: "POST",
-          body: JSON.stringify({ format, locale: exportLocale }),
+          body: JSON.stringify({ format: exportFormat, locale: exportLocale }),
         });
 
         if (!response.ok) {
@@ -327,6 +353,25 @@ export default function ExportPanel({
               </label>
             ))}
           </div>
+          {selectedFormats.has("pdf") && (
+            <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-4">
+              <p className="mb-2 text-sm font-medium text-gray-700">{t("pdfVersionLabel")}</p>
+              <div className="flex flex-col gap-2">
+                {PDF_VERSION_OPTIONS.map((version) => (
+                  <label key={version} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="pdf-version"
+                      checked={pdfVersion === version}
+                      onChange={() => setPdfVersion(version)}
+                      className="border-gray-300 text-indigo-600"
+                    />
+                    {t(pdfVersionLabelKey[version])}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => void handleExport()}
@@ -376,7 +421,7 @@ export default function ExportPanel({
                     aria-label={t("emailSelectLabel")}
                   />
                   <span>
-                    <span className="font-medium uppercase">{record.format}</span>
+                    <span className="font-medium">{exportFormatLabel(record.format, t)}</span>
                     <span className="mx-2 text-gray-400">·</span>
                     <span>{record.locale.toUpperCase()}</span>
                     <span className="mx-2 text-gray-400">·</span>

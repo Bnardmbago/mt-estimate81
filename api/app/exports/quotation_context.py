@@ -194,4 +194,6 @@ def build_quotation_context(
         "tax_rate": resolved_tax_rate,
         "tax_percent_label": _tax_percent_label(resolved_tax_rate, locale),
         "template_dir": str(TEMPLATE_DIR),
+        "questionnaire_sections": report.get("questionnaire_sections") or [],
+        "questionnaire_appendix_title": report["labels"]["questionnaire_appendix"],
     }

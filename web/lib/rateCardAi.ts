@@ -20,8 +20,10 @@ export type RateCardAiSuggestResponse = {
 
 type RoleRate = {
   name: string;
-  hourly_rate_jpy: number;
-  daily_rate_jpy: number;
+  hourly_rate: number;
+  daily_rate: number;
+  hourly_rate_jpy?: number;
+  daily_rate_jpy?: number;
 };
 
 type PhasePercentage = {
@@ -31,7 +33,8 @@ type PhasePercentage = {
 
 type LineItem = {
   name: string;
-  amount_jpy: number;
+  amount: number;
+  amount_jpy?: number;
 };
 
 export type RateCardSettingsLike = {
@@ -48,15 +51,17 @@ function normalizeName(value: string): string {
 }
 
 function normalizeRole(item: Record<string, unknown>): RoleRate {
-  const hourly = Number(item.hourly_rate_jpy) || 0;
+  const hourly = Number(item.hourly_rate ?? item.hourly_rate_jpy) || 0;
   const daily =
-    item.daily_rate_jpy === undefined || item.daily_rate_jpy === null
-      ? hourly * HOURS_PER_DAY
-      : Number(item.daily_rate_jpy);
+    item.daily_rate !== undefined && item.daily_rate !== null
+      ? Number(item.daily_rate)
+      : item.daily_rate_jpy === undefined || item.daily_rate_jpy === null
+        ? hourly * HOURS_PER_DAY
+        : Number(item.daily_rate_jpy);
   return {
     name: String(item.name ?? "").trim(),
-    hourly_rate_jpy: hourly,
-    daily_rate_jpy: daily,
+    hourly_rate: hourly,
+    daily_rate: daily,
   };
 }
 
@@ -70,7 +75,7 @@ function normalizePhase(item: Record<string, unknown>): PhasePercentage {
 function normalizeLineItem(item: Record<string, unknown>): LineItem {
   return {
     name: String(item.name ?? "").trim(),
-    amount_jpy: Number(item.amount_jpy) || 0,
+    amount: Number(item.amount ?? item.amount_jpy) || 0,
   };
 }
 

@@ -1,5 +1,6 @@
 from app.database import Base
 from app.models.audit import AuditLog
+from app.fx.models import FxRate  # noqa: F401
 from app.models.estimate import (
     Actuals,
     Estimate,
@@ -9,13 +10,14 @@ from app.models.estimate import (
     ExportFormat,
     FeatureItem,
 )
-from app.models.rate_card import RateCard, RateCardVersion
+from app.models.form_template import FormTemplate
 from app.models.system_config import SystemConfig
 from app.models.user import User
 
 __all__ = [
     "Base",
     "User",
+    "FormTemplate",
     "RateCard",
     "RateCardVersion",
     "Estimate",

@@ -17,6 +17,7 @@ import RequirementsReview from "@/components/RequirementsReview";
 type EstimateExtractionProps = {
   estimate: EstimateDetail;
   formRef?: RefObject<EstimateFormHandle | null>;
+  hideDraftRateCard?: boolean;
 };
 
 type EstimateStatusResponse = {
@@ -81,7 +82,11 @@ function ExtractButton({
   );
 }
 
-export default function EstimateExtraction({ estimate, formRef }: EstimateExtractionProps) {
+export default function EstimateExtraction({
+  estimate,
+  formRef,
+  hideDraftRateCard = false,
+}: EstimateExtractionProps) {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("review");
@@ -310,10 +315,12 @@ export default function EstimateExtraction({ estimate, formRef }: EstimateExtrac
       <section className="mt-8 border-t border-gray-200 pt-8">
         <h2 className="mb-1 text-lg font-semibold">{t("extractTitle")}</h2>
         <p className="mb-4 text-sm text-gray-500">{t("extractDescription")}</p>
-        <EstimateRateCardPanel
-          rateCardId={estimate.rate_card_id}
-          rateCardName={estimate.rate_card_name}
-        />
+        {!hideDraftRateCard ? (
+          <EstimateRateCardPanel
+            rateCardId={estimate.rate_card_id}
+            rateCardName={estimate.rate_card_name}
+          />
+        ) : null}
         {error && (
           <p
             className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"

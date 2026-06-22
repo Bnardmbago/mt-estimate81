@@ -2,8 +2,10 @@ import uuid
 from datetime import datetime
 from types import SimpleNamespace
 
+from app.exports.preliminary_context import build_preliminary_context
 from app.exports.quotation_context import build_quotation_context
 from app.exports.report_context import build_report_context
+from app.i18n.localized_content import store_localized_dict
 
 
 def sample_estimate_with_calculation(*, estimate_id: uuid.UUID | None = None):
@@ -43,6 +45,7 @@ def sample_estimate_with_calculation(*, estimate_id: uuid.UUID | None = None):
             "cost_drivers": [{"name": "OAuth integration", "impact_jpy": 120000}],
         },
         feature_items=[feature_item],
+        form_schema_snapshot=[],
         calculation_result={
             "total_effort_hours": 40,
             "total_effort_days": 5.0,
@@ -126,6 +129,31 @@ def sample_estimate_with_calculation(*, estimate_id: uuid.UUID | None = None):
     )
 
 
+def sample_estimate_with_localized_form(*, estimate_id: uuid.UUID | None = None):
+    estimate = sample_estimate_with_calculation(estimate_id=estimate_id)
+    estimate.form_data = store_localized_dict(
+        None,
+        "en",
+        {
+            "desired_system": "Customer portal",
+            "usage_platform": "web_browser",
+            "development_approach": "Agile",
+            "nature_of_work": "Greenfield web application",
+        },
+    )
+    estimate.form_data = store_localized_dict(
+        estimate.form_data,
+        "ja",
+        {
+            "desired_system": "顧客ポータル",
+            "usage_platform": "web_browser",
+            "development_approach": "アジャイル",
+            "nature_of_work": "新規Webアプリケーション",
+        },
+    )
+    return estimate
+
+
 def sample_report_context(
     estimate=None,
     *,
@@ -161,6 +189,30 @@ def sample_quotation_context(
 ):
     estimate = estimate or sample_estimate_with_calculation()
     return build_quotation_context(
+        estimate,
+        locale,
+        generated_at=generated_at or datetime(2026, 6, 7),
+        rate_card_name=rate_card_name,
+        rate_card_version_number=rate_card_version_number,
+        rate_card_effective_date=rate_card_effective_date or datetime(2026, 1, 1),
+        export_revision=export_revision,
+        tax_rate=tax_rate,
+    )
+
+
+def sample_preliminary_context(
+    estimate=None,
+    *,
+    locale: str = "en",
+    generated_at: datetime | None = None,
+    rate_card_name: str | None = "2026 Standard Rates",
+    rate_card_version_number: int | None = 2,
+    rate_card_effective_date: datetime | None = None,
+    export_revision: int = 1,
+    tax_rate: float = 0.10,
+):
+    estimate = estimate or sample_estimate_with_calculation()
+    return build_preliminary_context(
         estimate,
         locale,
         generated_at=generated_at or datetime(2026, 6, 7),

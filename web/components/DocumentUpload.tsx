@@ -14,9 +14,6 @@ type DocumentUploadProps = {
 
 const SUPPORTED_EXTENSIONS = ["pdf", "docx", "xlsx", "txt", "md"];
 
-const textareaClassName =
-  "min-h-[10rem] w-full flex-1 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-
 const statusBadgeClassName: Record<string, string> = {
   pending: "bg-gray-100 text-gray-700",
   processing: "bg-yellow-100 text-yellow-800",
@@ -42,7 +39,6 @@ export default function DocumentUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [aiPrompt, setAiPrompt] = useState("");
 
   useEffect(() => {
     setDocuments(initialDocuments);
@@ -187,7 +183,7 @@ export default function DocumentUpload({
       <h2 className="mb-1 text-lg font-semibold">{t("title")}</h2>
       <p className="mb-4 text-sm text-gray-500">{t("description")}</p>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+      <div className="mb-4">
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -216,20 +212,6 @@ export default function DocumentUpload({
             {uploading ? t("uploading") : t("dropzone")}
           </p>
           <p className="mt-1 text-xs text-gray-500">{t("supportedTypes")}</p>
-        </div>
-
-        <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
-          <label htmlFor="ai-prompt" className="mb-1 text-sm font-medium text-gray-700">
-            {t("aiPromptLabel")}
-          </label>
-          <textarea
-            id="ai-prompt"
-            value={aiPrompt}
-            onChange={(event) => setAiPrompt(event.target.value)}
-            placeholder={t("aiPromptPlaceholder")}
-            rows={6}
-            className={textareaClassName}
-          />
         </div>
       </div>
 

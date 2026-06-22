@@ -4,6 +4,18 @@ import { useTranslations } from "next-intl";
 import { useDisplayLabels } from "@/lib/displayI18n";
 import { roleDevelopersCount } from "@/lib/datetime";
 
+type LineItemAmount = {
+  amount?: number | null;
+  amount_jpy?: number | null;
+};
+
+function lineItemAmountJpy(item: LineItemAmount): number {
+  if (item.amount_jpy != null) {
+    return item.amount_jpy;
+  }
+  return item.amount ?? 0;
+}
+
 export type CalculationResult = {
   total_effort_hours: number;
   total_effort_days: number;
@@ -21,14 +33,14 @@ export type CalculationResult = {
   }>;
   nrc: {
     labor_jpy: number;
-    setup_items?: Array<{ name: string; amount_jpy: number }>;
+    setup_items?: Array<{ name: string; amount?: number | null; amount_jpy?: number | null }>;
     setup_jpy: number;
     contingency_jpy: number;
     overhead_jpy: number;
     total_jpy: number;
   };
   rc: {
-    monthly_items: Array<{ name: string; amount_jpy: number }>;
+    monthly_items: Array<{ name: string; amount?: number | null; amount_jpy?: number | null }>;
     maintenance_jpy: number;
     monthly_total_jpy: number;
     annual_total_jpy: number;
@@ -197,7 +209,7 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
                   <td className="px-3 py-2 pl-6 text-gray-600">
                     {t("setup")}: {translateSetupItem(item.name)}
                   </td>
-                  <td className="px-3 py-2 text-right">{formatJpy(item.amount_jpy)}</td>
+                  <td className="px-3 py-2 text-right">{formatJpy(lineItemAmountJpy(item))}</td>
                 </tr>
               ))}
               {(!result.nrc.setup_items || result.nrc.setup_items.length === 0) && (
@@ -248,7 +260,7 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
               {result.rc.monthly_items.map((item) => (
                 <tr key={item.name}>
                   <td className="px-3 py-2">{translateSetupItem(item.name)}</td>
-                  <td className="px-3 py-2 text-right">{formatJpy(item.amount_jpy)}</td>
+                  <td className="px-3 py-2 text-right">{formatJpy(lineItemAmountJpy(item))}</td>
                 </tr>
               ))}
               <tr>

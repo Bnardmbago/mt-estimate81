@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     default_locale: str = "ja"
     app_env: str = "development"
     calculation_policy_version: str = "1.0.0"
+    fx_refresh_interval_seconds: int = 3600
 
     quotation_company_name: str = "MTECH Corporation"
     quotation_company_brand: str = "MTECH"

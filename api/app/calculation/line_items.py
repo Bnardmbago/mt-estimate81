@@ -1,6 +1,7 @@
 from typing import Any
 
-from app.calculation.schemas import RateCardSettings, SetupCostItem
+from app.calculation.schemas import MonthlyRcItem, SetupCostItem
+from app.rate_cards.normalize import line_item_amount
 
 
 def _role_nrc_category(role: str) -> str:
@@ -65,10 +66,10 @@ def build_nrc_line_items(
     for item in setup_items:
         if isinstance(item, SetupCostItem):
             name = item.name
-            amount = item.amount_jpy
+            amount = item.amount
         else:
             name = str(item.get("name", "Setup"))
-            amount = int(item.get("amount_jpy", 0))
+            amount = line_item_amount(item)
         category = _setup_nrc_category(name)
         category_totals[category] = category_totals.get(category, 0) + amount
 
@@ -95,7 +96,7 @@ def build_rc_line_items(
     line_items: list[dict[str, Any]] = []
 
     for item in monthly_items:
-        monthly = int(item.get("amount_jpy", 0))
+        monthly = line_item_amount(item)
         name = str(item.get("name", "Item"))
         line_items.append(
             {
@@ -130,3 +131,38 @@ def enrich_phase_breakdown(phase_breakdown: list[dict[str, Any]]) -> list[dict[s
             }
         )
     return enriched
+
+
+def serialize_jpy_line_item(
+    item: dict[str, Any] | SetupCostItem | MonthlyRcItem,
+) -> dict[str, Any]:
+    if isinstance(item, (SetupCostItem, MonthlyRcItem)):
+        amount = int(item.amount or 0)
+        name = item.name
+    else:
+        amount = line_item_amount(item)
+        name = str(item.get("name", "Item"))
+    return {
+        "name": name,
+        "amount": amount,
+        "amount_jpy": amount,
+    }
+
+
+def normalize_calculation_result(calculation: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not calculation:
+        return calculation
+
+    normalized = dict(calculation)
+    nrc = dict(normalized.get("nrc") or {})
+    nrc["setup_items"] = [
+        serialize_jpy_line_item(item) for item in nrc.get("setup_items") or []
+    ]
+    normalized["nrc"] = nrc
+
+    rc = dict(normalized.get("rc") or {})
+    rc["monthly_items"] = [
+        serialize_jpy_line_item(item) for item in rc.get("monthly_items") or []
+    ]
+    normalized["rc"] = rc
+    return normalized

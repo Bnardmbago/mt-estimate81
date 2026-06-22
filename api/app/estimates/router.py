@@ -7,13 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import SessionLocal
 from app.dependencies import get_content_locale, get_current_user, get_db, get_display_locale
-from app.estimates import extraction, service
+from app.estimates import ai_suggest_form, extraction, service
 from app.models.estimate import EstimateStatus
 from app.models.user import User
 from app.schemas.estimate import (
     AuditLogEntry,
     CalculateEstimateRequest,
     CreateEstimateRateCardRequest,
+    EstimateAiSuggestFormRequest,
+    EstimateAiSuggestFormResponse,
     EstimateCreate,
     EstimateDetail,
     EstimateStatusResponse,
@@ -129,6 +131,16 @@ async def start_extraction(
         )
 
     return {"status": "accepted"}
+
+
+@router.post("/{estimate_id}/ai/suggest-form", response_model=EstimateAiSuggestFormResponse)
+async def suggest_estimate_form(
+    estimate_id: uuid.UUID,
+    body: EstimateAiSuggestFormRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await ai_suggest_form.suggest_form_for_estimate(db, estimate_id, body, user)
 
 
 @router.post("/{estimate_id}/rate-card/generate", response_model=GenerateRateCardResponse)

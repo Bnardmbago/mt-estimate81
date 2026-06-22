@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from app.calculation.line_items import build_nrc_line_items
 from app.calculation.schemas import CalculationResult, RateCardSettings, SetupCostItem
+from app.rate_cards.normalize import line_item_amount
 
 
 def _scale_jpy(value: int | float, multiplier: float) -> int:
@@ -31,17 +32,19 @@ def apply_estimate_discount(
 
     setup_items = deepcopy(data["nrc"]["setup_items"])
     for item in setup_items:
-        item["amount_jpy"] = _scale_jpy(item["amount_jpy"], multiplier)
+        scaled = _scale_jpy(line_item_amount(item), multiplier)
+        item["amount"] = scaled
+        item["amount_jpy"] = scaled
 
     contingency_jpy = _scale_jpy(data["nrc"]["contingency_jpy"], multiplier)
     overhead_jpy = _scale_jpy(data["nrc"]["overhead_jpy"], multiplier)
 
     labor_jpy = sum(int(row["cost_jpy"]) for row in role_breakdown)
-    setup_jpy = sum(int(item["amount_jpy"]) for item in setup_items)
+    setup_jpy = sum(line_item_amount(item) for item in setup_items)
     nrc_total = labor_jpy + setup_jpy + contingency_jpy + overhead_jpy
 
     setup_cost_items = [
-        SetupCostItem(name=item["name"], amount_jpy=int(item["amount_jpy"]))
+        SetupCostItem(name=item["name"], amount=line_item_amount(item))
         for item in setup_items
     ]
     nrc_line_items = build_nrc_line_items(

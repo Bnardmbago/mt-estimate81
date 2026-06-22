@@ -7,6 +7,7 @@ from app.calculation.line_items import (
     build_nrc_line_items,
     build_rc_line_items,
     enrich_phase_breakdown,
+    serialize_jpy_line_item,
 )
 from app.calculation.discount import apply_estimate_discount
 from app.calculation.schemas import (
@@ -55,7 +56,10 @@ def calculate_estimate(
     effort_multiplier = approach_factors.effort_multiplier
     team_size_multiplier = approach_factors.team_size_multiplier
 
-    role_rates = {role.name: role.hourly_rate_jpy for role in rate_card.roles}
+    role_rates = {
+        role.name: role.hourly_rate if role.hourly_rate else (role.hourly_rate_jpy or 0)
+        for role in rate_card.roles
+    }
     role_hours: dict[str, float] = {}
     total_hours = 0.0
 
@@ -127,14 +131,14 @@ def calculate_estimate(
     labor_jpy = sum(entry["cost_jpy"] for entry in role_breakdown)
     contingency_jpy = int(labor_jpy * rate_card.contingency_rate)
     overhead_jpy = int(labor_jpy * rate_card.overhead_rate)
-    setup_items = [item.model_dump() for item in rate_card.setup_cost_items]
+    setup_items = [serialize_jpy_line_item(item) for item in rate_card.setup_cost_items]
     setup_jpy = setup_items_total(rate_card.setup_cost_items)
     nrc_total = labor_jpy + setup_jpy + contingency_jpy + overhead_jpy
 
     support_role = maintenance.get("support_role", "developer")
     maintenance_jpy = int(maintenance.get("monthly_support_hours", 0) * role_rates.get(support_role, 0))
-    monthly_rc_items = [item.model_dump() for item in rate_card.monthly_rc_items]
-    monthly_rc = sum(item.amount_jpy for item in rate_card.monthly_rc_items) + maintenance_jpy
+    monthly_rc_items = [serialize_jpy_line_item(item) for item in rate_card.monthly_rc_items]
+    monthly_rc = sum(item.amount for item in rate_card.monthly_rc_items) + maintenance_jpy
 
     active_roles = len([role for role, hours in role_hours.items() if hours > 0])
     base_team_size = max(active_roles, 1)

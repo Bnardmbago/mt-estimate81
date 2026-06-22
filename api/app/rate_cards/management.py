@@ -13,10 +13,15 @@ from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
 from app.rate_cards.normalize import normalize_settings_dict
 from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
+from app.rate_cards.regional_profiles import apply_regional_standard
+from app.fx import get_fx_service
 from app.rate_cards import service as rate_card_service
 from app.rate_cards.ai_suggest import suggest_rate_card_section_for_card
 from app.schemas.rate_card import (
     ActiveRateCardResponse,
+    ApplyRegionalRatesRequest,
+    ApplyRegionalRatesResponse,
+    FxRatesResponse,
     RateCardAiSuggestRequest,
     RateCardAiSuggestResponse,
     RateCardCreate,
@@ -177,6 +182,28 @@ async def _count_versions(db: AsyncSession, rate_card_id: uuid.UUID) -> int:
         .where(RateCardVersion.rate_card_id == rate_card_id)
     )
     return int(result.scalar_one())
+
+
+@router.get("/fx-rates", response_model=FxRatesResponse)
+async def get_fx_rates(
+    user: User = Depends(get_current_user),
+):
+    rates = await get_fx_service().get_public_rates()
+    return FxRatesResponse(rates=rates)
+
+
+@router.post("/apply-regional-standard", response_model=ApplyRegionalRatesResponse)
+async def apply_regional_standard_rates(
+    body: ApplyRegionalRatesRequest,
+    user: User = Depends(get_current_user),
+):
+    updated = await apply_regional_standard(
+        body.settings,
+        body.region,
+        body.settings.currency,
+        get_fx_service(),
+    )
+    return ApplyRegionalRatesResponse(settings=normalize_settings_dict(updated.model_dump()))
 
 
 @router.get("/cards/options", response_model=list[RateCardOption])

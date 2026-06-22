@@ -41,6 +41,16 @@ def generate_report_pdf(report_context: dict[str, Any]) -> bytes:
     )
 
 
+def generate_preliminary_pdf(preliminary_context: dict[str, Any]) -> bytes:
+    return _render_template(
+        "estimate_preliminary.html.j2",
+        ctx=preliminary_context,
+        format_currency=format_currency,
+        format_hours=format_hours,
+        format_effort_days=format_effort_days,
+    )
+
+
 def generate_pdf(quotation_context: dict[str, Any]) -> bytes:
     """Backward-compatible alias for quotation PDF generation."""
     return generate_quotation_pdf(quotation_context)

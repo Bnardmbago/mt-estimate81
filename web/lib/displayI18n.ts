@@ -42,8 +42,37 @@ export function normalizeRoleKey(role: string): string {
   return role.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
 
-export function formatJpy(value: number, locale: string): string {
+export function formatJpy(value: number | null | undefined, locale: string): string {
+  if (value == null || Number.isNaN(value)) {
+    return "—";
+  }
   return `¥${value.toLocaleString(locale === "ja" ? "ja-JP" : "en-US")}`;
+}
+
+export function formatMoney(amount: number, currency: string, locale: string): string {
+  const code = currency.toUpperCase();
+  if (code === "JPY") {
+    return formatJpy(amount, locale);
+  }
+  const formatted = amount.toLocaleString(locale === "ja" ? "ja-JP" : "en-US", {
+    minimumFractionDigits: code === "USD" ? 2 : 0,
+    maximumFractionDigits: code === "USD" ? 2 : 0,
+  });
+  if (code === "USD") {
+    return `$${formatted}`;
+  }
+  if (code === "PHP") {
+    return `₱${formatted}`;
+  }
+  return `${code} ${formatted}`;
+}
+
+export function moneySymbol(currency: string): string {
+  const code = currency.toUpperCase();
+  if (code === "JPY") return "¥";
+  if (code === "USD") return "$";
+  if (code === "PHP") return "₱";
+  return code;
 }
 
 export function formatNumber(value: number, locale: string): string {
@@ -102,7 +131,9 @@ export function useDisplayLabels() {
     translatePhase,
     translateRole,
     translateSetupItem,
-    formatJpy: (value: number) => formatJpy(value, locale),
+    formatJpy: (value: number | null | undefined) => formatJpy(value, locale),
+    formatMoney: (value: number, currency: string) => formatMoney(value, currency, locale),
+    moneySymbol: (currency: string) => moneySymbol(currency),
     formatNumber: (value: number) => formatNumber(value, locale),
     formatDisplayDate: (value: string) => formatDisplayDate(value, locale),
   };

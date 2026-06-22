@@ -10,6 +10,10 @@ type ExportPreviewModalProps = {
   onClose: () => void;
 };
 
+function isPdfExportFormat(format: string): boolean {
+  return format === "pdf" || format.startsWith("pdf_");
+}
+
 export default function ExportPreviewModal({
   exportId,
   format,
@@ -17,8 +21,10 @@ export default function ExportPreviewModal({
 }: ExportPreviewModalProps) {
   const t = useTranslations("export");
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const pdfObjectUrlRef = useRef<string | null>(null);
   const [markdown, setMarkdown] = useState<string | null>(null);
-  const [loading, setLoading] = useState(format === "md");
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(isPdfExportFormat(format) || format === "md");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,6 +40,63 @@ export default function ExportPreviewModal({
       document.body.style.overflow = "";
     };
   }, [onClose]);
+
+  useEffect(() => {
+    if (!isPdfExportFormat(format)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPdfPreview() {
+      setLoading(true);
+      setError(null);
+      setPdfPreviewUrl(null);
+
+      if (pdfObjectUrlRef.current) {
+        URL.revokeObjectURL(pdfObjectUrlRef.current);
+        pdfObjectUrlRef.current = null;
+      }
+
+      try {
+        const response = await apiFetch(`/exports/${exportId}/download?inline=1`);
+        if (!response.ok) {
+          throw new Error(t("previewError"));
+        }
+
+        const blob = await response.blob();
+        if (!blob.size) {
+          throw new Error(t("previewError"));
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        pdfObjectUrlRef.current = objectUrl;
+        if (!cancelled) {
+          setPdfPreviewUrl(objectUrl);
+        }
+      } catch (previewError) {
+        if (!cancelled) {
+          setError(
+            previewError instanceof Error ? previewError.message : t("previewError"),
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadPdfPreview();
+
+    return () => {
+      cancelled = true;
+      if (pdfObjectUrlRef.current) {
+        URL.revokeObjectURL(pdfObjectUrlRef.current);
+        pdfObjectUrlRef.current = null;
+      }
+    };
+  }, [exportId, format, t]);
 
   useEffect(() => {
     if (format !== "md") {
@@ -72,10 +135,8 @@ export default function ExportPreviewModal({
     };
   }, [exportId, format, t]);
 
-  const previewUrl = `/api/exports/${exportId}/download?inline=1`;
-
   function handlePrint() {
-    if (format === "pdf") {
+    if (isPdfExportFormat(format)) {
       iframeRef.current?.contentWindow?.print();
       return;
     }
@@ -134,7 +195,7 @@ export default function ExportPreviewModal({
             {t("previewTitle")}
           </h2>
           <div className="flex items-center gap-2">
-            {(format === "pdf" || format === "md") && (
+            {(isPdfExportFormat(format) || format === "md") && (
               <button
                 type="button"
                 onClick={handlePrint}
@@ -154,13 +215,23 @@ export default function ExportPreviewModal({
         </div>
 
         <div className="print-preview-content min-h-0 flex-1 overflow-auto p-4">
-          {format === "pdf" && (
-            <iframe
-              ref={iframeRef}
-              title={t("previewTitle")}
-              src={previewUrl}
-              className="h-[75vh] w-full rounded border border-gray-200 bg-gray-50"
-            />
+          {isPdfExportFormat(format) && (
+            <>
+              {loading && <p className="text-sm text-gray-500">{t("previewLoading")}</p>}
+              {error && (
+                <p className="text-sm text-red-600" role="alert">
+                  {error}
+                </p>
+              )}
+              {pdfPreviewUrl && (
+                <iframe
+                  ref={iframeRef}
+                  title={t("previewTitle")}
+                  src={pdfPreviewUrl}
+                  className="h-[75vh] w-full rounded border border-gray-200 bg-gray-50"
+                />
+              )}
+            </>
           )}
 
           {format === "md" && (

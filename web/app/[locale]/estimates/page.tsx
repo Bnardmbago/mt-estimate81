@@ -21,6 +21,10 @@ export default async function EstimatesPage({
   const t = await getTranslations("estimates");
   const estimates = await fetchEstimates(token.value);
 
+  if (estimates === null) {
+    redirect(`/${locale}/login`);
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">

@@ -5,25 +5,18 @@ from app.ai.schemas import accuracy_level_from_score
 from app.calculation.engine import HOURS_PER_EFFORT_DAY, role_personnel_count
 from app.config import settings
 from app.exports.markdown import (
-    FORM_FIELD_KEYS,
-    FORM_FIELD_LABELS,
     LABELS,
     _build_feature_rows,
-    _build_form_fields,
     format_date,
 )
 from app.exports.gantt_svg import build_gantt_svg
+from app.exports.questionnaire import (
+    build_flat_form_fields,
+    build_questionnaire_sections,
+    resolve_export_extracted,
+    resolve_export_form_data,
+)
 from app.models.estimate import Estimate
-
-KEY_ASSUMPTION_KEYS = [
-    ("development_approach", "development_model"),
-    ("team_and_resources", "team_size"),
-    ("development_location", "delivery_location"),
-    ("integrations", "integrations"),
-    ("non_functional_needs", "security_requirements"),
-    ("rules_and_standards", "compliance_requirements"),
-    ("risks_unknowns", "major_constraints"),
-]
 
 
 def _normalize_extracted(extracted: dict[str, Any]) -> dict[str, Any]:
@@ -57,28 +50,16 @@ def _normalize_extracted(extracted: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _build_key_assumptions(form_data: dict[str, Any], locale: str) -> list[dict[str, str]]:
-    field_labels = FORM_FIELD_LABELS[locale]
-    section_labels = LABELS[locale]
-    rows: list[dict[str, str]] = []
-
-    for form_key, label_key in KEY_ASSUMPTION_KEYS:
-        value = form_data.get(form_key)
-        if value is None or value == "":
-            continue
-        rows.append(
-            {
-                "label": section_labels.get(label_key, field_labels.get(form_key, form_key)),
-                "value": str(value),
-            }
-        )
-    return rows
-
-
 def _resolve_estimate_type(extracted: dict[str, Any], form_data: dict[str, Any]) -> str:
     if extracted.get("estimate_type"):
         return str(extracted["estimate_type"])
-    for key in ("system_type", "nature_of_work", "project_overview"):
+    for key in (
+        "system_type",
+        "desired_system",
+        "nature_of_work",
+        "project_overview",
+        "problem_to_solve",
+    ):
         value = form_data.get(key)
         if value:
             return str(value)
@@ -125,8 +106,13 @@ def build_report_context(
 
     labels = LABELS[locale]
     calculation = estimate.calculation_result or {}
-    extracted = _normalize_extracted(estimate.extracted_data or {})
-    form_data = estimate.form_data or {}
+    form_data = resolve_export_form_data(estimate, locale)
+    extracted = _normalize_extracted(resolve_export_extracted(estimate, locale))
+    questionnaire_sections = build_questionnaire_sections(
+        form_data,
+        estimate.form_schema_snapshot,
+        locale,
+    )
     nrc = calculation.get("nrc") or {}
     rc = calculation.get("rc") or {}
 
@@ -163,8 +149,12 @@ def build_report_context(
             "accuracy_level": extracted["accuracy_level"],
             "accuracy_label": _accuracy_label(extracted["accuracy_level"], locale),
         },
-        "key_assumptions": _build_key_assumptions(form_data, locale),
-        "form_fields": _build_form_fields(form_data, locale),
+        "questionnaire_sections": questionnaire_sections,
+        "form_fields": build_flat_form_fields(
+            form_data,
+            estimate.form_schema_snapshot,
+            locale,
+        ),
         "extracted": extracted,
         "feature_items": _build_feature_rows(estimate),
         "effort_summary": {
@@ -191,6 +181,9 @@ def build_report_context(
             if rate_card_effective_date
             else labels["none"],
             "policy_version": settings.calculation_policy_version,
+            "rate_card_currency": calculation.get("source_currency"),
+            "rate_card_region": calculation.get("source_region"),
+            "fx_snapshot": calculation.get("fx_snapshot"),
         },
         "gantt": calculation.get("gantt") or {},
         "gantt_chart_svg": build_gantt_svg(calculation.get("gantt") or {}),

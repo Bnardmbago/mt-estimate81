@@ -10,11 +10,16 @@ from sqlalchemy.orm import selectinload
 from app.admin.discount_config import get_estimate_discount_rate
 from app.audit.service import log_change
 from app.calculation.calendar import default_project_start_date
+from app.calculation.currency import rate_card_settings_to_jpy
 from app.calculation.engine import CalculationError, calculate_estimate
 from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline
+from app.calculation.line_items import normalize_calculation_result
 from app.calculation.schemas import FeatureItemInput as CalcFeatureItemInput
 from app.calculation.schemas import GanttFeatureItemInput, RateCardSettings
 from app.estimates.access import can_access_estimate, require_estimate_access
+from app.estimates.form_fields import prune_form_data_to_schema, snapshot_fields
+from app.form_templates.service import get_template_or_404, resolve_template
+from app.fx import get_fx_service
 from app.estimates.rate_card_stale import is_rate_card_stale_for_estimate
 from app.i18n.localized_content import (
     normalize_locale,
@@ -24,6 +29,7 @@ from app.i18n.localized_content import (
     store_localized_dict,
 )
 from app.models.audit import AuditLog
+from app.models.form_template import FormTemplate
 from app.models.estimate import Estimate, EstimateStatus, FeatureItem
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
@@ -55,11 +61,16 @@ async def create_estimate(
         if data.client_name and data.client_name.strip()
         else user.default_client_name()
     )
+    template = await resolve_template(db, data.form_template_id)
+    schema_snapshot = snapshot_fields(template.fields)
+
     estimate = Estimate(
         project_name=data.project_name,
         client_name=client_name,
         locale=data.locale,
         form_data=data.form_data,
+        form_template_id=template.id,
+        form_schema_snapshot=schema_snapshot,
         status=EstimateStatus.DRAFT.value,
         created_by=user.id,
     )
@@ -169,6 +180,12 @@ async def estimate_to_detail(
 
     detail = EstimateDetail.model_validate(estimate, from_attributes=True)
     rate_card_stale = await is_rate_card_stale_for_estimate(db, estimate)
+    template_name = None
+    if estimate.form_template_id:
+        template = await db.get(FormTemplate, estimate.form_template_id)
+        if template:
+            template_name = template.name
+    schema_snapshot = snapshot_fields(estimate.form_schema_snapshot)
     return detail.model_copy(
         update={
             "rate_card_name": rate_card_name,
@@ -176,6 +193,9 @@ async def estimate_to_detail(
             "extracted_data": extracted_data,
             "feature_items": feature_items,
             "rate_card_stale": rate_card_stale,
+            "form_template_name": template_name,
+            "form_schema_snapshot": schema_snapshot,
+            "calculation_result": normalize_calculation_result(estimate.calculation_result),
         }
     )
 
@@ -207,6 +227,27 @@ async def update_estimate(
     changes: dict[str, Any] = {}
     update_data = data.model_dump(exclude_unset=True)
     form_data_payload = update_data.pop("form_data", None)
+    form_template_id = update_data.pop("form_template_id", None)
+
+    if form_template_id is not None:
+        if estimate.status != EstimateStatus.DRAFT.value:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Form template can only be changed on draft estimates",
+                    "code": "INVALID_STATUS",
+                },
+            )
+        template = await get_template_or_404(db, form_template_id)
+        new_snapshot = snapshot_fields(template.fields)
+        if estimate.form_template_id != template.id:
+            changes["form_template_id"] = {
+                "old": str(estimate.form_template_id) if estimate.form_template_id else None,
+                "new": str(template.id),
+            }
+            estimate.form_template_id = template.id
+            estimate.form_schema_snapshot = new_snapshot
+            estimate.form_data = prune_form_data_to_schema(new_snapshot, estimate.form_data)
 
     locked_statuses = {
         EstimateStatus.CALCULATED.value,
@@ -563,6 +604,9 @@ async def run_calculation(
         for item in estimate.feature_items
     ]
     rate_settings = RateCardSettings.model_validate(version.settings)
+    source_currency = rate_settings.currency
+    source_region = rate_settings.region
+    jpy_settings, fx_snapshot = await rate_card_settings_to_jpy(rate_settings, get_fx_service())
     maintenance = dict(estimate.maintenance_assumptions or {})
     extracted = (
         resolve_localized_dict(estimate.extracted_data, estimate.locale, estimate.locale)
@@ -591,7 +635,7 @@ async def run_calculation(
     try:
         result = calculate_estimate(
             feature_inputs,
-            rate_settings,
+            jpy_settings,
             maintenance,
             rate_card_version_id=str(version.id),
             cost_drivers=cost_drivers,
@@ -602,7 +646,11 @@ async def run_calculation(
     except CalculationError:
         raise
 
-    estimate.calculation_result = result.model_dump()
+    result_payload = result.model_dump()
+    result_payload["fx_snapshot"] = fx_snapshot
+    result_payload["source_currency"] = source_currency
+    result_payload["source_region"] = source_region
+    estimate.calculation_result = result_payload
     estimate.status = EstimateStatus.CALCULATED.value
 
     await log_change(

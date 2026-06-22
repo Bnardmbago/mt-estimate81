@@ -101,6 +101,10 @@ LABELS: dict[str, dict[str, str]] = {
         "accuracy_medium": "Medium",
         "accuracy_low": "Low",
         "key_assumptions": "Key Assumptions",
+        "questionnaire": "Project Questionnaire",
+        "questionnaire_header": "Client requirements",
+        "questionnaire_specification": "Technical assumptions",
+        "questionnaire_appendix": "Project Questionnaire (Appendix)",
         "development_model": "Development Model",
         "team_size": "Team Size",
         "delivery_location": "Delivery Location",
@@ -218,6 +222,10 @@ LABELS: dict[str, dict[str, str]] = {
         "accuracy_medium": "中",
         "accuracy_low": "低",
         "key_assumptions": "主要前提",
+        "questionnaire": "プロジェクト質問票",
+        "questionnaire_header": "クライアント要件",
+        "questionnaire_specification": "技術的前提",
+        "questionnaire_appendix": "プロジェクト質問票（別紙）",
         "development_model": "開発モデル",
         "team_size": "チーム規模",
         "delivery_location": "開発場所",
@@ -340,15 +348,14 @@ def format_date(dt: datetime, locale: str) -> str:
     return dt.strftime("%B %d, %Y").replace(" 0", " ")
 
 
-def _build_form_fields(form_data: dict[str, Any], locale: str) -> list[dict[str, str]]:
-    labels = FORM_FIELD_LABELS[locale]
-    fields: list[dict[str, str]] = []
-    for key in FORM_FIELD_KEYS:
-        value = form_data.get(key)
-        if value is None or value == "":
-            continue
-        fields.append({"label": labels[key], "value": str(value)})
-    return fields
+def _build_form_fields(
+    form_data: dict[str, Any],
+    locale: str,
+    schema: list[dict[str, Any]] | None = None,
+) -> list[dict[str, str]]:
+    from app.exports.questionnaire import build_flat_form_fields
+
+    return build_flat_form_fields(form_data, schema, locale)
 
 
 def _build_feature_rows(estimate: Estimate) -> list[dict[str, Any]]:

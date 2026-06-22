@@ -135,15 +135,19 @@ def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
         start_row=row_idx,
     )
 
-    ws.cell(row=row_idx, column=1, value=labels["key_assumptions"]).font = _header_font()
+    ws.cell(row=row_idx, column=1, value=labels["questionnaire"]).font = _header_font()
     row_idx += 1
-    key_assumptions = ctx.get("key_assumptions") or []
-    if key_assumptions:
-        row_idx = _write_key_value_rows(
-            ws,
-            [(row["label"], row["value"]) for row in key_assumptions],
-            start_row=row_idx,
-        )
+    questionnaire_sections = ctx.get("questionnaire_sections") or []
+    if questionnaire_sections:
+        for section in questionnaire_sections:
+            ws.cell(row=row_idx, column=1, value=section["title"]).font = _header_font()
+            row_idx += 1
+            row_idx = _write_key_value_rows(
+                ws,
+                [(field["label"], field["value"]) for field in section["fields"]],
+                start_row=row_idx,
+            )
+            row_idx += 1
     else:
         ws.cell(row=row_idx, column=1, value=labels["none"])
         row_idx += 1
@@ -310,13 +314,17 @@ def _build_assumptions_sheet(ws, ctx: dict[str, Any]) -> None:
     extracted = ctx["extracted"]
     row_idx = 1
 
-    ws.cell(row=row_idx, column=1, value=labels["input_assumptions"]).font = _header_font()
+    ws.cell(row=row_idx, column=1, value=labels["questionnaire"]).font = _header_font()
     row_idx += 1
-    form_fields = ctx.get("form_fields") or []
-    if form_fields:
-        for field in form_fields:
-            ws.cell(row=row_idx, column=1, value=field["label"]).font = _header_font()
-            ws.cell(row=row_idx, column=2, value=field["value"])
+    questionnaire_sections = ctx.get("questionnaire_sections") or []
+    if questionnaire_sections:
+        for section in questionnaire_sections:
+            ws.cell(row=row_idx, column=1, value=section["title"]).font = _header_font()
+            row_idx += 1
+            for field in section["fields"]:
+                ws.cell(row=row_idx, column=1, value=field["label"]).font = _header_font()
+                ws.cell(row=row_idx, column=2, value=field["value"])
+                row_idx += 1
             row_idx += 1
     else:
         ws.cell(row=row_idx, column=1, value=labels["none"])

@@ -57,6 +57,39 @@ export function isFieldRequired(
 
 export type FormFieldValues = Record<FormFieldKey, string>;
 
+export const DEFAULT_PROJECT_NAMES = new Set(["New Estimate", "新規見積"]);
+
+export function displayProjectName(projectName: string): string {
+  return DEFAULT_PROJECT_NAMES.has(projectName) ? "" : projectName;
+}
+
+export function localizedProjectName(projectName: string | null | undefined, locale: string): string {
+  const name = projectName ?? "";
+  if (!DEFAULT_PROJECT_NAMES.has(name)) {
+    return name;
+  }
+  return locale === "ja" ? "新規見積" : "New Estimate";
+}
+
+export function defaultProjectNameForLocale(locale: string): string {
+  return locale === "ja" ? "新規見積" : "New Estimate";
+}
+
+/** Use typed name, or keep the stored default placeholder name when the field is left blank. */
+export function resolveProjectNameForSave(
+  formProjectName: string,
+  storedProjectName: string,
+): string {
+  const trimmed = formProjectName.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  if (DEFAULT_PROJECT_NAMES.has(storedProjectName)) {
+    return storedProjectName;
+  }
+  return "";
+}
+
 export function emptyFormValues(): FormFieldValues {
   return Object.fromEntries(
     FORM_FIELDS.map((field) => [field.key, ""]),
@@ -68,7 +101,7 @@ export function formValuesFromData(
   projectName: string,
 ): FormFieldValues {
   const values = emptyFormValues();
-  values.project_name = projectName;
+  values.project_name = displayProjectName(projectName);
 
   if (formData) {
     for (const field of FORM_FIELDS) {

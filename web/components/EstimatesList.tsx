@@ -1,21 +1,48 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { apiFetch } from "@/lib/api";
-import type { EstimateSummary } from "@/lib/estimate";
+import { localizedProjectName } from "@/lib/formFields";
+import {
+  ESTIMATE_STATUS_KEYS,
+  type EstimateStatusKey,
+  type EstimateSummary,
+} from "@/lib/estimate-types";
 
 type EstimatesListProps = {
   estimates: EstimateSummary[];
   locale: string;
 };
 
+function parseDate(value: string): Date | null {
+  if (!value) {
+    return null;
+  }
+  const normalized = value.includes("T") ? value : value.replace(" ", "T");
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function formatDate(value: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
-    dateStyle: "medium",
-  }).format(new Date(value));
+  const parsed = parseDate(value);
+  if (!parsed) {
+    return value || "—";
+  }
+
+  try {
+    return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+      dateStyle: "medium",
+    }).format(parsed);
+  } catch {
+    return value;
+  }
+}
+
+function isEstimateStatusKey(status: string): status is EstimateStatusKey {
+  return (ESTIMATE_STATUS_KEYS as readonly string[]).includes(status);
 }
 
 export default function EstimatesList({ estimates, locale }: EstimatesListProps) {
@@ -24,6 +51,15 @@ export default function EstimatesList({ estimates, locale }: EstimatesListProps)
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const rows = Array.isArray(estimates) ? estimates : [];
+
+  function statusLabel(status: string): string {
+    if (isEstimateStatusKey(status)) {
+      return t(`status.${status}`);
+    }
+    return status || "—";
+  }
 
   async function handleDelete(estimate: EstimateSummary) {
     setDeletingId(estimate.id);
@@ -47,7 +83,7 @@ export default function EstimatesList({ estimates, locale }: EstimatesListProps)
     }
   }
 
-  if (estimates.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
         {t("empty")}
@@ -85,9 +121,10 @@ export default function EstimatesList({ estimates, locale }: EstimatesListProps)
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {estimates.map((estimate) => {
+            {rows.map((estimate) => {
               const isConfirming = confirmingId === estimate.id;
               const isDeleting = deletingId === estimate.id;
+              const projectLabel = localizedProjectName(estimate.project_name ?? "", locale);
 
               return (
                 <tr key={estimate.id} className="hover:bg-gray-50">
@@ -96,12 +133,14 @@ export default function EstimatesList({ estimates, locale }: EstimatesListProps)
                       href={`/${locale}/estimates/${estimate.id}`}
                       className="font-medium text-blue-600 hover:underline"
                     >
-                      {estimate.project_name}
+                      {projectLabel}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{estimate.client_name}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
-                    {t(`status.${estimate.status}`)}
+                    {estimate.client_name ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {statusLabel(estimate.status)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {formatDate(estimate.updated_at, locale)}
@@ -110,7 +149,7 @@ export default function EstimatesList({ estimates, locale }: EstimatesListProps)
                     {isConfirming ? (
                       <div className="inline-flex flex-col items-end gap-2 sm:flex-row sm:items-center">
                         <span className="max-w-xs text-left text-xs text-gray-600">
-                          {t("deleteConfirm", { project: estimate.project_name })}
+                          {t("deleteConfirm", { project: projectLabel })}
                         </span>
                         <div className="flex gap-2">
                           <button

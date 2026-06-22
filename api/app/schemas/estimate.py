@@ -1,8 +1,8 @@
 import uuid
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.feedback import ActualsResponse
 
@@ -12,6 +12,7 @@ class EstimateCreate(BaseModel):
     client_name: str | None = Field(default=None, max_length=255)
     locale: str = Field(default="ja", pattern=r"^(ja|en)$")
     form_data: dict[str, Any] = Field(default_factory=dict)
+    form_template_id: uuid.UUID | None = None
 
 
 class EstimateUpdate(BaseModel):
@@ -19,6 +20,7 @@ class EstimateUpdate(BaseModel):
     client_name: str | None = Field(default=None, min_length=1, max_length=255)
     locale: str | None = Field(default=None, pattern=r"^(ja|en)$")
     form_data: dict[str, Any] | None = None
+    form_template_id: uuid.UUID | None = None
     project_start_date: date | None = None
     rate_card_id: uuid.UUID | None = None
 
@@ -101,6 +103,9 @@ class EstimateStatusResponse(BaseModel):
 
 class EstimateDetail(EstimateSummary):
     form_data: dict[str, Any]
+    form_template_id: uuid.UUID | None = None
+    form_template_name: str | None = None
+    form_schema_snapshot: list[dict[str, Any]] = Field(default_factory=list)
     extracted_data: dict[str, Any] | None
     maintenance_assumptions: dict[str, Any]
     calculation_result: dict[str, Any] | None
@@ -141,3 +146,21 @@ class AuditLogEntry(BaseModel):
     action: str
     changes: dict[str, Any]
     created_at: datetime
+
+
+class EstimateAiSuggestFormRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    locale: Literal["ja", "en"] | None = None
+
+    @field_validator("prompt")
+    @classmethod
+    def validate_prompt(cls, value: str) -> str:
+        trimmed = value.strip()
+        if not trimmed:
+            raise ValueError("Prompt is required")
+        return trimmed
+
+
+class EstimateAiSuggestFormResponse(BaseModel):
+    form_data: dict[str, str]
+    generation_notes: str = ""

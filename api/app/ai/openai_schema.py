@@ -3,6 +3,24 @@ from typing import Any
 from pydantic import BaseModel
 
 
+def build_form_fields_suggestion_schema(field_keys: list[str]) -> dict[str, Any]:
+    properties = {key: {"type": "string"} for key in field_keys}
+    return {
+        "type": "object",
+        "properties": {
+            "form_data": {
+                "type": "object",
+                "properties": properties,
+                "required": field_keys,
+                "additionalProperties": False,
+            },
+            "generation_notes": {"type": "string"},
+        },
+        "required": ["form_data", "generation_notes"],
+        "additionalProperties": False,
+    }
+
+
 def build_openai_strict_schema(model: type[BaseModel]) -> dict[str, Any]:
     schema = model.model_json_schema()
     schema.pop("$schema", None)

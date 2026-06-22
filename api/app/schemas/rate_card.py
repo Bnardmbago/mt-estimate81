@@ -119,3 +119,16 @@ class RateCardAiSuggestResponse(BaseModel):
     generation_notes: str
     replace_all: bool = False
     estimate: RateCardEstimateUsage | None = None
+
+
+class ApplyRegionalRatesRequest(BaseModel):
+    settings: RateCardSettings
+    region: Literal["japan", "philippines", "usa"]
+
+
+class ApplyRegionalRatesResponse(BaseModel):
+    settings: dict
+
+
+class FxRatesResponse(BaseModel):
+    rates: dict[str, str | float | None]

@@ -30,6 +30,7 @@ FORMAT_EXTENSIONS = {
     ExportFormat.XLSX.value: "xlsx",
     ExportFormat.PDF.value: "pdf",
     ExportFormat.PDF_QUOTATION.value: "pdf",
+    ExportFormat.PDF_PRELIMINARY.value: "pdf",
 }
 
 CONTENT_TYPES = {
@@ -37,6 +38,7 @@ CONTENT_TYPES = {
     ExportFormat.XLSX.value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ExportFormat.PDF.value: "application/pdf",
     ExportFormat.PDF_QUOTATION.value: "application/pdf",
+    ExportFormat.PDF_PRELIMINARY.value: "application/pdf",
 }
 
 
@@ -128,6 +130,22 @@ def _generate_content(
             tax_rate=tax_rate,
         )
         return generate_quotation_pdf(quotation_context)
+
+    if export_format == ExportFormat.PDF_PRELIMINARY.value:
+        from app.exports.pdf import generate_preliminary_pdf
+        from app.exports.preliminary_context import build_preliminary_context
+
+        preliminary_context = build_preliminary_context(
+            estimate,
+            locale,
+            generated_at=generated_at,
+            rate_card_name=rate_card_name,
+            rate_card_version_number=rate_card_version_number,
+            rate_card_effective_date=rate_card_effective_date,
+            export_revision=export_revision,
+            tax_rate=tax_rate,
+        )
+        return generate_preliminary_pdf(preliminary_context)
 
     raise AppError(
         f"Export format '{export_format}' is not yet implemented",
@@ -274,6 +292,8 @@ async def download_export(
     suffix = ""
     if export_record.format == ExportFormat.PDF_QUOTATION.value:
         suffix = "-quotation"
+    elif export_record.format == ExportFormat.PDF_PRELIMINARY.value:
+        suffix = "-preliminary"
     filename = f"estimate-{export_record.estimate_id}{suffix}.{extension}"
     content_type = CONTENT_TYPES.get(export_record.format, "application/octet-stream")
     disposition = "inline" if inline else "attachment"

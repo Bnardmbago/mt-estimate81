@@ -23,25 +23,17 @@
 
 **{{ ctx.labels.confidence_score }}:** {{ "%.0f"|format(ctx.executive_summary.confidence_score) }}% — **{{ ctx.labels.accuracy_level }}:** {{ ctx.executive_summary.accuracy_label }}
 
-## {{ ctx.labels.key_assumptions }}
+## {{ ctx.labels.questionnaire }}
 
-{% if ctx.key_assumptions %}
+{% if ctx.questionnaire_sections %}
+{% for section in ctx.questionnaire_sections %}
+### {{ section.title }}
+
 | | |
 |---|---|
-{% for row in ctx.key_assumptions %}
-| {{ row.label }} | {{ row.value }} |
+{% for field in section.fields %}
+| {{ field.label }} | {{ field.value }} |
 {% endfor %}
-{% else %}
-_{{ ctx.labels.none }}_
-{% endif %}
-
-## {{ ctx.labels.input_assumptions }}
-
-{% if ctx.form_fields %}
-{% for field in ctx.form_fields %}
-### {{ field.label }}
-
-{{ field.value }}
 
 {% endfor %}
 {% else %}

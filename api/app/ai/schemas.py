@@ -104,3 +104,8 @@ def accuracy_level_from_score(score: float) -> Literal["high", "medium", "low"]:
     if score >= 50:
         return "medium"
     return "low"
+
+
+class EstimateFormFieldsSuggestion(BaseModel):
+    form_data: dict[str, str] = Field(default_factory=dict)
+    generation_notes: str = ""

@@ -1,6 +1,7 @@
 from typing import Any, Literal, Protocol
 
 from app.ai.schemas import (
+    EstimateFormFieldsSuggestion,
     ExtractedRequirements,
     GeneratedRateCardSuggestion,
     RateCardLineItemsSectionSuggestion,
@@ -45,3 +46,15 @@ class AIProvider(Protocol):
         | RateCardPhasesSectionSuggestion
         | RateCardLineItemsSectionSuggestion
     ): ...
+
+    async def suggest_estimate_form_fields(
+        self,
+        *,
+        prompt: str,
+        project_name: str,
+        client_name: str,
+        current_form_data: dict[str, Any],
+        document_texts: list[str],
+        locale: Literal["ja", "en"],
+        form_schema: list[dict[str, Any]],
+    ) -> EstimateFormFieldsSuggestion: ...

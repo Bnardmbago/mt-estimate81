@@ -31,6 +31,7 @@ class EstimateStatus(str, enum.Enum):
 class ExportFormat(str, enum.Enum):
     PDF = "pdf"
     PDF_QUOTATION = "pdf_quotation"
+    PDF_PRELIMINARY = "pdf_preliminary"
     XLSX = "xlsx"
     MD = "md"
 
@@ -51,6 +52,10 @@ class Estimate(Base):
         UUID(as_uuid=True), ForeignKey("rate_cards.id"), nullable=True
     )
     form_data: Mapped[dict] = mapped_column(JSONB, default=dict)
+    form_template_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("form_templates.id"), nullable=True
+    )
+    form_schema_snapshot: Mapped[list] = mapped_column(JSONB, default=list)
     extracted_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     maintenance_assumptions: Mapped[dict] = mapped_column(JSONB, default=dict)
     calculation_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -135,7 +140,7 @@ class Export(Base):
     estimate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("estimates.id", ondelete="CASCADE")
     )
-    format: Mapped[str] = mapped_column(String(10))
+    format: Mapped[str] = mapped_column(String(20))
     storage_path: Mapped[str] = mapped_column(String(1024))
     locale: Mapped[str] = mapped_column(String(2))
     generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

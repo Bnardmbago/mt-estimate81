@@ -77,6 +77,65 @@ def build_user_prompt(
     return "\n\n".join(sections)
 
 
+def build_form_fields_system_prompt(
+    locale: Literal["ja", "en"],
+    field_metadata: list[dict[str, Any]],
+) -> str:
+    language = "Japanese" if locale == "ja" else "English"
+    return (
+        "You are an expert software project estimator helping draft a project questionnaire.\n"
+        f"Write all field content in {language}.\n"
+        "Return valid JSON matching the required schema exactly.\n\n"
+        "Populate the form_data object with values for each **specification** field listed below.\n"
+        "Do not populate header/client questionnaire fields — those are provided separately and must not be changed.\n\n"
+        "Use these inputs:\n"
+        "- The project name and client\n"
+        "- The user's prompt describing what they need\n"
+        "- Client header questionnaire answers in Current Questionnaire Values (treat as fixed context)\n"
+        "- Any uploaded document excerpts\n"
+        "- Current specification field values (improve or fill gaps; keep good existing values)\n\n"
+        "Rules:\n"
+        "- For select fields, use exactly one of the allowed option values listed below.\n"
+        "- Leave a field as an empty string only when there is truly insufficient information.\n"
+        "- Explain assumptions, gaps, and confidence in generation_notes.\n\n"
+        "## Field definitions\n"
+        f"{json.dumps(field_metadata, ensure_ascii=False, indent=2)}"
+    )
+
+
+def build_form_fields_user_prompt(
+    *,
+    prompt: str,
+    project_name: str,
+    client_name: str,
+    current_form_data: dict[str, Any],
+    document_texts: list[str],
+) -> str:
+    truncated_texts, truncation_note = _truncate_document_texts(document_texts)
+
+    sections = [
+        "## User Prompt",
+        prompt.strip(),
+        "## Project",
+        f"Project name: {project_name}",
+        f"Client: {client_name}",
+        "## Current Questionnaire Values",
+        json.dumps(current_form_data, ensure_ascii=False, indent=2),
+        "## Document Excerpts",
+    ]
+
+    if not truncated_texts:
+        sections.append("(No documents provided)")
+    else:
+        for index, text in enumerate(truncated_texts, start=1):
+            sections.append(f"### Document {index}\n{text}")
+
+    if truncation_note:
+        sections.extend(["## Truncation Notice", truncation_note])
+
+    return "\n\n".join(sections)
+
+
 SECTION_LABELS = {
     "roles": "Roles",
     "phases": "Phases",

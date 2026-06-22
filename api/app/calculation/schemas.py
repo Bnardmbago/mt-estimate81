@@ -1,6 +1,12 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from app.calculation.development_approach import DevelopmentApproach
+from app.rate_cards.defaults import DEFAULT_CURRENCY, DEFAULT_REGION
+
+Region = Literal["japan", "philippines", "usa"]
+Currency = Literal["JPY", "USD", "PHP"]
 
 
 class FeatureItemInput(BaseModel):
@@ -21,8 +27,21 @@ class GanttFeatureItemInput(BaseModel):
 
 class RoleRate(BaseModel):
     name: str
-    hourly_rate_jpy: int
+    hourly_rate: int = 0
+    daily_rate: int | None = None
+    hourly_rate_jpy: int | None = None
     daily_rate_jpy: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_fields(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        if "hourly_rate" not in data and data.get("hourly_rate_jpy") is not None:
+            data["hourly_rate"] = data["hourly_rate_jpy"]
+        if "daily_rate" not in data and data.get("daily_rate_jpy") is not None:
+            data["daily_rate"] = data["daily_rate_jpy"]
+        return data
 
 
 class PhasePercentage(BaseModel):
@@ -32,12 +51,28 @@ class PhasePercentage(BaseModel):
 
 class MonthlyRcItem(BaseModel):
     name: str
-    amount_jpy: int
+    amount: int = 0
+    amount_jpy: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_fields(cls, data: object) -> object:
+        if isinstance(data, dict) and "amount" not in data and data.get("amount_jpy") is not None:
+            data["amount"] = data["amount_jpy"]
+        return data
 
 
 class SetupCostItem(BaseModel):
     name: str = Field(min_length=1)
-    amount_jpy: int = Field(ge=0)
+    amount: int = Field(default=0, ge=0)
+    amount_jpy: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_fields(cls, data: object) -> object:
+        if isinstance(data, dict) and "amount" not in data and data.get("amount_jpy") is not None:
+            data["amount"] = data["amount_jpy"]
+        return data
 
 
 class SetupCosts(BaseModel):
@@ -61,14 +96,16 @@ class RateCardSettings(BaseModel):
     setup_costs: SetupCosts | None = None
     productivity: ProductivitySettings
     tax_rate: float
+    region: Region = DEFAULT_REGION
+    currency: Currency = DEFAULT_CURRENCY
 
     @model_validator(mode="after")
     def migrate_legacy_setup_costs(self) -> "RateCardSettings":
         if not self.setup_cost_items and self.setup_costs is not None:
             self.setup_cost_items = [
-                SetupCostItem(name="Infrastructure", amount_jpy=self.setup_costs.infrastructure_jpy),
-                SetupCostItem(name="Tooling", amount_jpy=self.setup_costs.tooling_jpy),
-                SetupCostItem(name="Third party", amount_jpy=self.setup_costs.third_party_jpy),
+                SetupCostItem(name="Infrastructure", amount=self.setup_costs.infrastructure_jpy),
+                SetupCostItem(name="Tooling", amount=self.setup_costs.tooling_jpy),
+                SetupCostItem(name="Third party", amount=self.setup_costs.third_party_jpy),
             ]
         return self
 

@@ -310,7 +310,7 @@ async def test_update_rate_card_with_name_and_label(
     payload = response.json()
     assert payload["name"] == "2026 Premium Rates"
     assert payload["version_label"] == "Premium v2"
-    assert payload["settings"]["roles"][0]["daily_rate_jpy"] == 7000 * 8
+    assert payload["settings"]["roles"][0]["daily_rate"] == 7000 * 8
 
 
 @pytest.mark.asyncio
@@ -331,7 +331,7 @@ async def test_update_rate_card_preserves_custom_daily_rate(
         headers=admin_headers,
     )
     assert response.status_code == 200
-    assert response.json()["settings"]["roles"][0]["daily_rate_jpy"] == 55000
+    assert response.json()["settings"]["roles"][0]["daily_rate"] == 55000
 
 
 @pytest.mark.asyncio

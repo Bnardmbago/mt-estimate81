@@ -53,3 +53,11 @@ def test_quotation_en_labels():
     ctx = sample_quotation_context(locale="en")
     assert ctx["labels"]["title"] == "QUOTATION"
     assert "御中" not in ctx["client_name"]
+
+
+def test_quotation_includes_questionnaire_appendix_context():
+    ctx = sample_quotation_context()
+    assert ctx["questionnaire_appendix_title"] == "Project Questionnaire (Appendix)"
+    assert ctx["questionnaire_sections"]
+    spec = next(section for section in ctx["questionnaire_sections"] if section["id"] == "specification")
+    assert any(field["label"] == "Development approach" for field in spec["fields"])

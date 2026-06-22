@@ -2,6 +2,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.rate_cards.defaults import DEFAULT_CURRENCY, DEFAULT_REGION
+
 HOURS_PER_DAY = 8
 
 LEGACY_SETUP_LABELS = {
@@ -13,7 +15,7 @@ LEGACY_SETUP_LABELS = {
 
 class SetupCostItem(BaseModel):
     name: str = Field(min_length=1)
-    amount_jpy: int = Field(ge=0)
+    amount: int = Field(ge=0)
 
 
 class SetupCosts(BaseModel):
@@ -22,23 +24,54 @@ class SetupCosts(BaseModel):
     third_party_jpy: int = 0
 
 
+def _migrate_role(role: dict[str, Any]) -> dict[str, Any]:
+    role_copy = dict(role)
+    if "hourly_rate" not in role_copy and role_copy.get("hourly_rate_jpy") is not None:
+        role_copy["hourly_rate"] = int(role_copy["hourly_rate_jpy"])
+    if "daily_rate" not in role_copy and role_copy.get("daily_rate_jpy") is not None:
+        role_copy["daily_rate"] = int(role_copy["daily_rate_jpy"])
+
+    hourly = int(role_copy.get("hourly_rate", 0) or 0)
+    if role_copy.get("daily_rate") is None:
+        role_copy["daily_rate"] = hourly * HOURS_PER_DAY
+    else:
+        role_copy["daily_rate"] = int(role_copy["daily_rate"])
+    role_copy["hourly_rate"] = hourly
+    return role_copy
+
+
+def _migrate_line_item(item: dict[str, Any]) -> dict[str, Any]:
+    item_copy = dict(item)
+    if "amount" not in item_copy and item_copy.get("amount_jpy") is not None:
+        item_copy["amount"] = int(item_copy["amount_jpy"])
+    item_copy["amount"] = int(item_copy.get("amount", 0) or 0)
+    return item_copy
+
+
 def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
     settings = dict(raw)
+    has_legacy_jpy = any(
+        key.endswith("_jpy")
+        for key in settings.keys()
+        if key not in {"setup_costs"}
+    ) or any(
+        isinstance(role, dict) and ("hourly_rate_jpy" in role or "daily_rate_jpy" in role)
+        for role in settings.get("roles", [])
+    ) or any(
+        isinstance(item, dict) and "amount_jpy" in item
+        for collection in ("setup_cost_items", "monthly_rc_items")
+        for item in settings.get(collection, [])
+    )
 
     if not settings.get("development_approach"):
         settings["development_approach"] = "traditional"
 
-    roles = settings.get("roles", [])
-    normalized_roles = []
-    for role in roles:
-        role_copy = dict(role)
-        hourly = int(role_copy.get("hourly_rate_jpy", 0))
-        if role_copy.get("daily_rate_jpy") is None:
-            role_copy["daily_rate_jpy"] = hourly * HOURS_PER_DAY
-        else:
-            role_copy["daily_rate_jpy"] = int(role_copy["daily_rate_jpy"])
-        normalized_roles.append(role_copy)
-    settings["roles"] = normalized_roles
+    if "region" not in settings:
+        settings["region"] = "japan" if has_legacy_jpy else DEFAULT_REGION
+    if "currency" not in settings:
+        settings["currency"] = "JPY"
+
+    settings["roles"] = [_migrate_role(role) for role in settings.get("roles", [])]
 
     if not settings.get("setup_cost_items"):
         legacy = settings.get("setup_costs")
@@ -46,13 +79,34 @@ def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
             settings["setup_cost_items"] = [
                 {
                     "name": LEGACY_SETUP_LABELS[key],
-                    "amount_jpy": int(legacy.get(key, 0) or 0),
+                    "amount": int(legacy.get(key, 0) or 0),
                 }
                 for key in LEGACY_SETUP_LABELS
             ]
+
+    settings["setup_cost_items"] = [
+        _migrate_line_item(item) for item in settings.get("setup_cost_items", [])
+    ]
+    settings["monthly_rc_items"] = [
+        _migrate_line_item(item) for item in settings.get("monthly_rc_items", [])
+    ]
 
     return settings
 
 
 def setup_items_total(setup_cost_items: list[SetupCostItem]) -> int:
-    return sum(item.amount_jpy for item in setup_cost_items)
+    return sum(item.amount for item in setup_cost_items)
+
+
+def line_item_amount(item: dict[str, Any] | SetupCostItem) -> int:
+    if isinstance(item, SetupCostItem):
+        return item.amount
+    if item.get("amount") is not None:
+        return int(item["amount"])
+    return int(item.get("amount_jpy", 0) or 0)
+
+
+def role_hourly_rate(role: dict[str, Any]) -> int:
+    if role.get("hourly_rate") is not None:
+        return int(role["hourly_rate"])
+    return int(role.get("hourly_rate_jpy", 0) or 0)
