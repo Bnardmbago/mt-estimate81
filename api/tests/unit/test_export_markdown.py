@@ -4,8 +4,11 @@ import pytest
 
 from app.exports.markdown import (
     format_currency,
+    format_currency_yen,
     format_effort_days,
     format_hours,
+    format_person_days,
+    format_person_months,
     generate_markdown,
 )
 from tests.unit.export_fixtures import sample_report_context
@@ -19,6 +22,21 @@ def report_context():
 def test_format_currency():
     assert format_currency(1234567) == "¥1,234,567"
     assert format_currency(0) == "¥0"
+
+
+def test_format_currency_yen():
+    assert format_currency_yen(1234567) == "1,234,567円"
+    assert format_currency_yen(0) == "0円"
+
+
+def test_format_person_days():
+    assert format_person_days(5) == "5"
+    assert format_person_days(7.5) == "7.5"
+
+
+def test_format_person_months():
+    assert format_person_months(2) == "2"
+    assert format_person_months(1.25) == "1.25"
 
 
 def test_format_effort_days():

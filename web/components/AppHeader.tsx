@@ -28,6 +28,7 @@ export default async function AppHeader({
             welcome: t("welcome"),
             estimates: t("estimates"),
             rateCards: t("rateCards"),
+            proofOfConcept: t("proofOfConcept"),
             help: t("help"),
             admin: t("admin"),
           }}

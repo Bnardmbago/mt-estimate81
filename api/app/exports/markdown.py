@@ -329,6 +329,11 @@ def format_currency(amount: int | float) -> str:
     return f"¥{int(amount):,}"
 
 
+def format_currency_yen(amount: int | float) -> str:
+    """Japanese yen style for client-facing estimates, e.g. 1,000,000円."""
+    return f"{int(amount):,}円"
+
+
 def format_hours(hours: float) -> str:
     if hours == int(hours):
         return str(int(hours))
@@ -337,9 +342,19 @@ def format_hours(hours: float) -> str:
 
 def format_effort_days(hours: float) -> str:
     days = hours / HOURS_PER_EFFORT_DAY
+    return format_person_days(days)
+
+
+def format_person_days(days: float) -> str:
     if days == int(days):
         return str(int(days))
     return f"{days:.2f}".rstrip("0").rstrip(".")
+
+
+def format_person_months(months: float) -> str:
+    if months == int(months):
+        return str(int(months))
+    return f"{months:.2f}".rstrip("0").rstrip(".")
 
 
 def format_date(dt: datetime, locale: str) -> str:

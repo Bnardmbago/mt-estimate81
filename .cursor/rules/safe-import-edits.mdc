@@ -1,0 +1,38 @@
+---
+description: Avoid accidental import removal when editing Python modules
+globs: api/**/*.py
+alwaysApply: true
+---
+
+# Safe import edits
+
+When adding or reordering imports, **never replace or delete unrelated import lines**. Add new imports on their own line; do not swap one import block for another unless every removed symbol is confirmed unused.
+
+## Required checks after import changes
+
+1. **Grep the file** for every symbol that was on a removed/changed import line (e.g. `resolve_template`, `get_template_or_404`) and confirm each still has a valid import.
+2. **Grep the repo** if unsure whether a removed import is used elsewhere in the same file.
+3. **Run a targeted test** for the affected endpoint or function before claiming the change is complete.
+
+## Known failure (do not repeat)
+
+In `api/app/estimates/service.py`, adding `from app.fx import get_fx_service` accidentally removed:
+
+```python
+from app.form_templates.service import get_template_or_404, resolve_template
+```
+
+`POST /estimates` then failed with `NameError: name 'resolve_template' is not defined` (500 Internal Server Error on New estimate).
+
+## Preferred edit pattern
+
+```python
+# ✅ GOOD — add without removing existing imports
+from app.form_templates.service import get_template_or_404, resolve_template
+from app.fx import get_fx_service
+
+# ❌ BAD — replacing an unrelated import line
+from app.fx import get_fx_service  # resolve_template import lost
+```
+
+When using search-and-replace on import blocks, include enough surrounding context that only the intended line changes.

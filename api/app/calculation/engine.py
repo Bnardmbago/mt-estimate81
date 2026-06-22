@@ -10,6 +10,7 @@ from app.calculation.line_items import (
     serialize_jpy_line_item,
 )
 from app.calculation.discount import apply_estimate_discount
+from app.calculation.role_allocation import allocate_role_hours_from_phases, resolve_feature_item_role
 from app.calculation.schemas import (
     CalculationResult,
     FeatureItemInput,
@@ -64,11 +65,24 @@ def calculate_estimate(
     total_hours = 0.0
 
     for item in feature_items:
-        if item.role not in role_rates:
+        resolved_role = resolve_feature_item_role(
+            item.role,
+            role_rates,
+            phase=item.phase,
+        )
+        if resolved_role is None:
             raise CalculationError(f"Unknown role '{item.role}'", feature_item_name=item.name)
         adjusted_hours = round(float(item.hours) * effort_multiplier, 2)
         total_hours += adjusted_hours
-        role_hours[item.role] = role_hours.get(item.role, 0) + adjusted_hours
+        role_hours[resolved_role] = role_hours.get(resolved_role, 0) + adjusted_hours
+
+    role_hours = allocate_role_hours_from_phases(
+        feature_items,
+        rate_card,
+        role_hours,
+        total_hours,
+        effort_multiplier,
+    )
 
     total_days = total_hours / HOURS_PER_EFFORT_DAY
 
@@ -115,17 +129,17 @@ def calculate_estimate(
 
     role_breakdown = [
         {
-            "role": role,
-            "hours": hours,
+            "role": role.name,
+            "hours": role_hours.get(role.name, 0.0),
             "personnel_count": role_personnel_count(
-                hours,
+                role_hours.get(role.name, 0.0),
                 estimated_duration_days=estimated_duration_days,
                 total_days=total_days,
             ),
-            "rate_jpy": role_rates[role],
-            "cost_jpy": int(hours * role_rates[role]),
+            "rate_jpy": role_rates[role.name],
+            "cost_jpy": int(role_hours.get(role.name, 0.0) * role_rates[role.name]),
         }
-        for role, hours in role_hours.items()
+        for role in rate_card.roles
     ]
 
     labor_jpy = sum(entry["cost_jpy"] for entry in role_breakdown)
@@ -140,9 +154,13 @@ def calculate_estimate(
     monthly_rc_items = [serialize_jpy_line_item(item) for item in rate_card.monthly_rc_items]
     monthly_rc = sum(item.amount for item in rate_card.monthly_rc_items) + maintenance_jpy
 
-    active_roles = len([role for role, hours in role_hours.items() if hours > 0])
+    active_roles = len([row for row in role_breakdown if row["hours"] > 0])
     base_team_size = max(active_roles, 1)
-    recommended_team_size = max(1, math.ceil(base_team_size * team_size_multiplier))
+    recommended_team_size = max(
+        1,
+        math.ceil(base_team_size * team_size_multiplier),
+        sum(row["personnel_count"] for row in role_breakdown),
+    )
     nrc_line_items = build_nrc_line_items(
         role_breakdown,
         rate_card.setup_cost_items,

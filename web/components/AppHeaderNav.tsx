@@ -9,6 +9,7 @@ type NavLabels = {
   welcome: string;
   estimates: string;
   rateCards: string;
+  proofOfConcept: string;
   help: string;
   admin: string;
 };
@@ -101,6 +102,11 @@ export default function AppHeaderNav({
         href: `/${locale}/rate-cards`,
         label: labels.rateCards,
         match: (path) => path === "/rate-cards" || path.startsWith("/rate-cards/"),
+      },
+      {
+        href: `/${locale}/proof-of-concept`,
+        label: labels.proofOfConcept,
+        match: (path) => path === "/proof-of-concept" || path.startsWith("/proof-of-concept/"),
       },
       {
         href: `/${locale}/help`,

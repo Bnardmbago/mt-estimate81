@@ -5,6 +5,8 @@ import { getTranslations } from "next-intl/server";
 import EstimateDetailContent from "@/components/EstimateDetailContent";
 import { fetchEstimateResult } from "@/lib/estimate";
 
+export const dynamic = "force-dynamic";
+
 export default async function EstimateDetailPage({
   params,
 }: {

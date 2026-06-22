@@ -120,6 +120,13 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
           <p className="text-xl font-semibold">{formatNumber(result.total_effort_days)}</p>
           <p className="text-xs text-gray-400">{t("daysFormula")}</p>
         </div>
+        {result.recommended_team_size != null && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-sm text-gray-500">{t("recommendedTeamSize")}</p>
+            <p className="text-xl font-semibold">{formatNumber(result.recommended_team_size)}</p>
+            <p className="text-xs text-gray-400">{t("recommendedTeamSizeHint")}</p>
+          </div>
+        )}
       </div>
 
       <div>
@@ -150,15 +157,16 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
       </div>
 
       <div>
-        <h3 className="mb-2 font-medium">{t("roleBreakdown")}</h3>
+        <h3 className="mb-1 font-medium">{t("roleBreakdown")}</h3>
+        <p className="mb-2 text-xs text-gray-500">{t("roleBreakdownHint")}</p>
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-700">{t("role")}</th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">
-                  {t("developers")}
-                  <Tooltip text={t("developersFormula")} />
+                  {t("headcount")}
+                  <Tooltip text={t("headcountFormula")} />
                 </th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">{t("hours")}</th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">{t("rate")}</th>
@@ -173,14 +181,16 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
                 <tr key={row.role}>
                   <td className="px-3 py-2">{translateRole(row.role)}</td>
                   <td className="px-3 py-2 text-right">
-                    {formatNumber(
-                      roleDevelopersCount(
-                        row.hours,
-                        row.personnel_count,
-                        result.estimated_duration_days,
-                        result.total_effort_days,
-                      ),
-                    )}
+                    {row.hours > 0
+                      ? formatNumber(
+                          roleDevelopersCount(
+                            row.hours,
+                            row.personnel_count,
+                            result.estimated_duration_days,
+                            result.total_effort_days,
+                          ),
+                        )
+                      : "—"}
                   </td>
                   <td className="px-3 py-2 text-right">{formatNumber(row.hours)}</td>
                   <td className="px-3 py-2 text-right">{formatJpy(row.rate_jpy)}</td>

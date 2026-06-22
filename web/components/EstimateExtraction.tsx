@@ -13,6 +13,7 @@ import ActualsForm from "@/components/ActualsForm";
 import FeatureItemEditor from "@/components/FeatureItemEditor";
 import GanttChart from "@/components/GanttChart";
 import RequirementsReview from "@/components/RequirementsReview";
+import { resolveExtractedData } from "@/lib/resolveLocalizedContent";
 
 type EstimateExtractionProps = {
   estimate: EstimateDetail;
@@ -30,16 +31,7 @@ type EstimateStatusResponse = {
   extraction_error: string | null;
 };
 
-const emptyExtractedData = (): ExtractedData => ({
-  functional_requirements: [],
-  non_functional_requirements: [],
-  user_roles: [],
-  modules: [],
-  external_systems: [],
-  risks: [],
-  gaps: [],
-  confidence_notes: "",
-});
+const emptyExtractedData = (): ExtractedData => resolveExtractedData(null, "ja", "ja");
 
 function parseApiError(payload: unknown, fallback: string): string {
   if (typeof payload === "object" && payload !== null) {
@@ -115,12 +107,12 @@ export default function EstimateExtraction({
 
   const refreshRateCardStale = useCallback(async () => {
     try {
-      const latest = await apiJson<EstimateDetail>(`/estimates/${estimate.id}`);
+      const latest = await apiJson<EstimateDetail>(`/estimates/${estimate.id}`, {}, locale);
       setRateCardStale(latest.rate_card_stale ?? false);
     } catch {
       // Keep the last known value when refresh fails.
     }
-  }, [estimate.id]);
+  }, [estimate.id, locale]);
 
   useEffect(() => {
     void refreshRateCardStale();
@@ -167,7 +159,7 @@ export default function EstimateExtraction({
       setExtracting(false);
       setError(pollError instanceof Error ? pollError.message : t("extractError"));
     }
-  }, [estimate.id, router, t]);
+  }, [estimate.id, locale, router, t]);
 
   useEffect(() => {
     if (status !== "extracting" && !extracting) {
@@ -261,10 +253,11 @@ export default function EstimateExtraction({
     status === "exported" ||
     status === "completed"
   ) {
-    const extractedData = {
-      ...emptyExtractedData(),
-      ...(estimate.extracted_data ?? {}),
-    };
+    const extractedData = resolveExtractedData(
+      estimate.extracted_data as Record<string, unknown> | null,
+      locale,
+      estimate.locale,
+    );
     const showExportPanel =
       status === "calculated" || status === "exported" || status === "completed";
     const storedGantt = (estimate.calculation_result?.gantt as GanttData | undefined) ?? null;
@@ -310,7 +303,12 @@ export default function EstimateExtraction({
             </div>
           </section>
         )}
-        <RequirementsReview estimateId={estimate.id} initialData={extractedData} />
+        <RequirementsReview
+          estimateId={estimate.id}
+          estimateUpdatedAt={estimate.updated_at}
+          initialData={extractedData}
+          fallbackLocale={estimate.locale}
+        />
         <FeatureItemEditor estimateId={estimate.id} initialItems={featureItems} />
         <GanttChart
           estimateId={estimate.id}

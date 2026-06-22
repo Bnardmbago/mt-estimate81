@@ -46,7 +46,7 @@ FEATURE_SECTIONS: list[tuple[str, str, set[str]]] = [
 
 PRELIMINARY_LABELS: dict[str, dict[str, Any]] = {
     "ja": {
-        "title": "概算見積書（テンプレート）",
+        "title": "概算見積書",
         "issue_date": "見積日",
         "recipient": "宛先",
         "recipient_suffix": "様",
@@ -118,7 +118,7 @@ PRELIMINARY_LABELS: dict[str, dict[str, Any]] = {
         "dash": "—",
     },
     "en": {
-        "title": "Preliminary Estimate (Template)",
+        "title": "Preliminary Estimate",
         "issue_date": "Estimate Date",
         "recipient": "To",
         "recipient_suffix": "",
@@ -277,18 +277,20 @@ def _build_role_summary(
         bucket = buckets[key]
         hours = bucket["hours"]
         amount = bucket["cost_jpy"]
+        if amount <= 0 and bucket["headcount"] <= 0:
+            continue
         total_amount += amount
         unit_rate = int(round(bucket["rate_weighted_sum"] / hours)) if hours > 0 else 0
-        rows.append(
-            {
-                "label": bucket["label"],
-                "unit_rate_jpy": unit_rate if amount > 0 else None,
-                "utilization": bucket["utilization"],
-                "headcount": bucket["headcount"] if bucket["headcount"] > 0 else None,
-                "months": months if amount > 0 else None,
-                "amount_jpy": amount if amount > 0 else None,
-            }
-        )
+        row: dict[str, Any] = {"label": bucket["label"]}
+        if unit_rate > 0:
+            row["unit_rate_jpy"] = unit_rate
+        if bucket["headcount"] > 0:
+            row["headcount"] = bucket["headcount"]
+        if amount > 0 and months > 0:
+            row["months"] = months
+        if amount > 0:
+            row["amount_jpy"] = amount
+        rows.append(row)
 
     return rows, total_amount
 
@@ -341,18 +343,19 @@ def _build_phase_effort_rows(
 
     for phase_key in PHASE_KEYS:
         hours = phase_hours[phase_key]
+        if hours <= 0:
+            continue
         total_hours += hours
         days = _hours_to_days(hours)
         total_days += days
-        percentage = 0.0
-        assignees = ", ".join(sorted(phase_roles[phase_key])) if phase_roles[phase_key] else labels["dash"]
+        assignees = ", ".join(sorted(phase_roles[phase_key])) if phase_roles[phase_key] else None
         rows.append(
             {
                 "phase": _phase_label(phase_key, labels),
-                "percentage": percentage,
+                "percentage": 0.0,
                 "assignee": assignees,
-                "effort_days": days if hours > 0 else None,
-                "effort_months": _days_to_months(days) if hours > 0 else None,
+                "effort_days": days,
+                "effort_months": _days_to_months(days),
                 "hours": hours,
             }
         )
@@ -400,54 +403,63 @@ def _build_feature_effort_sections(
             target = "app_dev"
 
         hours = float(item.get("hours") or 0)
-        grouped[target].append(
-            {
-                "no": index,
-                "name": item.get("name") or "",
-                "summary": item.get("description") or item.get("name") or "",
-                "phase_item": _feature_section_label(target, labels),
-                "effort_days": _hours_to_days(hours) if hours > 0 else None,
-                "remarks": labels["dash"],
-            }
-        )
+        name = (item.get("name") or "").strip()
+        summary = (item.get("description") or name or "").strip()
+        if not name and not summary and hours <= 0:
+            continue
+
+        row: dict[str, Any] = {
+            "no": index,
+            "name": name,
+            "summary": summary,
+            "phase_item": _feature_section_label(target, labels),
+        }
+        if hours > 0:
+            row["effort_days"] = _hours_to_days(hours)
+        grouped[target].append(row)
 
     buffer_days = None
     if contingency_jpy > 0 and labor_jpy > 0 and total_effort_days > 0:
         buffer_days = round(contingency_jpy / (labor_jpy / total_effort_days), 2)
 
-    sections: list[dict[str, Any]] = []
-    for label_key, section_key, _ in FEATURE_SECTIONS:
-        if section_key == "system_dev":
-            sections.append({"type": "header", "label": _feature_section_label("system_dev", labels)})
-            continue
-        if section_key == "pm_section":
-            sections.append({"type": "header", "label": _feature_section_label("pm", labels)})
-            continue
-        if section_key == "buffer":
-            sections.append(
-                {
-                    "type": "subheader",
-                    "label": _feature_section_label("buffer", labels),
-                }
-            )
-            if buffer_days:
-                sections.append(
-                    {
-                        "type": "row",
-                        "no": None,
-                        "name": _feature_section_label("buffer", labels),
-                        "summary": "",
-                        "phase_item": _feature_section_label("buffer", labels),
-                        "effort_days": buffer_days,
-                        "remarks": labels["dash"],
-                    }
-                )
-            continue
-
-        sections.append({"type": "subheader", "label": _feature_section_label(section_key, labels)})
+    system_keys = ("requirement", "design", "infrastructure", "app_dev", "testing")
+    system_rows: list[dict[str, Any]] = []
+    for section_key in system_keys:
         rows = grouped.get(section_key, [])
-        if rows:
-            sections.extend({"type": "row", **row} for row in rows)
+        if not rows:
+            continue
+        system_rows.append(
+            {"type": "subheader", "label": _feature_section_label(section_key, labels)}
+        )
+        system_rows.extend({"type": "row", **row} for row in rows)
+
+    if buffer_days and buffer_days > 0:
+        system_rows.append(
+            {"type": "subheader", "label": _feature_section_label("buffer", labels)}
+        )
+        system_rows.append(
+            {
+                "type": "row",
+                "no": None,
+                "name": _feature_section_label("buffer", labels),
+                "summary": "",
+                "phase_item": _feature_section_label("buffer", labels),
+                "effort_days": buffer_days,
+            }
+        )
+
+    sections: list[dict[str, Any]] = []
+    if system_rows:
+        sections.append({"type": "header", "label": _feature_section_label("system_dev", labels)})
+        sections.extend(system_rows)
+
+    pm_rows = grouped.get("pm", [])
+    if pm_rows:
+        sections.append({"type": "header", "label": _feature_section_label("pm", labels)})
+        sections.append(
+            {"type": "subheader", "label": _feature_section_label("pm", labels)}
+        )
+        sections.extend({"type": "row", **row} for row in pm_rows)
 
     return sections
 
@@ -463,12 +475,16 @@ def build_preliminary_context(
     export_revision: int,
     tax_rate: float | None = None,
 ) -> dict[str, Any]:
-    if locale not in ("ja", "en"):
-        raise ValueError(f"Unsupported locale: {locale}")
+    if not estimate.calculation_result:
+        raise ValueError("Calculation result is required for preliminary export")
+
+    # Preliminary estimate PDF uses Japanese labels and formatting regardless of export locale.
+    display_locale = "ja"
+    labels = PRELIMINARY_LABELS[display_locale]
 
     report = build_report_context(
         estimate,
-        locale,
+        display_locale,
         generated_at=generated_at,
         rate_card_name=rate_card_name,
         rate_card_version_number=rate_card_version_number,
@@ -476,7 +492,6 @@ def build_preliminary_context(
         export_revision=export_revision,
     )
 
-    labels = PRELIMINARY_LABELS[locale]
     resolved_tax_rate = tax_rate if tax_rate is not None else DEFAULT_TAX_RATE
     calculation = report["calculation"]
     nrc = calculation.get("nrc") or {}
@@ -512,37 +527,62 @@ def build_preliminary_context(
     )
 
     client_name = report["project_summary"]["client_name"]
-    if locale == "ja" and labels["recipient_suffix"]:
-        client_display = f"{client_name}　{labels['recipient_suffix']}"
-    else:
-        client_display = client_name
+    client_display = f"{client_name}　{labels['recipient_suffix']}" if client_name else ""
+
+    company_address = (settings.quotation_company_address or "").strip()
+
+    project_rows: list[dict[str, str]] = []
+    project_name = (report["project_summary"]["project_name"] or "").strip()
+    if project_name:
+        project_rows.append({"label": labels["project_name"], "value": project_name})
+    if grand_total_jpy > 0:
+        project_rows.append(
+            {"label": labels["total_with_tax"], "value_jpy": grand_total_jpy}
+        )
+
+    show_role_unit_rate = any("unit_rate_jpy" in row for row in role_summary)
+    show_role_headcount = any("headcount" in row for row in role_summary)
+    show_role_months = any("months" in row for row in role_summary)
+    show_phase_assignee = any(row.get("assignee") for row in phase_rows)
 
     return {
         "labels": labels,
-        "locale": locale,
-        "issue_date": format_date(generated_at, locale),
+        "locale": display_locale,
+        "issue_date": format_date(generated_at, display_locale),
         "client_name": client_display,
         "intro": labels["intro"],
         "company": {
             "name": settings.quotation_company_name,
-            "address": settings.quotation_company_address,
-            "contact_person": labels["blank"],
+            "address": company_address,
+            "contact_person": "",
         },
-        "project_name": report["project_summary"]["project_name"],
+        "show_company_address": bool(company_address),
+        "project_name": project_name,
+        "project_rows": project_rows,
+        "show_project_info": bool(project_rows),
         "subtotal_jpy": subtotal_jpy,
         "tax_jpy": tax_jpy,
         "grand_total_jpy": grand_total_jpy,
         "tax_rate": resolved_tax_rate,
         "role_summary": role_summary,
+        "show_role_summary": bool(role_summary),
+        "show_role_unit_rate": show_role_unit_rate,
+        "show_role_headcount": show_role_headcount,
+        "show_role_months": show_role_months,
         "role_subtotal_jpy": role_subtotal,
         "phase_rows": phase_rows,
+        "show_phase_effort": bool(phase_rows),
+        "show_phase_assignee": show_phase_assignee,
         "total_effort_days": total_effort_days,
         "total_effort_months": total_effort_months,
+        "show_dev_effort": bool(feature_sections),
         "feature_sections": feature_sections,
         "assumptions": [
             {"number": f"3.{index}", "text": text}
             for index, text in enumerate(labels["assumptions"], start=1)
         ],
+        "show_assumptions": bool(labels["assumptions"]),
+        "show_approval": False,
         "approval": {
             "company": labels["blank"],
             "approver": labels["blank"],
@@ -552,5 +592,6 @@ def build_preliminary_context(
         "estimate_id": report["project_summary"]["estimate_id"],
         "export_revision": export_revision,
         "questionnaire_sections": report.get("questionnaire_sections") or [],
+        "show_questionnaire_appendix": bool(report.get("questionnaire_sections")),
         "questionnaire_appendix_title": report["labels"]["questionnaire_appendix"],
     }

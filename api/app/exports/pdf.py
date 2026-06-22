@@ -3,7 +3,14 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from app.exports.markdown import format_currency, format_effort_days, format_hours
+from app.exports.markdown import (
+    format_currency,
+    format_currency_yen,
+    format_effort_days,
+    format_hours,
+    format_person_days,
+    format_person_months,
+)
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -45,9 +52,11 @@ def generate_preliminary_pdf(preliminary_context: dict[str, Any]) -> bytes:
     return _render_template(
         "estimate_preliminary.html.j2",
         ctx=preliminary_context,
-        format_currency=format_currency,
+        format_currency=format_currency_yen,
         format_hours=format_hours,
         format_effort_days=format_effort_days,
+        format_person_days=format_person_days,
+        format_person_months=format_person_months,
     )
 
 

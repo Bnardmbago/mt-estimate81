@@ -4,15 +4,17 @@ from datetime import date, datetime
 from html import escape
 from typing import Any
 
+from app.exports.theme import BLUE_LIGHT, BLUE_PRIMARY
+
 PHASE_COLORS: dict[str, str] = {
-    "requirement": "#0ea5e9",
-    "design": "#8b5cf6",
-    "development": "#4f46e5",
-    "testing": "#f59e0b",
-    "deployment": "#10b981",
+    "requirement": f"#{BLUE_PRIMARY}",
+    "design": "#6B9BC3",
+    "development": f"#{BLUE_PRIMARY}",
+    "testing": "#F5C842",
+    "deployment": "#7BA3C9",
 }
 
-DEFAULT_BAR_COLOR = "#6b7280"
+DEFAULT_BAR_COLOR = f"#{BLUE_PRIMARY}"
 
 
 def _parse_date(value: str) -> date:
@@ -70,7 +72,7 @@ def build_gantt_svg(gantt: dict[str, Any]) -> str:
     chart_top = padding_top + header_height
     parts.append(
         f'<rect x="{label_width}" y="{chart_top}" width="{chart_width}" height="{len(tasks) * row_height}" '
-        f'fill="#f9fafb" stroke="#e5e7eb" stroke-width="0.5"/>'
+        f'fill="#{BLUE_LIGHT}" stroke="#{BLUE_PRIMARY}" stroke-width="0.5"/>'
     )
 
     for row_index, task in enumerate(tasks):

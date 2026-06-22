@@ -19,6 +19,8 @@ const FORWARD_REQUEST_HEADERS = [
   "authorization",
   "content-type",
   "cookie",
+  "x-display-locale",
+  "x-content-locale",
 ];
 
 type RouteContext = {

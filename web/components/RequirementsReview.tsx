@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { apiJson } from "@/lib/api";
-import type { EstimateDetail, ExtractedData } from "@/lib/estimate";
+import type { EstimateDetail, ExtractedData } from "@/lib/estimate-types";
+import { resolveExtractedData } from "@/lib/resolveLocalizedContent";
 
 type RequirementsReviewProps = {
   estimateId: string;
+  estimateUpdatedAt: string;
   initialData: ExtractedData;
+  contentLocale?: string;
+  fallbackLocale?: string;
 };
 
 type SectionKey = keyof Omit<ExtractedData, "confidence_notes">;
@@ -26,36 +30,72 @@ const LIST_SECTIONS: SectionKey[] = [
 const inputClassName =
   "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-function emptyData(): ExtractedData {
-  return {
-    functional_requirements: [],
-    non_functional_requirements: [],
-    user_roles: [],
-    modules: [],
-    external_systems: [],
-    risks: [],
-    gaps: [],
-    confidence_notes: "",
-  };
+function hasAnyListItems(data: ExtractedData): boolean {
+  return LIST_SECTIONS.some((section) => data[section].length > 0);
 }
 
 export default function RequirementsReview({
   estimateId,
+  estimateUpdatedAt,
   initialData,
+  contentLocale,
+  fallbackLocale = "ja",
 }: RequirementsReviewProps) {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("review");
-  const [data, setData] = useState<ExtractedData>({ ...emptyData(), ...initialData });
+  const displayLocale = contentLocale ?? locale;
+  const resolvedSeed = resolveExtractedData(
+    initialData as unknown as Record<string, unknown>,
+    displayLocale,
+    fallbackLocale,
+  );
+  const [data, setData] = useState<ExtractedData>(resolvedSeed);
+  const [loading, setLoading] = useState(() => !hasAnyListItems(resolvedSeed));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setData({ ...emptyData(), ...initialData });
-    setSaved(false);
-    setError(null);
-  }, [initialData]);
+    let cancelled = false;
+
+    async function loadExtractedData() {
+      setError(null);
+
+      try {
+        const latest = await apiJson<EstimateDetail>(
+          `/estimates/${estimateId}?display_locale=${encodeURIComponent(displayLocale)}`,
+          {},
+          displayLocale,
+        );
+        if (cancelled) {
+          return;
+        }
+
+        setData(
+          resolveExtractedData(
+            latest.extracted_data as Record<string, unknown> | null,
+            displayLocale,
+            latest.locale,
+          ),
+        );
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : t("loadError"));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadExtractedData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [estimateId, estimateUpdatedAt, displayLocale, fallbackLocale, t]);
 
   function updateListItem(section: SectionKey, index: number, value: string) {
     setData((current) => {
@@ -102,7 +142,7 @@ export default function RequirementsReview({
           method: "PATCH",
           body: JSON.stringify(payload),
         },
-        locale,
+        displayLocale,
       );
       setData(payload);
       setSaved(true);
@@ -126,7 +166,7 @@ export default function RequirementsReview({
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving}
+            disabled={saving || loading}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? t("saving") : t("save")}
@@ -140,6 +180,17 @@ export default function RequirementsReview({
         </p>
       )}
 
+      {!loading && !hasAnyListItems(data) && !data.confidence_notes.trim() && (
+        <p className="mb-4 text-sm text-amber-700" role="status">
+          {t("noRequirementsLoaded")}
+        </p>
+      )}
+
+      {loading && !hasAnyListItems(data) ? (
+        <p className="text-sm text-gray-500" role="status">
+          {t("loadingRequirements")}
+        </p>
+      ) : (
       <div className="space-y-6">
         {LIST_SECTIONS.map((section) => (
           <div key={section}>
@@ -194,6 +245,7 @@ export default function RequirementsReview({
           />
         </div>
       </div>
+      )}
     </section>
   );
 }

@@ -2,9 +2,12 @@ from io import BytesIO
 from typing import Any
 
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Font, PatternFill
 
+from app.exports.theme import BLUE_LIGHT, BLUE_PRIMARY, TEXT_ON_PRIMARY, YELLOW_SECTION, YELLOW_TOTAL
 from app.models.estimate import Estimate
+
+# Branded color output is PDF/XLSX only; Markdown exports remain plain text.
 
 SHEET_NAMES = {
     "en": {
@@ -35,8 +38,54 @@ CURRENCY_FORMAT = '"¥"#,##0'
 PERCENT_FORMAT = "0%"
 
 
-def _header_font() -> Font:
+def _solid_fill(color: str) -> PatternFill:
+    return PatternFill(fill_type="solid", fgColor=color)
+
+
+def _table_header_font() -> Font:
+    return Font(bold=True, color=TEXT_ON_PRIMARY)
+
+
+def _section_font() -> Font:
     return Font(bold=True)
+
+
+def _total_font() -> Font:
+    return Font(bold=True)
+
+
+def _apply_table_header(cell) -> None:
+    cell.fill = _solid_fill(BLUE_PRIMARY)
+    cell.font = _table_header_font()
+
+
+def _apply_section_title(cell) -> None:
+    cell.fill = _solid_fill(YELLOW_SECTION)
+    cell.font = _section_font()
+
+
+def _apply_label_cell(cell) -> None:
+    cell.fill = _solid_fill(YELLOW_SECTION)
+    cell.font = _section_font()
+
+
+def _apply_total_row(cells: list) -> None:
+    fill = _solid_fill(YELLOW_TOTAL)
+    font = _total_font()
+    for cell in cells:
+        cell.fill = fill
+        cell.font = font
+
+
+def _apply_zebra_row(cells: list, *, data_row_index: int) -> None:
+    if data_row_index % 2 == 0:
+        fill = _solid_fill(BLUE_LIGHT)
+        for cell in cells:
+            cell.fill = fill
+
+
+def _header_font() -> Font:
+    return _section_font()
 
 
 def _write_key_value_rows(
@@ -48,12 +97,18 @@ def _write_key_value_rows(
 ) -> int:
     row_idx = start_row
     for label, value in rows:
-        ws.cell(row=row_idx, column=1, value=label).font = _header_font()
+        label_cell = ws.cell(row=row_idx, column=1, value=label)
+        _apply_label_cell(label_cell)
         cell = ws.cell(row=row_idx, column=2, value=value)
         if value_format:
             cell.number_format = value_format
         row_idx += 1
     return row_idx
+
+
+def _write_section_title(ws, row: int, column: int, value: str) -> None:
+    cell = ws.cell(row=row, column=column, value=value)
+    _apply_section_title(cell)
 
 
 def _write_table(
@@ -65,14 +120,18 @@ def _write_table(
     column_formats: dict[int, str] | None = None,
 ) -> int:
     for col_idx, header in enumerate(headers, start=1):
-        ws.cell(row=start_row, column=col_idx, value=header).font = _header_font()
+        cell = ws.cell(row=start_row, column=col_idx, value=header)
+        _apply_table_header(cell)
 
     row_idx = start_row + 1
-    for row in rows:
+    for data_index, row in enumerate(rows):
+        row_cells = []
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
             if column_formats and col_idx in column_formats:
                 cell.number_format = column_formats[col_idx]
+            row_cells.append(cell)
+        _apply_zebra_row(row_cells, data_row_index=data_index)
         row_idx += 1
     return row_idx
 
@@ -113,7 +172,7 @@ def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
     )
     row_idx += 1
 
-    ws.cell(row=row_idx, column=1, value=labels["executive_cost_summary"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["executive_cost_summary"])
     row_idx += 1
     currency_rows = [
         (labels["nrc_total"], executive["nrc_total_jpy"]),
@@ -122,7 +181,8 @@ def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
         (labels["first_year_total_cost"], executive["first_year_total_jpy"]),
     ]
     for label, value in currency_rows:
-        ws.cell(row=row_idx, column=1, value=label).font = _header_font()
+        label_cell = ws.cell(row=row_idx, column=1, value=label)
+        _apply_label_cell(label_cell)
         cell = ws.cell(row=row_idx, column=2, value=value)
         cell.number_format = CURRENCY_FORMAT
         row_idx += 1
@@ -135,12 +195,12 @@ def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
         start_row=row_idx,
     )
 
-    ws.cell(row=row_idx, column=1, value=labels["questionnaire"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["questionnaire"])
     row_idx += 1
     questionnaire_sections = ctx.get("questionnaire_sections") or []
     if questionnaire_sections:
         for section in questionnaire_sections:
-            ws.cell(row=row_idx, column=1, value=section["title"]).font = _header_font()
+            _write_section_title(ws, row_idx, 1, section["title"])
             row_idx += 1
             row_idx = _write_key_value_rows(
                 ws,
@@ -250,26 +310,32 @@ def _build_role_sheet(ws, ctx: dict[str, Any]) -> None:
     role_rows = calculation.get("role_breakdown") or []
     headers = [labels["role"], labels["developers"], labels["hours"], labels["rate"], labels["cost"]]
     for col_idx, header in enumerate(headers, start=1):
-        ws.cell(row=1, column=col_idx, value=header).font = _header_font()
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        _apply_table_header(cell)
 
-    for row_idx, row in enumerate(role_rows, start=2):
-        ws.cell(row=row_idx, column=1, value=row["role"])
-        ws.cell(row=row_idx, column=2, value=row.get("personnel_count", 1))
-        ws.cell(row=row_idx, column=3, value=row["hours"])
+    for data_index, row in enumerate(role_rows):
+        row_idx = data_index + 2
+        row_cells = [
+            ws.cell(row=row_idx, column=1, value=row["role"]),
+            ws.cell(row=row_idx, column=2, value=row.get("personnel_count", 1)),
+            ws.cell(row=row_idx, column=3, value=row["hours"]),
+        ]
         rate_cell = ws.cell(row=row_idx, column=4, value=row["rate_jpy"])
         rate_cell.number_format = CURRENCY_FORMAT
         cost_cell = ws.cell(row=row_idx, column=5, value=row["cost_jpy"])
         cost_cell.number_format = CURRENCY_FORMAT
+        row_cells.extend([rate_cell, cost_cell])
+        _apply_zebra_row(row_cells, data_row_index=data_index)
 
     subtotal_row = len(role_rows) + 2
-    ws.cell(row=subtotal_row, column=1, value=labels["subtotal"]).font = _header_font()
+    subtotal_label = ws.cell(row=subtotal_row, column=1, value=labels["subtotal"])
     subtotal_cell = ws.cell(
         row=subtotal_row,
         column=5,
         value=calculation.get("role_labor_subtotal_jpy", 0),
     )
     subtotal_cell.number_format = CURRENCY_FORMAT
-    subtotal_cell.font = _header_font()
+    _apply_total_row([subtotal_label, subtotal_cell])
 
 
 def _build_nrc_sheet(ws, ctx: dict[str, Any]) -> None:
@@ -283,10 +349,10 @@ def _build_nrc_sheet(ws, ctx: dict[str, Any]) -> None:
         column_formats={3: CURRENCY_FORMAT},
     )
     row_idx += 1
-    ws.cell(row=row_idx, column=1, value=labels["nrc_total"]).font = _header_font()
+    total_label = ws.cell(row=row_idx, column=1, value=labels["nrc_total"])
     total_cell = ws.cell(row=row_idx, column=3, value=ctx["executive_summary"]["nrc_total_jpy"])
     total_cell.number_format = CURRENCY_FORMAT
-    total_cell.font = _header_font()
+    _apply_total_row([total_label, total_cell])
 
 
 def _build_rc_sheet(ws, ctx: dict[str, Any]) -> None:
@@ -314,15 +380,16 @@ def _build_assumptions_sheet(ws, ctx: dict[str, Any]) -> None:
     extracted = ctx["extracted"]
     row_idx = 1
 
-    ws.cell(row=row_idx, column=1, value=labels["questionnaire"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["questionnaire"])
     row_idx += 1
     questionnaire_sections = ctx.get("questionnaire_sections") or []
     if questionnaire_sections:
         for section in questionnaire_sections:
-            ws.cell(row=row_idx, column=1, value=section["title"]).font = _header_font()
+            _write_section_title(ws, row_idx, 1, section["title"])
             row_idx += 1
             for field in section["fields"]:
-                ws.cell(row=row_idx, column=1, value=field["label"]).font = _header_font()
+                label_cell = ws.cell(row=row_idx, column=1, value=field["label"])
+                _apply_label_cell(label_cell)
                 ws.cell(row=row_idx, column=2, value=field["value"])
                 row_idx += 1
             row_idx += 1
@@ -331,7 +398,7 @@ def _build_assumptions_sheet(ws, ctx: dict[str, Any]) -> None:
         row_idx += 1
     row_idx += 1
 
-    ws.cell(row=row_idx, column=1, value=labels["extracted_requirements"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["extracted_requirements"])
     row_idx += 1
 
     sections = [
@@ -346,7 +413,7 @@ def _build_assumptions_sheet(ws, ctx: dict[str, Any]) -> None:
         if not items:
             continue
         has_content = True
-        ws.cell(row=row_idx, column=1, value=section_label).font = _header_font()
+        _write_section_title(ws, row_idx, 1, section_label)
         row_idx += 1
         row_idx = _write_bullet_list(ws, items, start_row=row_idx)
     if not has_content:
@@ -359,7 +426,7 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
     rate_card = ctx["rate_card_reference"]
     row_idx = 1
 
-    ws.cell(row=row_idx, column=1, value=labels["cost_drivers_title"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["cost_drivers_title"])
     row_idx += 1
     cost_drivers = ctx.get("cost_drivers") or []
     if cost_drivers:
@@ -374,7 +441,7 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
         ws.cell(row=row_idx, column=1, value=labels["none"])
         row_idx += 2
 
-    ws.cell(row=row_idx, column=1, value=labels["risks_gaps"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["risks_gaps"])
     row_idx += 1
     for section_label, key in (
         (labels["risks"], "risks"),
@@ -385,12 +452,12 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
         items = extracted.get(key) or []
         if not items:
             continue
-        ws.cell(row=row_idx, column=1, value=section_label).font = _header_font()
+        _write_section_title(ws, row_idx, 1, section_label)
         row_idx += 1
         row_idx = _write_bullet_list(ws, items, start_row=row_idx)
     row_idx += 1
 
-    ws.cell(row=row_idx, column=1, value=labels["estimate_exclusions"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["estimate_exclusions"])
     row_idx += 1
     exclusions = extracted.get("estimate_exclusions") or []
     if exclusions:
@@ -399,7 +466,7 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
         ws.cell(row=row_idx, column=1, value=labels["none"])
         row_idx += 2
 
-    ws.cell(row=row_idx, column=1, value=labels["confidence_notes"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["confidence_notes"])
     row_idx += 1
     row_idx = _write_key_value_rows(
         ws,
@@ -414,7 +481,7 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
         items = extracted.get(key) or []
         if not items:
             continue
-        ws.cell(row=row_idx, column=1, value=labels[label_key]).font = _header_font()
+        _write_section_title(ws, row_idx, 1, labels[label_key])
         row_idx += 1
         row_idx = _write_bullet_list(ws, items, start_row=row_idx)
     notes = extracted.get("confidence_notes")
@@ -422,7 +489,7 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
         ws.cell(row=row_idx, column=1, value=notes)
         row_idx += 2
 
-    ws.cell(row=row_idx, column=1, value=labels["rate_card_reference"]).font = _header_font()
+    _write_section_title(ws, row_idx, 1, labels["rate_card_reference"])
     row_idx += 1
     _write_key_value_rows(
         ws,

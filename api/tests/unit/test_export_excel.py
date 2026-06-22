@@ -49,14 +49,13 @@ def test_excel_nrc_total_on_nrc_detail_sheet(report_context, estimate):
     assert nrc_sheet.cell(row=last_row, column=3).value == 700000
 
 
-def test_excel_role_breakdown_uses_formulas(report_context, estimate):
+def test_excel_role_breakdown_has_cost_values(report_context, estimate):
     content = generate_excel(report_context, estimate)
     wb = _load_workbook_from_bytes(content)
 
     role_sheet = wb[SHEET_NAMES["en"]["role"]]
-    cost_formula = role_sheet["E2"].value
-
-    assert cost_formula == "=C2*D2"
+    assert role_sheet["E2"].value == 240000
+    assert role_sheet["E2"].number_format == '"¥"#,##0'
 
 
 def test_excel_executive_contains_project_name(report_context, estimate):

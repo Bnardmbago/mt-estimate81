@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <title>{{ ctx.labels.title }}</title>
   <style>
+    {% include '_export_theme.css.j2' %}
     @page { size: A4; margin: 10mm 8mm; }
     @font-face {
       font-family: "Noto Sans JP";
@@ -14,30 +15,32 @@
       font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
       font-size: 8pt;
       line-height: 1.25;
-      color: #1f2937;
+      color: var(--export-text-body);
       margin: 0;
     }
     h1 {
       font-size: 13pt;
       font-weight: 700;
       margin: 0 0 8pt;
-      color: #4f46e5;
-      border-bottom: 1px solid #4f46e5;
-      padding-bottom: 4pt;
+      color: var(--export-text-on-primary);
+      background: var(--export-blue-primary);
+      padding: 6pt 10pt;
+      border-bottom: none;
     }
     h2 {
       font-size: 9pt;
       font-weight: 700;
       margin: 8pt 0 4pt;
-      color: #374151;
-      border-bottom: 1px solid #d1d5db;
-      padding-bottom: 2pt;
+      color: var(--export-text-body);
+      background: var(--export-yellow-section);
+      border-bottom: 2px solid var(--export-blue-primary);
+      padding: 3pt 6pt;
     }
     h3 {
       font-size: 8pt;
       font-weight: 600;
       margin: 4pt 0 2pt;
-      color: #4b5563;
+      color: var(--export-blue-primary);
     }
     table {
       width: 100%;
@@ -46,26 +49,42 @@
       font-size: 7.5pt;
     }
     th, td {
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--export-border);
       padding: 2pt 4pt;
       text-align: left;
       vertical-align: top;
     }
-    th { background: #f3f4f6; font-weight: 600; }
+    th {
+      background: var(--export-blue-primary);
+      color: var(--export-text-on-primary);
+      font-weight: 600;
+    }
+    tbody tr:nth-child(odd):not(.total-row) td { background: var(--export-blue-light); }
+    tbody tr:nth-child(even):not(.total-row) td { background: #fff; }
     .num { text-align: right; }
-    .total-row td, .total-row th { font-weight: 700; background: #f9fafb; }
+    .total-row td, .total-row th {
+      font-weight: 700;
+      background: var(--export-yellow-total) !important;
+    }
     .executive-box {
-      border: 1px solid #4f46e5;
-      background: #eef2ff;
+      border: 1px solid var(--export-blue-primary);
+      background: var(--export-blue-light);
       padding: 6pt 8pt;
       margin: 4pt 0 8pt;
       page-break-inside: avoid;
     }
-    .executive-box h2 { margin-top: 0; border-bottom: none; padding-bottom: 0; }
+    .executive-box h2 {
+      margin-top: 0;
+      border-bottom: none;
+      padding-bottom: 0;
+      background: transparent;
+    }
     .first-year-highlight {
       font-size: 10pt;
       font-weight: 700;
-      color: #4f46e5;
+      color: var(--export-blue-primary);
+      background: var(--export-yellow-total);
+      padding: 2pt 4pt;
     }
     ul { margin: 2pt 0 4pt; padding-left: 14pt; }
     li { margin-bottom: 1pt; }
@@ -73,7 +92,7 @@
     .field-value { margin: 0 0 4pt; white-space: pre-wrap; font-size: 7.5pt; }
     .section { margin-bottom: 4pt; }
     .signature-line {
-      border-bottom: 1px solid #9ca3af;
+      border-bottom: 1px solid var(--export-border-light);
       min-height: 14pt;
       margin-top: 2pt;
     }
@@ -81,6 +100,29 @@
     .gantt-chart { margin: 4pt 0 6pt; page-break-inside: avoid; }
     .gantt-chart svg { max-width: 100%; height: auto; display: block; }
     p { margin: 2pt 0 4pt; }
+    .questionnaire-appendix { page-break-before: always; margin-top: 8pt; }
+    .appendix-title {
+      font-size: 10pt;
+      font-weight: 700;
+      background: var(--export-blue-primary);
+      color: var(--export-text-on-primary);
+      padding: 4pt 8pt;
+      margin: 0 0 6pt;
+    }
+    .appendix-section-title {
+      font-size: 8pt;
+      font-weight: 700;
+      background: var(--export-yellow-section);
+      border-left: 3px solid var(--export-blue-primary);
+      padding: 2pt 6pt;
+      margin: 6pt 0 3pt;
+    }
+    .appendix-table th {
+      background: var(--export-blue-primary);
+      color: var(--export-text-on-primary);
+    }
+    .appendix-table tbody tr:nth-child(odd) td { background: var(--export-blue-light); }
+    .appendix-table tbody tr:nth-child(even) td { background: #fff; }
   </style>
 </head>
 <body>

@@ -37,8 +37,8 @@ def test_basic_nrc_calculation():
     assert result.total_effort_hours == 60
     assert result.total_effort_days == 7.5  # 60 / 8
     assert result.estimated_duration_days == 7.5
-    assert result.recommended_team_size == 2
-    assert result.nrc["labor_jpy"] == 40 * 6000 + 20 * 8000  # 400000
+    assert result.recommended_team_size == 3
+    assert result.nrc["labor_jpy"] == 25 * 6000 + 20 * 8000 + 15 * 5000
     assert result.nrc["contingency_jpy"] == int(result.nrc["labor_jpy"] * 0.15)
     assert result.nrc["overhead_jpy"] == int(result.nrc["labor_jpy"] * 0.10)
     assert result.nrc["setup_jpy"] == 400000
@@ -70,9 +70,22 @@ def test_role_breakdown_includes_personnel_count():
         FeatureItemInput(name="PM work", hours=20, phase="requirement", role="PM"),
     ]
     result = calculate_estimate(items, SAMPLE_RATE_CARD, {}, rate_card_version_id="v1")
+    assert [row["role"] for row in result.role_breakdown] == ["PM", "developer", "QA"]
     for row in result.role_breakdown:
         assert "personnel_count" in row
-        assert row["personnel_count"] >= 1
+        if row["hours"] > 0:
+            assert row["personnel_count"] >= 1
+        else:
+            assert row["personnel_count"] == 0
+
+
+def test_role_breakdown_lists_all_rate_card_roles():
+    items = [FeatureItemInput(name="Auth", hours=40, phase="development", role="developer")]
+    result = calculate_estimate(items, SAMPLE_RATE_CARD, {}, rate_card_version_id="v1")
+    assert len(result.role_breakdown) == 3
+    qa_row = next(row for row in result.role_breakdown if row["role"] == "QA")
+    assert qa_row["hours"] == 10.0
+    assert qa_row["cost_jpy"] == 10 * 5000
 
 
 def test_cost_drivers_passed_through():
@@ -96,6 +109,17 @@ def test_unknown_role_raises():
     assert exc.value.feature_item_name == "Bad"
 
 
+def test_combined_designer_developer_role_maps_to_developer():
+    items = [
+        FeatureItemInput(name="UI Design", hours=40, phase="design-phase", role="designer/developer"),
+        FeatureItemInput(name="Build", hours=40, phase="development", role="developer"),
+    ]
+    result = calculate_estimate(items, SAMPLE_RATE_CARD, {}, rate_card_version_id="v1")
+    dev_row = next(row for row in result.role_breakdown if row["role"] == "developer")
+    assert dev_row["hours"] > 0
+    assert result.total_effort_hours == 80
+
+
 def test_zero_hour_item():
     items = [
         FeatureItemInput(name="Placeholder", hours=0, phase="development", role="developer"),
@@ -104,10 +128,10 @@ def test_zero_hour_item():
     result = calculate_estimate(items, SAMPLE_RATE_CARD, {}, rate_card_version_id="v1")
     assert result.total_effort_hours == 40
     assert result.total_effort_days == 5.0
-    assert result.nrc["labor_jpy"] == 40 * 6000
-    assert len(result.role_breakdown) == 1
-    assert result.role_breakdown[0]["role"] == "developer"
-    assert result.role_breakdown[0]["hours"] == 40
+    assert result.nrc["labor_jpy"] == int(26 * 6000 + 10 * 5000 + 4 * 8000)
+    assert len(result.role_breakdown) == 3
+    dev_row = next(row for row in result.role_breakdown if row["role"] == "developer")
+    assert dev_row["hours"] == 26
 
 
 def test_maintenance_rc():
@@ -203,6 +227,6 @@ def test_ai_assisted_development_approach_reduces_effort_and_cost():
     assert adjusted.development_approach == "ai_assisted"
     assert adjusted.development_approach_effort_multiplier == 0.75
     assert adjusted.total_effort_hours == 45.0
-    assert adjusted.nrc["labor_jpy"] == int(30 * 6000 + 15 * 8000)
+    assert adjusted.nrc["labor_jpy"] == int(18.75 * 6000 + 11.25 * 5000 + 15 * 8000)
     assert adjusted.nrc["labor_jpy"] < baseline.nrc["labor_jpy"]
     assert adjusted.recommended_team_size <= baseline.recommended_team_size
