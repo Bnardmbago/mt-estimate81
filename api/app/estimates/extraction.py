@@ -36,7 +36,39 @@ async def _get_rate_card_roles(
     return await get_rate_card_roles(db, rate_card_id, user)
 
 
-async def _extract_pending_documents(db: AsyncSession, estimate_id: uuid.UUID) -> None:
+async def _log_extraction_phase(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    user_id: uuid.UUID,
+    phase: Literal["documents", "rate_card", "ai"],
+) -> None:
+    await log_change(
+        db,
+        estimate_id=estimate_id,
+        user_id=user_id,
+        action="extraction_phase",
+        changes={"phase": phase},
+    )
+    await db.commit()
+
+
+async def _get_extraction_phase(db: AsyncSession, estimate_id: uuid.UUID) -> str:
+    result = await db.execute(
+        select(AuditLog)
+        .where(
+            AuditLog.estimate_id == estimate_id,
+            AuditLog.action == "extraction_phase",
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(1)
+    )
+    entry = result.scalar_one_or_none()
+    if entry and isinstance(entry.changes.get("phase"), str):
+        return entry.changes["phase"]
+    return "ai"
+
+
+async def _extract_pending_documents(db: AsyncSession, estimate_id: uuid.UUID) -> bool:
     result = await db.execute(
         select(EstimateDocument.id).where(
             EstimateDocument.estimate_id == estimate_id,
@@ -48,6 +80,8 @@ async def _extract_pending_documents(db: AsyncSession, estimate_id: uuid.UUID) -
 
     if pending_ids:
         await asyncio.gather(*[run_document_extraction(doc_id) for doc_id in pending_ids])
+        return True
+    return False
 
 
 def _collect_document_texts(documents: list[EstimateDocument]) -> tuple[list[str], list[str]]:
@@ -207,24 +241,7 @@ async def run_extraction(
 
     from app.rate_cards.generation import ensure_rate_card_for_estimate
 
-    await ensure_rate_card_for_estimate(
-        db,
-        estimate_id,
-        user_id,
-        regenerate=False,
-    )
-
-    result = await db.execute(
-        select(Estimate)
-        .where(Estimate.id == estimate_id)
-        .options(
-            selectinload(Estimate.feature_items),
-            selectinload(Estimate.documents),
-        )
-    )
-    estimate = result.scalar_one_or_none()
-    if not estimate:
-        return
+    needs_rate_card = estimate.rate_card_id is None
 
     await db.execute(delete(FeatureItem).where(FeatureItem.estimate_id == estimate_id))
     estimate.extracted_data = None
@@ -234,7 +251,19 @@ async def run_extraction(
     await db.commit()
 
     try:
-        await _extract_pending_documents(db, estimate_id)
+        extracted_documents = await _extract_pending_documents(db, estimate_id)
+        if extracted_documents:
+            await _log_extraction_phase(db, estimate_id, user_id, "documents")
+
+        await ensure_rate_card_for_estimate(
+            db,
+            estimate_id,
+            user_id,
+            regenerate=False,
+            fast_bootstrap=needs_rate_card,
+        )
+
+        await _log_extraction_phase(db, estimate_id, user_id, "ai")
 
         result = await db.execute(
             select(Estimate)
@@ -384,12 +413,19 @@ async def get_extraction_status(
     documents_done = sum(
         1 for doc in documents if doc.extraction_status in ("done", "failed")
     )
+    documents_in_progress = any(
+        doc.extraction_status in ("pending", "processing") for doc in documents
+    )
 
     extraction_progress: dict[str, Any] | None = None
     if estimate.status == EstimateStatus.EXTRACTING.value:
+        phase = await _get_extraction_phase(db, estimate_id)
+        if documents_in_progress:
+            phase = "documents"
         extraction_progress = {
             "documents_total": len(documents),
             "documents_done": documents_done,
+            "phase": phase,
         }
 
     return {

@@ -25,6 +25,7 @@ type EstimateStatusResponse = {
   extraction_progress: {
     documents_total: number;
     documents_done: number;
+    phase?: "documents" | "rate_card" | "ai";
   } | null;
   extraction_error: string | null;
 };
@@ -223,18 +224,30 @@ export default function EstimateExtraction({
   }
 
   if (status === "extracting" || extracting) {
-    const progressLabel =
-      progress && progress.documents_total > 0
-        ? t("progressDocuments", {
-            done: progress.documents_done,
-            total: progress.documents_total,
-          })
-        : t("progressAi");
+    const progressLabel = (() => {
+      if (!progress) {
+        return t("progressAi");
+      }
+      const documentsPending =
+        progress.documents_total > 0 &&
+        progress.documents_done < progress.documents_total;
+      if (documentsPending) {
+        return t("progressDocuments", {
+          done: progress.documents_done,
+          total: progress.documents_total,
+        });
+      }
+      if (progress.phase === "rate_card") {
+        return t("progressRateCard");
+      }
+      return t("progressAi");
+    })();
 
     return (
       <section className="mt-8 border-t border-gray-200 pt-8">
         <h2 className="mb-1 text-lg font-semibold">{t("extractingTitle")}</h2>
         <p className="text-sm text-gray-500">{progressLabel}</p>
+        <p className="mt-1 text-xs text-gray-400">{t("progressHint")}</p>
         <div className="mt-4 h-2 w-full max-w-md overflow-hidden rounded-full bg-gray-200">
           <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-500" />
         </div>

@@ -213,6 +213,7 @@ async def ensure_rate_card_for_estimate(
     user_id: uuid.UUID,
     *,
     regenerate: bool = False,
+    fast_bootstrap: bool = False,
 ) -> uuid.UUID:
     from app.audit.service import log_change
     from app.models.estimate import Estimate
@@ -228,7 +229,19 @@ async def ensure_rate_card_for_estimate(
     user = await db.get(User, user_id)
     if not user:
         raise AppError("User not found", "USER_NOT_FOUND", status_code=404)
-    generated = await generate_rate_card_for_estimate(db, estimate_id, user)
+
+    card_name = estimate.project_name.strip() or "Generated Rate Card"
+    if fast_bootstrap:
+        generated = _default_generation_result(
+            card_name,
+            notes=(
+                "Standard default rate card applied for faster requirement extraction. "
+                "Use Generate rate card on the estimate page to customize rates with AI."
+            ),
+            default_fields=["all"],
+        )
+    else:
+        generated = await generate_rate_card_for_estimate(db, estimate_id, user)
 
     result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = result.scalar_one()
