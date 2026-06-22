@@ -8,11 +8,12 @@ from app.calculation.development_approach import DevelopmentApproach
 from app.calculation.schemas import RateCardSettings
 from app.dependencies import get_current_user, get_db
 from app.estimates.access import can_access_estimate
+from app.estimates.rate_card_stale import mark_rate_card_auto_tune_enabled
 from app.models.estimate import Estimate
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
 from app.rate_cards.normalize import normalize_settings_dict
-from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
+from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS, Currency
 from app.rate_cards.regional_profiles import apply_regional_standard
 from app.fx import get_fx_service
 from app.rate_cards import service as rate_card_service
@@ -197,13 +198,17 @@ async def apply_regional_standard_rates(
     body: ApplyRegionalRatesRequest,
     user: User = Depends(get_current_user),
 ):
-    updated = await apply_regional_standard(
+    currency = body.currency or body.settings.currency
+    updated, roles_updated = await apply_regional_standard(
         body.settings,
         body.region,
-        body.settings.currency,
+        currency,
         get_fx_service(),
     )
-    return ApplyRegionalRatesResponse(settings=normalize_settings_dict(updated.model_dump()))
+    return ApplyRegionalRatesResponse(
+        settings=normalize_settings_dict(updated.model_dump()),
+        roles_updated=roles_updated,
+    )
 
 
 @router.get("/cards/options", response_model=list[RateCardOption])
@@ -269,6 +274,12 @@ async def update_rate_card_by_id(
     version.settings = _serialize_settings(body.settings)
     if body.version_label is not None:
         version.label = body.version_label.strip() or None
+
+    for estimate in await _list_estimates_for_card(db, rate_card.id):
+        estimate.maintenance_assumptions = mark_rate_card_auto_tune_enabled(
+            estimate.maintenance_assumptions or {},
+            enabled=False,
+        )
 
     await db.commit()
     await db.refresh(version)

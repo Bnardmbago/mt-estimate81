@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.calculation.development_approach import DevelopmentApproach
 from app.calculation.schemas import RateCardSettings
+from app.rate_cards.defaults import Currency
 
 
 class RateCardUpdate(BaseModel):
@@ -124,10 +125,12 @@ class RateCardAiSuggestResponse(BaseModel):
 class ApplyRegionalRatesRequest(BaseModel):
     settings: RateCardSettings
     region: Literal["japan", "philippines", "usa"]
+    currency: Currency | None = None
 
 
 class ApplyRegionalRatesResponse(BaseModel):
     settings: dict
+    roles_updated: int = 0
 
 
 class FxRatesResponse(BaseModel):

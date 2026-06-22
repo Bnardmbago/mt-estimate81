@@ -32,6 +32,17 @@ export type ExtractedData = {
   risks: string[];
   gaps: string[];
   confidence_notes: string;
+  complexity_profile?: ComplexityProfile;
+};
+
+export type ComplexityProfile = {
+  level: "low" | "medium" | "high";
+  overall_score: number;
+  drivers?: string[];
+  feature_count?: number;
+  total_hours?: number;
+  integration_count?: number;
+  non_functional_count?: number;
 };
 
 export type GanttData = {
@@ -137,6 +148,10 @@ export type EstimateDetail = {
   rate_card_name: string | null;
   rate_card_version_id: string | null;
   rate_card_stale: boolean;
+  complexity_profile?: ComplexityProfile | null;
+  rate_card_auto_tuned?: boolean;
+  rate_card_tune_recommended?: boolean;
+  rate_card_auto_tune_enabled?: boolean;
   project_start_date: string | null;
   feature_items: FeatureItem[];
   documents: EstimateDocument[];

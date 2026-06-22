@@ -29,6 +29,9 @@ class AIProvider(Protocol):
         form_data: dict[str, Any],
         document_texts: list[str],
         locale: Literal["ja", "en"],
+        feature_items: list[dict[str, Any]] | None = None,
+        extracted_data: dict[str, Any] | None = None,
+        complexity_profile: dict[str, Any] | None = None,
     ) -> GeneratedRateCardSuggestion: ...
 
     async def suggest_rate_card_section(

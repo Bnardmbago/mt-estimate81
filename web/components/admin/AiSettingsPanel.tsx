@@ -101,8 +101,8 @@ export default function AiSettingsPanel() {
   const anthropicModelForTest =
     provider === "anthropic"
       ? model
-      : settings?.ai_provider === "anthropic"
-        ? settings.ai_model
+      : settings?.anthropic_models.includes("claude-haiku-4-5")
+        ? "claude-haiku-4-5"
         : settings?.anthropic_models[0] ?? "";
 
   async function handleTestConnection(target: "openai" | "anthropic") {

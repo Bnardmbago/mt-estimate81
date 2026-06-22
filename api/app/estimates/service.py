@@ -20,7 +20,13 @@ from app.estimates.access import can_access_estimate, require_estimate_access
 from app.estimates.form_fields import prune_form_data_to_schema, snapshot_fields
 from app.form_templates.service import get_template_or_404, resolve_template
 from app.fx import get_fx_service
-from app.estimates.rate_card_stale import is_rate_card_stale_for_estimate
+from app.estimates.rate_card_stale import (
+    get_latest_extraction_tune_status,
+    get_rate_card_auto_tune_enabled,
+    get_rate_card_tune_recommended,
+    is_rate_card_stale_for_estimate,
+    mark_rate_card_auto_tune_enabled,
+)
 from app.i18n.localized_content import (
     normalize_locale,
     resolve_feature_item_fields,
@@ -180,6 +186,12 @@ async def estimate_to_detail(
 
     detail = EstimateDetail.model_validate(estimate, from_attributes=True)
     rate_card_stale = await is_rate_card_stale_for_estimate(db, estimate)
+    tune_status = await get_latest_extraction_tune_status(db, estimate.id)
+    complexity_profile = None
+    if isinstance(extracted_data, dict):
+        profile = extracted_data.get("complexity_profile")
+        if isinstance(profile, dict):
+            complexity_profile = profile
     template_name = None
     if estimate.form_template_id:
         template = await db.get(FormTemplate, estimate.form_template_id)
@@ -193,6 +205,11 @@ async def estimate_to_detail(
             "extracted_data": extracted_data,
             "feature_items": feature_items,
             "rate_card_stale": rate_card_stale,
+            "complexity_profile": complexity_profile,
+            "rate_card_auto_tuned": tune_status["rate_card_auto_tuned"],
+            "rate_card_tune_recommended": tune_status["rate_card_tune_recommended"]
+            or get_rate_card_tune_recommended(estimate),
+            "rate_card_auto_tune_enabled": get_rate_card_auto_tune_enabled(estimate),
             "form_template_name": template_name,
             "form_schema_snapshot": schema_snapshot,
             "calculation_result": normalize_calculation_result(estimate.calculation_result),
@@ -265,6 +282,11 @@ async def update_estimate(
 
     if "rate_card_id" in update_data and update_data["rate_card_id"] is not None:
         await get_rate_card_for_user(db, update_data["rate_card_id"], user)
+        if update_data["rate_card_id"] != estimate.rate_card_id:
+            estimate.maintenance_assumptions = mark_rate_card_auto_tune_enabled(
+                estimate.maintenance_assumptions or {},
+                enabled=False,
+            )
 
     for field, new_value in update_data.items():
         old_value = getattr(estimate, field)
@@ -683,6 +705,103 @@ async def get_audit_log(
     return list(result.scalars().all())
 
 
+async def tune_rate_card_from_extraction(
+    db: AsyncSession,
+    user: User,
+    estimate_id: uuid.UUID,
+) -> Estimate:
+    from app.estimates.rate_card_stale import (
+        RATE_CARD_FINGERPRINT_KEY,
+        mark_rate_card_auto_tune_enabled,
+        mark_rate_card_tune_recommended,
+    )
+    from app.rate_cards.complexity import score_project_complexity
+    from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
+    from app.rate_cards.generation import (
+        regenerate_rate_card_after_extraction,
+        should_auto_tune_rate_card,
+    )
+
+    estimate = await get_estimate_for_user(db, estimate_id, user)
+    if estimate.status not in (
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+        EstimateStatus.EXPORTED.value,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Rate card tuning requires extracted requirements",
+                "code": "INVALID_STATUS",
+            },
+        )
+    if not estimate.extracted_data:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Extract requirements before tuning the rate card",
+                "code": "EXTRACTION_REQUIRED",
+            },
+        )
+    if not estimate.rate_card_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Assign a rate card before tuning",
+                "code": "RATE_CARD_REQUIRED",
+            },
+        )
+
+    if not await should_auto_tune_rate_card(db, estimate):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Generate a project-specific rate card instead of tuning a shared template",
+                "code": "TUNE_REQUIRES_NEW_CARD",
+            },
+        )
+
+    locale = normalize_locale(estimate.locale, estimate.locale)
+    extracted_data = resolve_localized_dict(estimate.extracted_data, locale, estimate.locale)
+    feature_items = [
+        {
+            "name": item.name,
+            "hours": float(item.hours),
+            "phase": item.phase,
+            "role": item.role,
+        }
+        for item in sorted(estimate.feature_items, key=lambda row: row.sort_order)
+    ]
+    form_data = resolve_localized_dict(estimate.form_data, locale, estimate.locale)
+    profile = extracted_data.get("complexity_profile")
+    if not isinstance(profile, dict):
+        profile = score_project_complexity(
+            feature_items=feature_items,
+            extracted_data=extracted_data,
+            form_data=form_data,
+        ).model_dump()
+
+    await regenerate_rate_card_after_extraction(
+        db,
+        estimate_id,
+        user.id,
+        complexity_profile=profile,
+    )
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one()
+    maintenance = mark_rate_card_auto_tune_enabled(
+        estimate.maintenance_assumptions or {},
+        enabled=True,
+    )
+    maintenance = mark_rate_card_tune_recommended(maintenance, recommended=False)
+    fingerprint = await get_latest_rate_card_fingerprint(db, estimate.rate_card_id)
+    if fingerprint:
+        maintenance[RATE_CARD_FINGERPRINT_KEY] = fingerprint
+    estimate.maintenance_assumptions = maintenance
+    await db.commit()
+    return await get_estimate(db, estimate_id)
+
+
 async def create_rate_card_for_estimate(
     db: AsyncSession,
     user: User,
@@ -708,6 +827,10 @@ async def create_rate_card_for_estimate(
         activate=body.activate,
     )
     estimate.rate_card_id = card.id
+    estimate.maintenance_assumptions = mark_rate_card_auto_tune_enabled(
+        estimate.maintenance_assumptions or {},
+        enabled=True,
+    )
 
     await log_change(
         db,

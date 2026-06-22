@@ -16,11 +16,34 @@ OPENAI_MODELS = [
 ]
 
 ANTHROPIC_MODELS = [
-    "claude-sonnet-4-20250514",
-    "claude-3-5-sonnet-latest",
-    "claude-3-5-haiku-latest",
-    "claude-3-opus-20240229",
+    "claude-opus-4-8",
+    "claude-opus-4-7",
+    "claude-opus-4-6",
+    "claude-opus-4-5-20251101",
+    "claude-sonnet-4-6",
+    "claude-sonnet-4-5",
+    "claude-sonnet-4-5-20250929",
+    "claude-haiku-4-5",
+    "claude-haiku-4-5-20251001",
 ]
+
+# Recommended default for estimate extraction (balance of quality and cost).
+ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6"
+
+# Lightweight model used to verify API keys (cheap, widely available).
+ANTHROPIC_CONNECTION_TEST_MODEL = "claude-haiku-4-5"
+
+# Retired model IDs → current equivalents (see Anthropic model deprecation notices).
+LEGACY_ANTHROPIC_MODEL_MAP: dict[str, str] = {
+    "claude-sonnet-4-20250514": "claude-sonnet-4-6",
+    "claude-3-5-sonnet-latest": "claude-sonnet-4-6",
+    "claude-3-5-haiku-latest": "claude-haiku-4-5",
+    "claude-3-opus-20240229": "claude-opus-4-6",
+}
+
+
+def normalize_anthropic_model(model: str) -> str:
+    return LEGACY_ANTHROPIC_MODEL_MAP.get(model, model)
 
 AIProviderName = Literal["openai", "anthropic"]
 
@@ -60,8 +83,10 @@ async def get_ai_config(db: AsyncSession) -> AIConfig:
     if provider not in ("openai", "anthropic"):
         provider = "openai"
 
-    default_model = OPENAI_MODELS[0] if provider == "openai" else ANTHROPIC_MODELS[0]
+    default_model = OPENAI_MODELS[0] if provider == "openai" else ANTHROPIC_DEFAULT_MODEL
     model = row.ai_model or settings.ai_model or default_model
+    if provider == "anthropic":
+        model = normalize_anthropic_model(model)
 
     return AIConfig(
         ai_provider=provider,  # type: ignore[arg-type]

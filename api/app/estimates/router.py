@@ -149,6 +149,17 @@ async def generate_estimate_rate_card(
     return await generate_rate_card_for_estimate(db, estimate_id, user)
 
 
+@router.post("/{estimate_id}/rate-card/tune-from-extraction", response_model=EstimateDetail)
+async def tune_estimate_rate_card_from_extraction(
+    estimate_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    display_locale: str | None = Depends(get_display_locale),
+):
+    estimate = await service.tune_rate_card_from_extraction(db, user, estimate_id)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+
+
 @router.post("/{estimate_id}/rate-card", response_model=EstimateDetail)
 async def create_estimate_rate_card(
     estimate_id: uuid.UUID,

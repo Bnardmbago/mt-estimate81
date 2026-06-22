@@ -149,7 +149,7 @@ function normalizeRole(role: RoleRate): RoleRate {
         ? Number(role.daily_rate_jpy)
         : defaultDailyRate(hourly);
   return {
-    ...role,
+    name: role.name,
     hourly_rate: hourly,
     daily_rate: daily,
   };
@@ -596,28 +596,35 @@ export default function RateCardEditor({
   async function handleApplyRegionalRates() {
     if (!settings || fieldsDisabled) return;
 
-    const hasEditedRates = settings.roles.some((role) => role.hourly_rate > 0);
-    if (hasEditedRates && !window.confirm(t("applyRegionalRatesConfirm"))) {
-      return;
-    }
-
     setApplyingRegional(true);
     setError(null);
+    setSaved(false);
     try {
-      const response = await apiJson<{ settings: RateCardSettings }>(
+      const response = await apiJson<{ settings: RateCardSettings; roles_updated: number }>(
         "/rate-cards/apply-regional-standard",
         {
           method: "POST",
           body: JSON.stringify({
             settings: buildSettingsPayload(),
             region: settings.region,
+            currency: settings.currency,
           }),
         },
       );
+      if (response.roles_updated === 0) {
+        setError(t("applyRegionalRatesNoMatch"));
+        return;
+      }
       const normalized = normalizeSettings(response.settings);
       setSettings(normalized);
-      setManualDailyRates(detectManualDailyRateIndexes(normalized.roles));
+      setManualDailyRates(new Set());
       markDirty();
+      if (response.roles_updated < normalized.roles.length) {
+        setError(t("applyRegionalRatesPartial", { count: response.roles_updated }));
+      } else {
+        setError(null);
+        setSaved(true);
+      }
     } catch (applyError) {
       setError(
         applyError instanceof Error ? applyError.message : t("applyRegionalRatesError"),
@@ -1275,7 +1282,7 @@ export default function RateCardEditor({
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {settings.roles.map((role, index) => (
-                <tr key={`${role.name}-${index}`}>
+                <tr key={`${role.name}-${index}-${role.hourly_rate}`}>
                   <td className="px-3 py-2">
                     <input
                       type="text"

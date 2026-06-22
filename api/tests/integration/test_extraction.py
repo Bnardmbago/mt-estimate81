@@ -56,12 +56,17 @@ from app.models.rate_card import RateCardVersion
 async def assign_rate_card(
     client: AsyncClient,
     estimate_id: str,
-    active_rate_card: RateCardVersion,
+    rate_card_id: str | RateCardVersion,
     headers: dict[str, str],
 ) -> None:
+    card_id = (
+        str(rate_card_id.rate_card_id)
+        if isinstance(rate_card_id, RateCardVersion)
+        else str(rate_card_id)
+    )
     response = await client.patch(
         f"/estimates/{estimate_id}",
-        json={"rate_card_id": str(active_rate_card.rate_card_id)},
+        json={"rate_card_id": card_id},
         headers=headers,
     )
     assert response.status_code == 200
@@ -146,6 +151,9 @@ async def test_extract_auto_creates_rate_card(
     payload = detail.json()
     assert payload["rate_card_id"] is not None
     assert payload["status"] == "review"
+    assert payload["complexity_profile"]["level"] in ("low", "medium", "high")
+    assert payload["rate_card_auto_tuned"] is True
+    assert payload["rate_card_tune_recommended"] is False
 
     card = await client.get(
         f"/rate-cards/cards/{payload['rate_card_id']}",
@@ -155,6 +163,8 @@ async def test_extract_auto_creates_rate_card(
     settings = card.json()["settings"]
     assert len(settings["setup_cost_items"]) >= 2
     assert len(settings["monthly_rc_items"]) >= 1
+    setup_names = {item["name"] for item in settings["setup_cost_items"]}
+    assert "Infrastructure setup" in setup_names
 
 
 @pytest.mark.asyncio
@@ -252,8 +262,13 @@ async def test_re_extract_preserves_edited_rate_card(
 
     card_after = await client.get(f"/rate-cards/cards/{card_id}", headers=auth_headers)
     after_settings = card_after.json()["settings"]
-    assert after_settings["setup_cost_items"][0]["amount_jpy"] == 999999
-    assert after_settings["monthly_rc_items"][0]["amount_jpy"] == 888888
+    assert after_settings["setup_cost_items"][0]["name"] == "Edited setup"
+    assert after_settings["setup_cost_items"][0]["amount"] == 999999
+    assert after_settings["monthly_rc_items"][0]["name"] == "Edited hosting"
+    assert after_settings["monthly_rc_items"][0]["amount"] == 888888
+
+    detail_after = await client.get(f"/estimates/{estimate_id}", headers=auth_headers)
+    assert detail_after.json()["rate_card_auto_tuned"] is False
 
 
 @pytest.mark.asyncio
@@ -264,7 +279,42 @@ async def test_re_extract_after_export_with_edited_rate_card(
     mock_ai_provider,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    from app.ai.schemas import (
+        GeneratedLineItem,
+        GeneratedPhasePercentage,
+        GeneratedProductivity,
+        GeneratedRateCardSuggestion,
+        GeneratedRoleRate,
+    )
+
     monkeypatch.setenv("EXTRACT_SYNC", "1")
+
+    class CombinedProvider:
+        async def extract_requirements(self, form_data, document_texts, locale, **kwargs):
+            return await mock_ai_provider.extract_requirements(
+                form_data, document_texts, locale, **kwargs
+            )
+
+        async def generate_rate_card(self, **kwargs):
+            return GeneratedRateCardSuggestion(
+                development_approach="traditional",
+                roles=[GeneratedRoleRate(name="developer", hourly_rate_jpy=7000)],
+                phases=[
+                    GeneratedPhasePercentage(name="requirement", percentage=0.10),
+                    GeneratedPhasePercentage(name="design", percentage=0.15),
+                    GeneratedPhasePercentage(name="development", percentage=0.40),
+                    GeneratedPhasePercentage(name="testing", percentage=0.25),
+                    GeneratedPhasePercentage(name="deployment", percentage=0.10),
+                ],
+                contingency_rate=0.15,
+                overhead_rate=0.10,
+                tax_rate=0.10,
+                productivity=GeneratedProductivity(hours_per_feature_default=32),
+                setup_cost_items=[GeneratedLineItem(name="Tuned setup", amount_jpy=100000)],
+                monthly_rc_items=[GeneratedLineItem(name="Tuned hosting", amount_jpy=50000)],
+                generation_notes="Tuned after extraction.",
+                used_default_assumptions=[],
+            )
 
     create = await client.post(
         "/estimates",
@@ -279,8 +329,11 @@ async def test_re_extract_after_export_with_edited_rate_card(
     estimate_id = create.json()["id"]
 
     with patch(
+        "app.rate_cards.generation.get_ai_provider",
+        new=AsyncMock(return_value=CombinedProvider()),
+    ), patch(
         "app.estimates.extraction.get_ai_provider",
-        new=AsyncMock(return_value=mock_ai_provider),
+        new=AsyncMock(return_value=CombinedProvider()),
     ):
         first = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
         assert first.status_code == 202
@@ -306,8 +359,11 @@ async def test_re_extract_after_export_with_edited_rate_card(
     assert updated.status_code == 200
 
     with patch(
+        "app.rate_cards.generation.get_ai_provider",
+        new=AsyncMock(return_value=CombinedProvider()),
+    ), patch(
         "app.estimates.extraction.get_ai_provider",
-        new=AsyncMock(return_value=mock_ai_provider),
+        new=AsyncMock(return_value=CombinedProvider()),
     ):
         second = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
         assert second.status_code == 202
@@ -659,3 +715,128 @@ async def test_extraction_status_reports_background_failure(
     assert payload["status"] == "draft"
     assert payload["extraction_error"]
     assert "api key" in payload["extraction_error"].lower()
+
+
+@pytest.mark.asyncio
+async def test_extract_skips_auto_tune_for_shared_rate_card(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    mock_ai_provider,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from app.ai.schemas import (
+        GeneratedLineItem,
+        GeneratedPhasePercentage,
+        GeneratedProductivity,
+        GeneratedRateCardSuggestion,
+        GeneratedRoleRate,
+    )
+
+    monkeypatch.setenv("EXTRACT_SYNC", "1")
+
+    class CombinedProvider:
+        def __init__(self) -> None:
+            self.generate_calls = 0
+
+        async def extract_requirements(self, form_data, document_texts, locale, **kwargs):
+            return await mock_ai_provider.extract_requirements(
+                form_data, document_texts, locale, **kwargs
+            )
+
+        async def generate_rate_card(self, **kwargs):
+            self.generate_calls += 1
+            developer_rate = 7000 if self.generate_calls == 1 else 9999
+            return GeneratedRateCardSuggestion(
+                development_approach="traditional",
+                roles=[GeneratedRoleRate(name="developer", hourly_rate_jpy=developer_rate)],
+                phases=[
+                    GeneratedPhasePercentage(name="requirement", percentage=0.10),
+                    GeneratedPhasePercentage(name="design", percentage=0.15),
+                    GeneratedPhasePercentage(name="development", percentage=0.40),
+                    GeneratedPhasePercentage(name="testing", percentage=0.25),
+                    GeneratedPhasePercentage(name="deployment", percentage=0.10),
+                ],
+                contingency_rate=0.15,
+                overhead_rate=0.10,
+                tax_rate=0.10,
+                productivity=GeneratedProductivity(hours_per_feature_default=32),
+                setup_cost_items=[GeneratedLineItem(name="Tuned setup", amount_jpy=999999)],
+                monthly_rc_items=[GeneratedLineItem(name="Tuned hosting", amount_jpy=99999)],
+                generation_notes="Should not apply to shared card.",
+                used_default_assumptions=[],
+            )
+
+    create_primary = await client.post(
+        "/estimates",
+        json={
+            "project_name": "Primary Project",
+            "client_name": "ACME",
+            "locale": "en",
+            "form_data": {"main_functional_needs": "Portal"},
+        },
+        headers=auth_headers,
+    )
+    primary_id = create_primary.json()["id"]
+
+    combined = CombinedProvider()
+    with patch(
+        "app.rate_cards.generation.get_ai_provider",
+        new=AsyncMock(return_value=combined),
+    ), patch(
+        "app.estimates.extraction.get_ai_provider",
+        new=AsyncMock(return_value=combined),
+    ):
+        primary_extract = await client.post(
+            f"/estimates/{primary_id}/extract",
+            headers=auth_headers,
+        )
+        assert primary_extract.status_code == 202
+
+    primary_detail = await client.get(f"/estimates/{primary_id}", headers=auth_headers)
+    shared_rate_card_id = primary_detail.json()["rate_card_id"]
+    assert shared_rate_card_id is not None
+
+    create_secondary = await client.post(
+        "/estimates",
+        json={
+            "project_name": "Secondary Project",
+            "client_name": "ACME",
+            "locale": "en",
+            "form_data": {"main_functional_needs": "Mobile app"},
+        },
+        headers=auth_headers,
+    )
+    secondary_id = create_secondary.json()["id"]
+    await assign_rate_card(client, secondary_id, shared_rate_card_id, auth_headers)
+
+    with patch(
+        "app.rate_cards.generation.get_ai_provider",
+        new=AsyncMock(return_value=combined),
+    ), patch(
+        "app.estimates.extraction.get_ai_provider",
+        new=AsyncMock(return_value=combined),
+    ):
+        secondary_extract = await client.post(
+            f"/estimates/{secondary_id}/extract",
+            headers=auth_headers,
+        )
+        assert secondary_extract.status_code == 202
+
+    detail = await client.get(f"/estimates/{secondary_id}", headers=auth_headers)
+    payload = detail.json()
+    assert payload["status"] == "review"
+    assert payload["rate_card_auto_tuned"] is False
+    assert payload["rate_card_tune_recommended"] is True
+    assert payload["rate_card_auto_tune_enabled"] is False
+    assert payload["complexity_profile"]["level"] in ("low", "medium", "high")
+
+    card = await client.get(
+        f"/rate-cards/cards/{shared_rate_card_id}",
+        headers=auth_headers,
+    )
+    developer_rate = next(
+        role["hourly_rate"]
+        for role in card.json()["settings"]["roles"]
+        if role["name"] == "developer"
+    )
+    assert developer_rate == 7000

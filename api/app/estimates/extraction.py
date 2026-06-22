@@ -23,8 +23,20 @@ from app.estimates.access import require_estimate_access
 from app.models.audit import AuditLog
 from app.models.estimate import Estimate, EstimateDocument, EstimateStatus, FeatureItem
 from app.models.user import User
-from app.estimates.rate_card_stale import RATE_CARD_FINGERPRINT_KEY
+from app.estimates.rate_card_stale import (
+    RATE_CARD_AUTO_TUNE_KEY,
+    RATE_CARD_FINGERPRINT_KEY,
+    RATE_CARD_TUNE_RECOMMENDED_KEY,
+    has_completed_extraction,
+    mark_rate_card_auto_tune_enabled,
+    mark_rate_card_tune_recommended,
+)
+from app.rate_cards.complexity import score_project_complexity
 from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
+from app.rate_cards.generation import (
+    regenerate_rate_card_after_extraction,
+    should_auto_tune_rate_card,
+)
 
 STUCK_EXTRACTION_MINUTES = 10
 STUCK_EXTRACTION_ERROR = (
@@ -76,7 +88,7 @@ async def _log_extraction_phase(
     db: AsyncSession,
     estimate_id: uuid.UUID,
     user_id: uuid.UUID,
-    phase: Literal["documents", "rate_card", "ai"],
+    phase: Literal["documents", "rate_card", "ai", "rate_card_tune"],
 ) -> None:
     await log_change(
         db,
@@ -280,11 +292,19 @@ async def run_extraction(
 
     from app.rate_cards.generation import ensure_rate_card_for_estimate
 
+    had_prior_extraction = await has_completed_extraction(db, estimate_id)
     needs_rate_card = estimate.rate_card_id is None
+
+    prior_maintenance = dict(estimate.maintenance_assumptions or {})
+    preserved_flags = {
+        key: prior_maintenance[key]
+        for key in (RATE_CARD_AUTO_TUNE_KEY, RATE_CARD_TUNE_RECOMMENDED_KEY)
+        if key in prior_maintenance
+    }
 
     await db.execute(delete(FeatureItem).where(FeatureItem.estimate_id == estimate_id))
     estimate.extracted_data = None
-    estimate.maintenance_assumptions = {}
+    estimate.maintenance_assumptions = preserved_flags
     estimate.calculation_result = None
     estimate.rate_card_version_id = None
     await db.commit()
@@ -358,13 +378,72 @@ async def run_extraction(
             )
 
         extracted_payload = _build_extracted_data(ai_result, skipped_docs)
+        feature_items_for_score = [
+            {
+                "name": item.name,
+                "hours": float(item.suggested_hours),
+                "phase": item.phase,
+                "role": item.role,
+            }
+            for item in ai_result.feature_items
+        ]
+        complexity_profile = score_project_complexity(
+            feature_items=feature_items_for_score,
+            extracted_data=extracted_payload,
+            form_data=form_data,
+        )
+        extracted_payload["complexity_profile"] = complexity_profile.model_dump()
         estimate.extracted_data = store_localized_dict(
             estimate.extracted_data,
             locale,
             extracted_payload,
         )
         maintenance_assumptions = ai_result.maintenance_assumptions.model_dump()
+        prior_maintenance = estimate.maintenance_assumptions or {}
+        if RATE_CARD_AUTO_TUNE_KEY in prior_maintenance:
+            maintenance_assumptions[RATE_CARD_AUTO_TUNE_KEY] = prior_maintenance[RATE_CARD_AUTO_TUNE_KEY]
         estimate.status = EstimateStatus.REVIEW.value
+
+        await db.flush()
+
+        rate_card_auto_tuned = False
+        rate_card_tune_recommended = False
+        if await should_auto_tune_rate_card(db, estimate) and not had_prior_extraction:
+            await _log_extraction_phase(db, estimate_id, user_id, "rate_card_tune")
+            try:
+                await regenerate_rate_card_after_extraction(
+                    db,
+                    estimate_id,
+                    user_id,
+                    complexity_profile=complexity_profile,
+                )
+                rate_card_auto_tuned = True
+                maintenance_assumptions = mark_rate_card_auto_tune_enabled(
+                    maintenance_assumptions,
+                    enabled=True,
+                )
+                maintenance_assumptions = mark_rate_card_tune_recommended(
+                    maintenance_assumptions,
+                    recommended=False,
+                )
+            except Exception as exc:
+                await log_change(
+                    db,
+                    estimate_id=estimate.id,
+                    user_id=user_id,
+                    action="rate_card_tune_failed",
+                    changes={"error": str(exc)[:200]},
+                )
+                maintenance_assumptions = mark_rate_card_tune_recommended(
+                    maintenance_assumptions,
+                    recommended=True,
+                )
+        else:
+            rate_card_tune_recommended = bool(estimate.rate_card_id)
+            maintenance_assumptions = mark_rate_card_tune_recommended(
+                maintenance_assumptions,
+                recommended=rate_card_tune_recommended,
+            )
 
         rate_card_fingerprint = None
         if estimate.rate_card_id:
@@ -385,6 +464,9 @@ async def run_extraction(
                 "status": EstimateStatus.REVIEW.value,
                 "feature_item_count": len(ai_result.feature_items),
                 "rate_card_fingerprint": rate_card_fingerprint,
+                "complexity_level": complexity_profile.level,
+                "rate_card_auto_tuned": rate_card_auto_tuned,
+                "rate_card_tune_recommended": rate_card_tune_recommended,
             },
         )
         await db.commit()

@@ -55,8 +55,13 @@ export default function EstimateDetailContent({
       {isDraft ? (
         <section className="mt-8 border-t border-gray-200 pt-8">
           <EstimateRateCardPanel
+            estimateId={estimate.id}
             rateCardId={estimate.rate_card_id}
             rateCardName={estimate.rate_card_name}
+            complexityProfile={estimate.complexity_profile ?? null}
+            rateCardAutoTuned={estimate.rate_card_auto_tuned ?? false}
+            rateCardTuneRecommended={estimate.rate_card_tune_recommended ?? false}
+            rateCardAutoTuneEnabled={estimate.rate_card_auto_tune_enabled ?? true}
           />
         </section>
       ) : null}

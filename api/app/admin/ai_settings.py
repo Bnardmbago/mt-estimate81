@@ -5,13 +5,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.ai_config import (
+    ANTHROPIC_DEFAULT_MODEL,
     ANTHROPIC_MODELS,
     OPENAI_MODELS,
     get_ai_config,
     mask_api_key,
     update_ai_config,
 )
-from app.admin.ai_connection_test import test_anthropic_connection, test_openai_connection
+from app.admin.ai_connection_test import verify_anthropic_connection, verify_openai_connection
 from app.dependencies import get_db, require_admin
 from app.documents.hermes_client import HermesClient
 from app.models.user import User
@@ -115,11 +116,11 @@ async def test_ai_connection(
 
     if body.provider == "openai":
         api_key = (body.api_key or "").strip() or config.openai_api_key
-        success, message = await test_openai_connection(api_key)
+        success, message = await verify_openai_connection(api_key)
     else:
         api_key = (body.api_key or "").strip() or config.anthropic_api_key
-        model = (body.model or "").strip() or config.ai_model or ANTHROPIC_MODELS[0]
-        success, message = await test_anthropic_connection(api_key, model)
+        model = (body.model or "").strip() or config.ai_model or ANTHROPIC_DEFAULT_MODEL
+        success, message = await verify_anthropic_connection(api_key, model)
 
     return AIConnectionTestResponse(
         provider=body.provider,

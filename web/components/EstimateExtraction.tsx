@@ -26,7 +26,7 @@ type EstimateStatusResponse = {
   extraction_progress: {
     documents_total: number;
     documents_done: number;
-    phase?: "documents" | "rate_card" | "ai";
+    phase?: "documents" | "rate_card" | "ai" | "rate_card_tune";
   } | null;
   extraction_error: string | null;
 };
@@ -238,6 +238,9 @@ export default function EstimateExtraction({
           total: progress.documents_total,
         });
       }
+      if (progress.phase === "rate_card_tune") {
+        return t("progressRateCardTune");
+      }
       if (progress.phase === "rate_card") {
         return t("progressRateCard");
       }
@@ -277,8 +280,13 @@ export default function EstimateExtraction({
     return (
       <div>
         <EstimateRateCardPanel
+          estimateId={estimate.id}
           rateCardId={estimate.rate_card_id}
           rateCardName={estimate.rate_card_name}
+          complexityProfile={estimate.complexity_profile ?? null}
+          rateCardAutoTuned={estimate.rate_card_auto_tuned ?? false}
+          rateCardTuneRecommended={estimate.rate_card_tune_recommended ?? false}
+          rateCardAutoTuneEnabled={estimate.rate_card_auto_tune_enabled ?? true}
           readOnly={status === "completed"}
         />
         {rateCardStale && canReExtract && (
@@ -356,8 +364,13 @@ export default function EstimateExtraction({
         <p className="mb-4 text-sm text-gray-500">{t("extractDescription")}</p>
         {!hideDraftRateCard ? (
           <EstimateRateCardPanel
+            estimateId={estimate.id}
             rateCardId={estimate.rate_card_id}
             rateCardName={estimate.rate_card_name}
+            complexityProfile={estimate.complexity_profile ?? null}
+            rateCardAutoTuned={estimate.rate_card_auto_tuned ?? false}
+            rateCardTuneRecommended={estimate.rate_card_tune_recommended ?? false}
+            rateCardAutoTuneEnabled={estimate.rate_card_auto_tune_enabled ?? true}
           />
         ) : null}
         {error && (

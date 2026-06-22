@@ -8,6 +8,38 @@ from app.models.estimate import Estimate, EstimateStatus
 from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
 
 RATE_CARD_FINGERPRINT_KEY = "_rate_card_fingerprint"
+RATE_CARD_AUTO_TUNE_KEY = "_rate_card_auto_tune"
+RATE_CARD_TUNE_RECOMMENDED_KEY = "_rate_card_tune_recommended"
+
+
+def get_rate_card_auto_tune_enabled(estimate: Estimate) -> bool:
+    assumptions = estimate.maintenance_assumptions or {}
+    value = assumptions.get(RATE_CARD_AUTO_TUNE_KEY)
+    if value is None:
+        return True
+    return bool(value)
+
+
+def get_rate_card_tune_recommended(estimate: Estimate) -> bool:
+    assumptions = estimate.maintenance_assumptions or {}
+    return bool(assumptions.get(RATE_CARD_TUNE_RECOMMENDED_KEY))
+
+
+def mark_rate_card_auto_tune_enabled(assumptions: dict, *, enabled: bool) -> dict:
+    updated = dict(assumptions or {})
+    updated[RATE_CARD_AUTO_TUNE_KEY] = enabled
+    if enabled:
+        updated.pop(RATE_CARD_TUNE_RECOMMENDED_KEY, None)
+    return updated
+
+
+def mark_rate_card_tune_recommended(assumptions: dict, *, recommended: bool) -> dict:
+    updated = dict(assumptions or {})
+    if recommended:
+        updated[RATE_CARD_TUNE_RECOMMENDED_KEY] = True
+    else:
+        updated.pop(RATE_CARD_TUNE_RECOMMENDED_KEY, None)
+    return updated
 
 
 def get_stored_rate_card_fingerprint(estimate: Estimate) -> str | None:
@@ -56,6 +88,29 @@ async def resolve_extracted_rate_card_fingerprint(
     if stored:
         return stored
     return await get_extracted_rate_card_fingerprint(db, estimate.id)
+
+
+async def get_latest_extraction_tune_status(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+) -> dict[str, bool]:
+    result = await db.execute(
+        select(AuditLog)
+        .where(
+            AuditLog.estimate_id == estimate_id,
+            AuditLog.action == "extraction_completed",
+        )
+        .order_by(AuditLog.created_at.desc())
+        .limit(1)
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        return {"rate_card_auto_tuned": False, "rate_card_tune_recommended": False}
+    changes = entry.changes or {}
+    return {
+        "rate_card_auto_tuned": bool(changes.get("rate_card_auto_tuned")),
+        "rate_card_tune_recommended": bool(changes.get("rate_card_tune_recommended")),
+    }
 
 
 async def is_rate_card_stale_for_estimate(db: AsyncSession, estimate: Estimate) -> bool:

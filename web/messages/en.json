@@ -112,6 +112,7 @@
     "extractingTitle": "Extracting requirements",
     "progressDocuments": "Processing documents ({done}/{total})…",
     "progressRateCard": "Generating rate card with AI…",
+    "progressRateCardTune": "Tuning rate card from extracted requirements…",
     "progressAi": "Analyzing requirements with AI…",
     "progressHint": "This usually takes 30–90 seconds depending on document size and AI response time.",
     "extractError": "Failed to start extraction",
@@ -159,7 +160,20 @@
       "reviewCancel": "Cancel",
       "reviewSave": "Save rate card",
       "reviewSaveAndExtract": "Save and extract requirements",
-      "reviewSaving": "Saving…"
+      "reviewSaving": "Saving…",
+      "complexityTitle": "Project complexity",
+      "complexityScore": "Score: {score}",
+      "complexityLevel": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "autoTunedHint": "Rate card was automatically tuned from extracted requirements.",
+      "tuneRecommendedDescription": "This shared rate card was not modified. Generate a project-specific rate card from the extracted requirements.",
+      "tuneFromExtraction": "Tune rate card from extraction",
+      "generateFromExtraction": "Generate rate card from extraction",
+      "tuningFromExtraction": "Tuning rate card…",
+      "tuneError": "Failed to tune rate card from extraction"
     },
     "requirementsTitle": "Extracted Requirements",
     "requirementsDescription": "Review and edit the AI-extracted requirement lists.",
@@ -475,6 +489,8 @@
       "applyRegionalRatesConfirm": "Apply standard rates for the selected region? This will overwrite existing role hourly rates.",
       "applyingRegionalRates": "Applying…",
       "applyRegionalRatesError": "Failed to apply regional standard rates",
+      "applyRegionalRatesNoMatch": "No role names matched the regional standard rate table. Rename roles to PM, developer, QA, etc., or add standard role names.",
+      "applyRegionalRatesPartial": "Updated {count} role(s). Some custom role names could not be matched to standard rates.",
       "fxLastUpdated": "FX rates last updated: {date}",
       "fxLastUpdatedUnknown": "FX rates last updated: unknown",
       "deleteCard": "Delete card",

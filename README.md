@@ -86,7 +86,7 @@ OPENAI_API_KEY=sk-...
 
 ```env
 AI_PROVIDER=anthropic
-AI_MODEL=claude-sonnet-4-20250514
+AI_MODEL=claude-sonnet-4-6
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 

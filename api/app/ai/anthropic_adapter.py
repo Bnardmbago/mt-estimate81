@@ -87,11 +87,18 @@ class AnthropicProvider:
         form_data: dict[str, Any],
         document_texts: list[str],
         locale: Literal["ja", "en"],
+        feature_items: list[dict[str, Any]] | None = None,
+        extracted_data: dict[str, Any] | None = None,
+        complexity_profile: dict[str, Any] | None = None,
     ) -> GeneratedRateCardSuggestion:
+        has_extraction_context = bool(feature_items or extracted_data or complexity_profile)
         response = await self._create_message(
             model=self.model,
             max_tokens=8192,
-            system=build_rate_card_system_prompt(locale),
+            system=build_rate_card_system_prompt(
+                locale,
+                has_extraction_context=has_extraction_context,
+            ),
             messages=[
                 {
                     "role": "user",
@@ -100,6 +107,9 @@ class AnthropicProvider:
                         client_name=client_name,
                         form_data=form_data,
                         document_texts=document_texts,
+                        feature_items=feature_items,
+                        extracted_data=extracted_data,
+                        complexity_profile=complexity_profile,
                     ),
                 }
             ],

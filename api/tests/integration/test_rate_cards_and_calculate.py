@@ -942,3 +942,31 @@ async def test_calculate_applies_admin_discount_rate(
     assert discounted_total < baseline_total
     assert discounted_total == int(round(baseline_total * 0.7))
     assert discounted_result["rc"]["monthly_total_jpy"] == baseline_rc
+
+
+@pytest.mark.asyncio
+async def test_apply_regional_standard_updates_role_rates(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    active_rate_card: RateCardVersion,
+):
+    settings = dict(active_rate_card.settings)
+    settings["region"] = "philippines"
+    settings["currency"] = "JPY"
+
+    response = await client.post(
+        "/rate-cards/apply-regional-standard",
+        headers=auth_headers,
+        json={
+            "settings": settings,
+            "region": "philippines",
+            "currency": "JPY",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["roles_updated"] >= 1
+    roles = {role["name"]: role for role in payload["settings"]["roles"]}
+    assert roles["PM"]["hourly_rate"] > 0
+    assert roles["developer"]["hourly_rate"] > 0
+    assert roles["PM"]["hourly_rate"] != settings["roles"][0]["hourly_rate"]

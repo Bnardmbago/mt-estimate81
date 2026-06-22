@@ -254,8 +254,22 @@ def build_rate_card_section_user_prompt(
     return "\n\n".join(sections)
 
 
-def build_rate_card_system_prompt(locale: Literal["ja", "en"]) -> str:
+def build_rate_card_system_prompt(
+    locale: Literal["ja", "en"],
+    *,
+    has_extraction_context: bool = False,
+) -> str:
     language = "Japanese" if locale == "ja" else "English"
+    extraction_guidance = ""
+    if has_extraction_context:
+        extraction_guidance = (
+            "\nWhen complexity_profile is provided:\n"
+            "- Scale roles to project size (add architect, DevOps, security, or BA for high complexity)\n"
+            "- Align phase percentages with phase_guidance while keeping sum = 1.0\n"
+            "- Derive setup_cost_items and monthly_rc_items from nrc_rc_guidance, integrations, "
+            "and non-functional requirements\n"
+            "- Increase contingency_rate for higher complexity when justified\n"
+        )
     return (
         "You are an expert software project estimator and rate card analyst. "
         "Analyze the project questionnaire and document excerpts to recommend a rate card "
@@ -279,7 +293,51 @@ def build_rate_card_system_prompt(locale: Literal["ja", "en"]) -> str:
         "reasonable industry defaults (empty list if confident)\n\n"
         "Base rates on project complexity, team location hints, technology stack, and delivery model "
         "when evident from the inputs. Use conservative JPY rates for Japan unless documents suggest otherwise."
+        f"{extraction_guidance}"
     )
+
+
+def _summarize_extracted_data(extracted_data: dict[str, Any]) -> dict[str, Any]:
+    list_fields = (
+        "functional_requirements",
+        "non_functional_requirements",
+        "user_roles",
+        "modules",
+        "external_systems",
+        "risks",
+        "gaps",
+        "cost_drivers",
+        "recommendations",
+        "estimation_warnings",
+    )
+    summary: dict[str, Any] = {}
+    for key, value in extracted_data.items():
+        if key == "complexity_profile":
+            summary[key] = value
+        elif key in list_fields and isinstance(value, list):
+            summary[key] = value[:12]
+            if len(value) > 12:
+                summary[f"{key}_truncated_count"] = len(value)
+        elif key not in ("confidence_notes",):
+            summary[key] = value
+    if extracted_data.get("confidence_notes"):
+        notes = str(extracted_data["confidence_notes"])
+        summary["confidence_notes"] = notes[:500] + ("…" if len(notes) > 500 else "")
+    return summary
+
+
+def _summarize_feature_items(feature_items: list[dict[str, Any]], *, limit: int = 40) -> list[dict[str, Any]]:
+    summarized = []
+    for item in feature_items[:limit]:
+        summarized.append(
+            {
+                "name": item.get("name", ""),
+                "hours": item.get("hours", 0),
+                "phase": item.get("phase", ""),
+                "role": item.get("role", ""),
+            }
+        )
+    return summarized
 
 
 def build_rate_card_user_prompt(
@@ -288,6 +346,9 @@ def build_rate_card_user_prompt(
     client_name: str,
     form_data: dict[str, Any],
     document_texts: list[str],
+    feature_items: list[dict[str, Any]] | None = None,
+    extracted_data: dict[str, Any] | None = None,
+    complexity_profile: dict[str, Any] | None = None,
 ) -> str:
     truncated_texts, truncation_note = _truncate_document_texts(document_texts)
 
@@ -305,6 +366,29 @@ def build_rate_card_user_prompt(
     else:
         for index, text in enumerate(truncated_texts, start=1):
             sections.append(f"### Document {index}\n{text}")
+
+    if extracted_data:
+        sections.extend(
+            [
+                "## Extracted Requirements Summary",
+                json.dumps(_summarize_extracted_data(extracted_data), ensure_ascii=False, indent=2),
+            ]
+        )
+
+    if feature_items:
+        summary = _summarize_feature_items(feature_items)
+        feature_section = json.dumps(summary, ensure_ascii=False, indent=2)
+        if len(feature_items) > len(summary):
+            feature_section += f"\n\n(Showing {len(summary)} of {len(feature_items)} feature items)"
+        sections.extend(["## Feature Items Summary", feature_section])
+
+    if complexity_profile:
+        sections.extend(
+            [
+                "## Complexity Analysis",
+                json.dumps(complexity_profile, ensure_ascii=False, indent=2),
+            ]
+        )
 
     if truncation_note:
         sections.extend(["## Truncation Notice", truncation_note])

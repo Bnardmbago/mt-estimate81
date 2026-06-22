@@ -308,7 +308,7 @@ async def test_update_ai_settings(client: AsyncClient, admin_headers: dict[str, 
         headers=admin_headers,
         json={
             "ai_provider": "anthropic",
-            "ai_model": "claude-3-5-sonnet-latest",
+            "ai_model": "claude-sonnet-4-6",
             "anthropic_api_key": "sk-ant-test-key",
         },
     )
@@ -317,7 +317,7 @@ async def test_update_ai_settings(client: AsyncClient, admin_headers: dict[str, 
     assert response.status_code == 200
     data = response.json()
     assert data["ai_provider"] == "anthropic"
-    assert data["ai_model"] == "claude-3-5-sonnet-latest"
+    assert data["ai_model"] == "claude-sonnet-4-6"
     assert data["anthropic_api_key_configured"] is True
     assert data["anthropic_api_key_hint"] == "...-key"
 
@@ -331,7 +331,7 @@ async def test_ai_settings_requires_admin(client: AsyncClient, auth_headers: dic
 @pytest.mark.asyncio
 async def test_ai_connection_test_success(client: AsyncClient, admin_headers: dict[str, str]):
     with patch(
-        "app.admin.ai_settings.test_openai_connection",
+        "app.admin.ai_settings.verify_openai_connection",
         new=AsyncMock(return_value=(True, "Connection successful")),
     ):
         response = await client.post(
@@ -349,13 +349,13 @@ async def test_ai_connection_test_success(client: AsyncClient, admin_headers: di
 @pytest.mark.asyncio
 async def test_ai_connection_test_failure(client: AsyncClient, admin_headers: dict[str, str]):
     with patch(
-        "app.admin.ai_settings.test_anthropic_connection",
+        "app.admin.ai_settings.verify_anthropic_connection",
         new=AsyncMock(return_value=(False, "Invalid API key")),
     ):
         response = await client.post(
             "/admin/ai-settings/test-connection",
             headers=admin_headers,
-            json={"provider": "anthropic", "api_key": "bad-key", "model": "claude-3-5-haiku-latest"},
+            json={"provider": "anthropic", "api_key": "bad-key", "model": "claude-haiku-4-5"},
         )
 
     assert response.status_code == 200

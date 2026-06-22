@@ -112,6 +112,7 @@
     "extractingTitle": "要件を抽出中",
     "progressDocuments": "ドキュメント処理中 ({done}/{total})…",
     "progressRateCard": "AIでレートカードを生成中…",
+    "progressRateCardTune": "抽出結果からレートカードを調整中…",
     "progressAi": "AIで要件を分析中…",
     "progressHint": "ドキュメントのサイズやAIの応答時間により、通常30〜90秒ほどかかります。",
     "extractError": "抽出の開始に失敗しました",
@@ -159,7 +160,20 @@
       "reviewCancel": "キャンセル",
       "reviewSave": "レートカードを保存",
       "reviewSaveAndExtract": "保存して要件を抽出",
-      "reviewSaving": "保存中…"
+      "reviewSaving": "保存中…",
+      "complexityTitle": "プロジェクト複雑度",
+      "complexityScore": "スコア: {score}",
+      "complexityLevel": {
+        "low": "低",
+        "medium": "中",
+        "high": "高"
+      },
+      "autoTunedHint": "抽出結果に基づきレートカードを自動調整しました。",
+      "tuneRecommendedDescription": "共有レートカードは変更されていません。抽出結果からプロジェクト専用のレートカードを生成してください。",
+      "tuneFromExtraction": "抽出結果からレートカードを調整",
+      "generateFromExtraction": "抽出結果からレートカードを生成",
+      "tuningFromExtraction": "レートカードを調整中…",
+      "tuneError": "抽出結果からのレートカード調整に失敗しました"
     },
     "requirementsTitle": "抽出された要件",
     "requirementsDescription": "AIが抽出した要件リストを確認・編集します。",
@@ -475,6 +489,8 @@
       "applyRegionalRatesConfirm": "選択した地域の標準レートを適用しますか？既存のロール時間単価は上書きされます。",
       "applyingRegionalRates": "適用中…",
       "applyRegionalRatesError": "地域標準レートの適用に失敗しました",
+      "applyRegionalRatesNoMatch": "地域標準レートに一致するロール名がありません。PM、developer、QA など標準的なロール名に変更してください。",
+      "applyRegionalRatesPartial": "{count} 件のロールを更新しました。一部のカスタムロール名は標準レートに一致しませんでした。",
       "fxLastUpdated": "為替レート最終更新: {date}",
       "fxLastUpdatedUnknown": "為替レート最終更新: 不明",
       "deleteCard": "カードを削除",

@@ -113,6 +113,10 @@ class EstimateDetail(EstimateSummary):
     rate_card_name: str | None = None
     rate_card_version_id: uuid.UUID | None
     rate_card_stale: bool = False
+    complexity_profile: dict[str, Any] | None = None
+    rate_card_auto_tuned: bool = False
+    rate_card_tune_recommended: bool = False
+    rate_card_auto_tune_enabled: bool = True
     project_start_date: date | None
     feature_items: list[FeatureItemResponse]
     documents: list[EstimateDocumentResponse]

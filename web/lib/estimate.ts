@@ -15,6 +15,7 @@ export type {
   ExtractedData,
   FeatureItem,
   GanttData,
+  ComplexityProfile,
 } from "@/lib/estimate-types";
 
 export type { ApiFetchResult };

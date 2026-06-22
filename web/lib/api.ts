@@ -49,7 +49,13 @@ export async function apiJson<T>(
         ? payload.error
         : typeof error.detail === "string"
           ? error.detail
-          : response.statusText,
+          : Array.isArray(error.detail)
+            ? error.detail
+                .map((item: { msg?: string; loc?: string[] }) =>
+                  item.loc ? `${item.loc.join(".")}: ${item.msg ?? "invalid"}` : item.msg,
+                )
+                .join("; ")
+            : response.statusText,
     );
   }
 

@@ -15,9 +15,16 @@ type RequirementsReviewProps = {
   fallbackLocale?: string;
 };
 
-type SectionKey = keyof Omit<ExtractedData, "confidence_notes">;
+type ListSectionKey =
+  | "functional_requirements"
+  | "non_functional_requirements"
+  | "user_roles"
+  | "modules"
+  | "external_systems"
+  | "risks"
+  | "gaps";
 
-const LIST_SECTIONS: SectionKey[] = [
+const LIST_SECTIONS: ListSectionKey[] = [
   "functional_requirements",
   "non_functional_requirements",
   "user_roles",
@@ -31,7 +38,7 @@ const inputClassName =
   "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function hasAnyListItems(data: ExtractedData): boolean {
-  return LIST_SECTIONS.some((section) => data[section].length > 0);
+  return LIST_SECTIONS.some((section) => (data[section] ?? []).length > 0);
 }
 
 export default function RequirementsReview({
@@ -97,7 +104,7 @@ export default function RequirementsReview({
     };
   }, [estimateId, estimateUpdatedAt, displayLocale, fallbackLocale, t]);
 
-  function updateListItem(section: SectionKey, index: number, value: string) {
+  function updateListItem(section: ListSectionKey, index: number, value: string) {
     setData((current) => {
       const items = [...current[section]];
       items[index] = value;
@@ -106,7 +113,7 @@ export default function RequirementsReview({
     setSaved(false);
   }
 
-  function addListItem(section: SectionKey) {
+  function addListItem(section: ListSectionKey) {
     setData((current) => ({
       ...current,
       [section]: [...current[section], ""],
@@ -114,7 +121,7 @@ export default function RequirementsReview({
     setSaved(false);
   }
 
-  function removeListItem(section: SectionKey, index: number) {
+  function removeListItem(section: ListSectionKey, index: number) {
     setData((current) => ({
       ...current,
       [section]: current[section].filter((_, itemIndex) => itemIndex !== index),
