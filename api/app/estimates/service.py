@@ -3,7 +3,7 @@ from datetime import date
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,7 +12,7 @@ from app.audit.service import log_change
 from app.calculation.calendar import default_project_start_date
 from app.calculation.currency import rate_card_settings_to_jpy
 from app.calculation.engine import CalculationError, calculate_estimate
-from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline
+from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline, build_gantt_timeline_two_pass
 from app.calculation.line_items import normalize_calculation_result
 from app.calculation.schemas import FeatureItemInput as CalcFeatureItemInput
 from app.calculation.schemas import GanttFeatureItemInput, RateCardSettings
@@ -39,12 +39,14 @@ from app.models.form_template import FormTemplate
 from app.models.estimate import Estimate, EstimateStatus, FeatureItem
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.rate_cards.system import attach_system_rate_card
 from app.rate_cards.service import (
     create_rate_card_with_settings,
     get_active_rate_card,
     get_latest_version_for_card,
     get_rate_card_for_user,
 )
+from app.users.access import is_contact_user
 from app.storage.factory import get_storage_backend
 from app.schemas.estimate import (
     CreateEstimateRateCardRequest,
@@ -62,6 +64,19 @@ async def create_estimate(
     user: User,
     data: EstimateCreate,
 ) -> Estimate:
+    if is_contact_user(user):
+        existing_count = await db.scalar(
+            select(func.count()).select_from(Estimate).where(Estimate.created_by == user.id)
+        )
+        if existing_count and existing_count >= 1:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "Contact accounts are limited to one estimate",
+                    "code": "CONTACT_ESTIMATE_LIMIT",
+                },
+            )
+
     client_name = (
         data.client_name.strip()
         if data.client_name and data.client_name.strip()
@@ -82,6 +97,9 @@ async def create_estimate(
     )
     db.add(estimate)
     await db.flush()
+
+    if is_contact_user(user):
+        await attach_system_rate_card(db, estimate)
 
     await log_change(
         db,
@@ -271,6 +289,14 @@ async def update_estimate(
         EstimateStatus.EXPORTED.value,
         EstimateStatus.COMPLETED.value,
     }
+    if is_contact_user(user) and "rate_card_id" in update_data:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Contact accounts cannot change rate cards",
+                "code": "CONTACT_ACCESS_DENIED",
+            },
+        )
     if "rate_card_id" in update_data and estimate.status in locked_statuses:
         raise HTTPException(
             status_code=400,
@@ -544,11 +570,28 @@ async def get_gantt_timeline(
     rate_settings = RateCardSettings.model_validate(version.settings)
     resolved_start = _resolve_project_start_date(estimate, start_date)
 
-    return build_gantt_timeline(
-        _gantt_items_from_estimate(estimate, display_locale=display_locale),
-        [phase.name for phase in rate_settings.phases],
-        resolved_start,
-    )
+    gantt_items = _gantt_items_from_estimate(estimate, display_locale=display_locale)
+    phase_names = [phase.name for phase in rate_settings.phases]
+
+    role_headcount: dict[str, int] | None = None
+    calculation = estimate.calculation_result or {}
+    breakdown = calculation.get("role_breakdown") or []
+    if breakdown:
+        role_headcount = {
+            str(row["role"]).strip(): max(1, int(row.get("personnel_count") or 1))
+            for row in breakdown
+            if float(row.get("hours") or 0) > 0
+        }
+
+    if role_headcount:
+        return build_gantt_timeline(
+            gantt_items,
+            phase_names,
+            resolved_start,
+            role_headcount=role_headcount,
+        )
+
+    return build_gantt_timeline_two_pass(gantt_items, phase_names, resolved_start)
 
 
 async def run_calculation(

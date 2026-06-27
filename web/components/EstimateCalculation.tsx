@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -11,11 +11,13 @@ import type { EstimateDetail } from "@/lib/estimate";
 type EstimateCalculationProps = {
   estimate: EstimateDetail;
   projectStartDate: string | null;
+  isContactUser?: boolean;
 };
 
 export default function EstimateCalculation({
   estimate,
   projectStartDate,
+  isContactUser = false,
 }: EstimateCalculationProps) {
   const router = useRouter();
   const locale = useLocale();
@@ -25,10 +27,27 @@ export default function EstimateCalculation({
   const [result, setResult] = useState<CalculationResult | null>(
     (estimate.calculation_result as CalculationResult | null) ?? null,
   );
+  const scrollToTotalsRef = useRef(false);
 
   useEffect(() => {
     setResult((estimate.calculation_result as CalculationResult | null) ?? null);
   }, [estimate.calculation_result]);
+
+  useEffect(() => {
+    if (!scrollToTotalsRef.current || !result) {
+      return;
+    }
+
+    scrollToTotalsRef.current = false;
+    const frameId = requestAnimationFrame(() => {
+      document.getElementById("total-development-cost")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [result]);
 
   async function handleCalculate() {
     if (!estimate.rate_card_id) {
@@ -63,6 +82,7 @@ export default function EstimateCalculation({
 
       const updated = (await response.json()) as EstimateDetail;
       setResult(updated.calculation_result as CalculationResult);
+      scrollToTotalsRef.current = true;
       router.refresh();
     } catch (calculateError) {
       setError(
@@ -87,23 +107,25 @@ export default function EstimateCalculation({
         </div>
 
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[320px]">
-          <div className="block text-sm">
-            <span className="mb-1 block font-medium text-gray-700">{t("rateCardLabel")}</span>
-            <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800">
-              {estimate.rate_card_name ?? "—"}
-            </p>
-            {estimate.rate_card_id && (
-              <Link
-                href={`/${locale}/rate-cards/${estimate.rate_card_id}`}
-                className="mt-2 inline-block rounded border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
-              >
-                {t("viewRateCard")}
-              </Link>
-            )}
-            {isCalculated && (
-              <p className="mt-1 text-xs text-gray-500">{t("rateCardFrozenHint")}</p>
-            )}
-          </div>
+          {!isContactUser && (
+            <div className="block text-sm">
+              <span className="mb-1 block font-medium text-gray-700">{t("rateCardLabel")}</span>
+              <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800">
+                {estimate.rate_card_name ?? "—"}
+              </p>
+              {estimate.rate_card_id && (
+                <Link
+                  href={`/${locale}/rate-cards/${estimate.rate_card_id}`}
+                  className="mt-2 inline-block rounded border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+                >
+                  {t("viewRateCard")}
+                </Link>
+              )}
+              {isCalculated && (
+                <p className="mt-1 text-xs text-gray-500">{t("rateCardFrozenHint")}</p>
+              )}
+            </div>
+          )}
 
           <button
             type="button"

@@ -5,445 +5,357 @@
   <title>{{ ctx.labels.title }}</title>
   <style>
     {% include '_export_theme.css.j2' %}
-    @page { size: A4; margin: 18mm 20mm; }
+
+    @page {
+      size: A4;
+      margin: 14mm 12mm 16mm 12mm;
+    }
+
     @font-face {
       font-family: "Noto Sans JP";
       src: local("Noto Sans CJK JP"), local("Noto Sans JP");
     }
+
     * { box-sizing: border-box; }
+
     body {
-      font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
-      font-size: 10pt;
-      line-height: 1.55;
-      color: #111;
+      font-family: "Noto Sans JP", "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      color: var(--export-text);
       margin: 0;
       padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    .top-row {
-      display: table;
-      width: 100%;
-      margin-bottom: 16pt;
-    }
-    .top-left {
-      display: table-cell;
-      vertical-align: top;
-      width: 58%;
-    }
-    .top-right {
-      display: table-cell;
-      vertical-align: top;
-      width: 42%;
-      text-align: right;
-    }
-    .title-bar {
-      background: var(--export-blue-primary);
-      color: #fff;
-      font-size: 20pt;
+
+    .num { text-align: right; white-space: nowrap; }
+
+    /* Header row: title + meta table */
+    .header-row { display: table; width: 100%; margin-bottom: 6pt; }
+    .header-left { display: table-cell; vertical-align: top; width: 50%; }
+    .header-right { display: table-cell; vertical-align: top; width: 50%; text-align: right; }
+
+    .doc-title {
+      font-size: 22pt;
       font-weight: 700;
-      padding: 10pt 28pt;
-      letter-spacing: 0.5em;
-      text-indent: 0.5em;
-      display: inline-block;
-      min-width: 180pt;
-      text-align: center;
+      margin: 0;
+      line-height: 1.1;
+      color: var(--export-text);
     }
-    .issue-date-box table {
+
+    .meta-table {
       border-collapse: collapse;
       margin: 0 0 0 auto;
+      font-size: 8pt;
     }
-    .issue-date-box th {
-      background: var(--export-blue-primary);
-      color: #fff;
+
+    .meta-table th {
       font-weight: 600;
-      padding: 5pt 14pt;
-      border: 1px solid var(--export-blue-primary);
-      font-size: 10pt;
-      text-align: center;
-    }
-    .issue-date-box td {
-      padding: 6pt 14pt;
-      border: 1px solid var(--export-blue-primary);
-      font-size: 10pt;
-      background: #fff;
-      text-align: center;
-      min-width: 110pt;
-    }
-    .parties-row {
-      display: table;
-      width: 100%;
-      margin-bottom: 16pt;
-    }
-    .recipient {
-      display: table-cell;
-      vertical-align: top;
-      width: 52%;
-      padding-right: 16pt;
-    }
-    .sender {
-      display: table-cell;
-      vertical-align: top;
-      width: 48%;
-    }
-    .quote-ref {
-      font-size: 10pt;
-      margin-bottom: 6pt;
-      color: #333;
-    }
-    .recipient-name {
-      font-size: 15pt;
-      font-weight: 700;
-      margin-bottom: 10pt;
-      line-height: 1.35;
-    }
-    .subject-line {
-      font-size: 10pt;
-      margin-top: 8pt;
-      padding-top: 6pt;
-      border-top: 1px solid var(--export-border-light);
-    }
-    .sender-block {
       text-align: right;
+      padding: 1pt 4pt 1pt 0;
+      white-space: nowrap;
+      color: var(--export-text);
+      background: transparent;
+      border: none;
     }
-    .sender-info {
-      display: inline-block;
+
+    .meta-table td {
       text-align: left;
-      max-width: 100%;
-      position: relative;
-      padding-right: 4pt;
+      padding: 1pt 0 1pt 2pt;
+      min-width: 80pt;
+      border: none;
     }
-    .sender-name-row {
-      position: relative;
-      margin-bottom: 6pt;
-      padding-right: 36pt;
-    }
-    .sender-name {
-      font-weight: 700;
-      font-size: 11pt;
-      line-height: 1.4;
-    }
-    .sender-detail {
-      font-size: 10pt;
-      line-height: 1.55;
-    }
-    .sender-detail div { margin-bottom: 1pt; }
-    .sender-brand-row {
-      margin-top: 10pt;
-      display: table;
-    }
-    .sender-brand-logo {
-      display: table-cell;
-      vertical-align: middle;
-      padding-right: 8pt;
-    }
-    .sender-brand-logo img {
-      height: 36pt;
-      width: auto;
-      display: block;
-    }
-    .sender-brand-text {
-      display: table-cell;
-      vertical-align: middle;
-      font-size: 16pt;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      color: #111;
-    }
-    .summary-table {
+
+    /* Parties row: client/project + company block */
+    .parties-row { display: table; width: 100%; margin-bottom: 6pt; }
+    .parties-left { display: table-cell; vertical-align: top; width: 48%; padding-right: 8pt; }
+    .parties-right { display: table-cell; vertical-align: top; width: 52%; text-align: right; }
+
+    .client-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 16pt;
-    }
-    .summary-table th {
-      background: var(--export-blue-primary);
-      color: #fff;
-      font-weight: 600;
-      padding: 7pt 12pt;
-      border: 1px solid var(--export-blue-primary);
-      text-align: left;
-      width: 20%;
-      font-size: 10pt;
-      vertical-align: middle;
-    }
-    .summary-table td {
-      padding: 7pt 12pt;
-      border: 1px solid var(--export-blue-primary);
-      font-size: 10pt;
-      vertical-align: middle;
-    }
-    .summary-table .total-amount {
-      font-size: 18pt;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-    .payment-note {
-      font-size: 9pt;
-      color: #444;
+      font-size: 8.5pt;
       margin-bottom: 4pt;
-      line-height: 1.45;
-      background: var(--export-yellow-section);
-      padding: 3pt 6pt;
     }
-    .invoice-wrap {
-      border: 1px solid var(--export-blue-primary);
-      margin-bottom: 18pt;
+
+    .client-table th {
+      font-weight: 600;
+      text-align: left;
+      padding: 2pt 6pt 2pt 0;
+      white-space: nowrap;
+      width: 28%;
+      color: var(--export-text);
+      background: transparent;
+      border: none;
     }
+
+    .client-table td {
+      padding: 2pt 0;
+      border: none;
+      border-bottom: 0.5pt solid var(--export-border);
+    }
+
+    .intro { font-size: 8.5pt; margin: 4pt 0 0; }
+
+    .company-block { display: inline-block; text-align: left; max-width: 100%; }
+    .brand-logo-img {
+      height: 24pt;
+      width: auto;
+      display: block;
+      margin-bottom: 4pt;
+    }
+
+    .company-detail { font-size: 7.5pt; line-height: 1.45; margin-top: 2pt; }
+    .contact-person-line { margin-bottom: 2pt; }
+    .company-contact { white-space: pre-line; }
+
+    .header-divider {
+      border: none;
+      border-bottom: 2pt solid var(--export-primary);
+      margin: 0 0 8pt;
+    }
+
+    /* Total amount band */
+    .total-band {
+      width: 50%;
+      border: 1pt solid var(--export-border);
+      padding: 6pt 10pt;
+      margin-bottom: 8pt;
+      text-align: left;
+    }
+
+    .total-band-label {
+      font-size: 9pt;
+      font-weight: 600;
+      margin-bottom: 2pt;
+      color: var(--export-text);
+    }
+
+    .total-band-amount {
+      font-size: 16pt;
+      font-weight: 700;
+      color: var(--export-primary);
+    }
+
+    /* Line items table */
+    .items-wrap {
+      border: 0.75pt solid var(--export-border);
+      margin-bottom: 6pt;
+    }
+
     .items-table {
       width: 100%;
       border-collapse: collapse;
       margin: 0;
+      font-size: 8pt;
     }
+
     .items-table thead th {
-      background: var(--export-blue-primary);
-      color: #fff;
+      background: var(--export-primary);
+      color: var(--export-text-on-primary);
       font-weight: 600;
-      padding: 7pt 8pt;
+      padding: 4pt 6pt;
       border: none;
-      border-bottom: 1px solid var(--export-blue-primary);
-      font-size: 10pt;
       text-align: left;
+      font-size: 8pt;
     }
-    .items-table thead th.col-qty,
-    .items-table thead th.col-unit { text-align: center; }
+
+    .items-table thead th.col-unit,
+    .items-table thead th.col-price,
+    .items-table thead th.col-sub { text-align: center; }
     .items-table thead th.col-price,
     .items-table thead th.col-sub { text-align: right; }
+
     .items-table tbody td {
-      padding: 9pt 8pt;
+      padding: 4pt 6pt;
       border: none;
-      border-bottom: 1px solid var(--export-blue-primary);
-      font-size: 10pt;
+      border-bottom: 0.5pt solid var(--export-border);
       vertical-align: middle;
     }
-    .items-table tbody tr:nth-child(odd) td { background: var(--export-blue-light); }
+
+    .items-table tbody tr:nth-child(odd) td { background: var(--export-surface); }
     .items-table tbody tr:nth-child(even) td { background: #fff; }
-    .items-table tbody tr.empty-row td {
-      height: 28pt;
+    .items-table tbody tr.empty-row td { height: 18pt; }
+
+    .items-table .col-item { text-align: left; width: 46%; }
+    .items-table .col-unit { text-align: center; width: 12%; }
+    .items-table .col-price { text-align: right; width: 21%; }
+    .items-table .col-sub { text-align: right; width: 21%; }
+
+    /* Summary row: notes + totals */
+    .summary-row { display: table; width: 100%; margin-bottom: 6pt; }
+    .summary-notes { display: table-cell; vertical-align: top; width: 54%; padding-right: 8pt; }
+    .summary-totals { display: table-cell; vertical-align: top; width: 46%; }
+
+    .notes-heading {
+      font-size: 8.5pt;
+      font-weight: 700;
+      margin: 0 0 3pt;
+      color: var(--export-text);
+    }
+
+    .remarks-box {
+      border: 0.75pt solid var(--export-border);
+      padding: 6pt 8pt;
+      min-height: 52pt;
+      white-space: pre-wrap;
+      line-height: 1.35;
+      font-size: 8pt;
       background: #fff;
     }
-    .items-table tbody tr.empty-row:nth-child(odd) td { background: var(--export-blue-light); }
-    .items-table .col-item { text-align: left; width: 46%; }
-    .items-table .col-qty { text-align: center; width: 8%; }
-    .items-table .col-unit { text-align: center; width: 8%; }
-    .items-table .col-price { text-align: right; width: 19%; }
-    .items-table .col-sub { text-align: right; width: 19%; }
-    .totals-row {
-      display: table;
-      width: 100%;
-      border-top: 1px solid var(--export-blue-primary);
-    }
-    .totals-spacer {
-      display: table-cell;
-      width: 54%;
-    }
-    .totals-cell {
-      display: table-cell;
-      width: 46%;
-      vertical-align: top;
-    }
+
     .totals-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 0;
+      font-size: 8pt;
     }
+
     .totals-table th {
-      background: var(--export-blue-primary);
-      color: #fff;
       font-weight: 600;
-      padding: 6pt 10pt;
-      border: 1px solid var(--export-blue-primary);
-      border-top: none;
+      padding: 4pt 6pt;
       text-align: left;
-      font-size: 10pt;
-      width: 42%;
+      border: none;
+      border-bottom: 0.5pt solid var(--export-border);
+      background: var(--export-primary-light);
+      color: var(--export-text);
     }
+
     .totals-table td {
-      padding: 6pt 10pt;
-      border: 1px solid var(--export-blue-primary);
-      border-top: none;
-      border-left: none;
+      padding: 4pt 6pt;
       text-align: right;
-      font-size: 10pt;
+      border: none;
+      border-bottom: 0.5pt solid var(--export-border);
       background: #fff;
     }
+
     .totals-table tr.grand-total th,
     .totals-table tr.grand-total td {
       font-weight: 700;
-      font-size: 11pt;
-      background: var(--export-yellow-total) !important;
+      background: var(--export-primary-light) !important;
+      color: var(--export-text);
     }
-    .footer-bank h3,
-    .footer-remarks h3,
-    .footer-remarks-only h3 {
-      font-size: 10pt;
-      font-weight: 700;
-      margin: 0 0 6pt;
-      background: var(--export-yellow-section);
-      padding: 3pt 6pt;
-      border-left: 3px solid var(--export-blue-primary);
-    }
-    .tax-target-note {
-      font-size: 8pt;
-      color: #555;
-      display: block;
-      margin-top: 2pt;
-      text-align: right;
-    }
-    .footer-row {
-      display: table;
-      width: 100%;
+
+    /* Payment + bank footer */
+    .payment-footer {
       margin-top: 4pt;
+      margin-bottom: 8pt;
     }
-    .footer-bank {
-      display: table-cell;
-      vertical-align: top;
-      width: 55%;
-      padding-right: 16pt;
-      font-size: 10pt;
-    }
-    .bank-text {
-      white-space: pre-wrap;
-      margin: 0;
-      line-height: 1.55;
-    }
-    .footer-remarks {
-      display: table-cell;
-      vertical-align: top;
-      width: 45%;
-      font-size: 10pt;
-    }
-    .remarks-box {
-      border: 1px solid var(--export-blue-primary);
-      padding: 10pt 12pt;
-      min-height: 56pt;
-      white-space: pre-wrap;
-      line-height: 1.55;
-    }
-    .footer-remarks-only {
-      margin-top: 14pt;
-      font-size: 10pt;
-    }
-    .questionnaire-appendix {
-      page-break-before: always;
-      margin-top: 16pt;
-    }
-    .appendix-title {
-      font-size: 12pt;
-      font-weight: 700;
-      margin: 0 0 12pt;
-      background: var(--export-blue-primary);
-      color: var(--export-text-on-primary);
-      padding: 6pt 10pt;
-    }
-    .appendix-section-title {
-      font-size: 10pt;
-      font-weight: 600;
-      margin: 12pt 0 6pt;
-      background: var(--export-yellow-section);
-      border-left: 3px solid var(--export-blue-primary);
-      padding: 3pt 6pt;
-    }
-    .appendix-table {
+
+    .payment-header-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 10pt;
-      font-size: 9pt;
-    }
-    .appendix-table th {
-      width: 32%;
-      text-align: left;
-      vertical-align: top;
-      padding: 5pt 8pt;
-      border: 1px solid var(--export-blue-primary);
-      background: var(--export-blue-primary);
-      color: var(--export-text-on-primary);
+      font-size: 8pt;
       font-weight: 600;
+      margin: 0;
     }
-    .appendix-table td {
-      padding: 5pt 8pt;
-      border: 1px solid var(--export-blue-primary);
-      vertical-align: top;
+
+    .payment-header-table td {
+      border: 0.75pt solid var(--export-border);
+      padding: 4pt 8pt;
+      vertical-align: middle;
+    }
+
+    .payment-header-table .payment-label {
+      width: 50%;
+      text-align: left;
+    }
+
+    .payment-header-table .payment-due {
+      width: 50%;
+      text-align: left;
+    }
+
+    /* Bank details box */
+    .bank-box {
+      border: 0.75pt solid var(--export-border);
+      border-top: none;
+      padding: 8pt 10pt;
+      margin: 0 0 8pt;
+      font-size: 8pt;
       white-space: pre-wrap;
+      line-height: 1.5;
+      background: #fff;
+      min-height: 28pt;
     }
-    .appendix-table tbody tr:nth-child(odd) td { background: var(--export-blue-light); }
-    .appendix-table tbody tr:nth-child(even) td { background: #fff; }
+
+    /* Bottom footer bar */
+    .footer-bar {
+      border: none;
+      border-top: 4pt solid var(--export-primary);
+      margin: 0;
+      height: 0;
+    }
+
+    {% if show_watermark %}
+    {% include '_watermark.css.j2' %}
+    {% endif %}
   </style>
 </head>
 <body>
-  <div class="top-row">
-    <div class="top-left">
-      <div class="title-bar">{{ ctx.labels.title }}</div>
+  {% if show_watermark %}
+  <div class="contact-watermark">Contact Estimate</div>
+  {% endif %}
+
+  <div class="header-row">
+    <div class="header-left">
+      <h1 class="doc-title">{{ ctx.labels.title }}</h1>
     </div>
-    <div class="top-right">
-      <div class="issue-date-box">
-        <table>
-          <tr>
-            <th colspan="1">{{ ctx.labels.issue_date }}</th>
-          </tr>
-          <tr>
-            <td>{{ ctx.issue_date }}</td>
-          </tr>
-        </table>
-      </div>
+    <div class="header-right">
+      <table class="meta-table">
+        <tr>
+          <th>{{ ctx.labels.issue_date }}：</th>
+          <td>{{ ctx.issue_date }}</td>
+        </tr>
+        <tr>
+          <th>{{ ctx.labels.quote_number }}：</th>
+          <td></td>
+        </tr>
+        <tr>
+          <th>{{ ctx.labels.registration_number }}：</th>
+          <td></td>
+        </tr>
+      </table>
     </div>
   </div>
 
   <div class="parties-row">
-    <div class="recipient">
-      <div class="quote-ref">{{ ctx.labels.quote_prefix }}：{{ ctx.quote_number }}</div>
-      <div class="recipient-name">{{ ctx.client_name }}</div>
-      <div class="subject-line">{{ ctx.subject_line }}</div>
+    <div class="parties-left">
+      <table class="client-table">
+        <tr>
+          <th>{{ ctx.labels.project_name }}：</th>
+          <td>{{ ctx.project_name }}</td>
+        </tr>
+        <tr>
+          <th>{{ ctx.labels.client }}：</th>
+          <td>{{ ctx.client_name }}</td>
+        </tr>
+      </table>
+      <p class="intro">{{ ctx.intro }}</p>
     </div>
-    <div class="sender">
-      <div class="sender-block">
-        <div class="sender-info">
-          <div class="sender-name-row">
-            <div class="sender-name">{{ ctx.company.name }}</div>
-          </div>
-          <div class="sender-detail">
-            {% if ctx.company.postal_code %}<div>〒{{ ctx.company.postal_code }}</div>{% endif %}
-            {% if ctx.company.address %}<div>{{ ctx.company.address }}</div>{% endif %}
-            {% if ctx.company.tel %}<div>{{ ctx.labels.tel }}：{{ ctx.company.tel }}</div>{% endif %}
-            {% if ctx.company.email %}<div>{{ ctx.company.email }}</div>{% endif %}
-            {% if ctx.company.registration_number %}
-              <div>{{ ctx.labels.registration_number }}：{{ ctx.company.registration_number }}</div>
-            {% endif %}
-          </div>
-          <div class="sender-brand-row">
-            <div class="sender-brand-logo">
-              <img src="{{ ctx.logo_path }}" alt="">
-            </div>
-            {% if ctx.company.brand %}
-              <div class="sender-brand-text">{{ ctx.company.brand }}</div>
-            {% endif %}
-          </div>
+    <div class="parties-right">
+      <div class="company-block">
+        <img class="brand-logo-img" src="assets/BI_logo.svg" alt="Beyond AI">
+        <div class="company-detail">
+          <div class="contact-person-line">{{ ctx.labels.contact_person }}：{% if ctx.company.contact_person %}{{ ctx.company.contact_person }}{% endif %}</div>
+          <div class="company-contact">{{ ctx.company.contact_block }}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <table class="summary-table">
-    <tr>
-      <th>{{ ctx.labels.payment_terms }}</th>
-      <td>
-        <div class="payment-note">{{ ctx.validity_note }}</div>
-        {{ ctx.payment_terms }}
-      </td>
-    </tr>
-    <tr>
-      <th>{{ ctx.labels.validity }}</th>
-      <td>{{ ctx.validity_text }}（{{ ctx.validity_date }}）</td>
-    </tr>
-    <tr>
-      <th>{{ ctx.labels.total_amount }}</th>
-      <td class="total-amount">{{ format_currency(ctx.grand_total_jpy) }}</td>
-    </tr>
-  </table>
+  <hr class="header-divider">
 
-  <div class="invoice-wrap">
+  <div class="total-band">
+    <div class="total-band-label">［{{ ctx.labels.total_amount_label }}］</div>
+    <div class="total-band-amount">{{ format_currency(ctx.grand_total_jpy) }}</div>
+  </div>
+
+  <div class="items-wrap">
     <table class="items-table">
       <thead>
         <tr>
           <th class="col-item">{{ ctx.labels.item }}</th>
-          <th class="col-qty">{{ ctx.labels.quantity }}</th>
           <th class="col-unit">{{ ctx.labels.unit }}</th>
           <th class="col-price">{{ ctx.labels.unit_price }}</th>
           <th class="col-sub">{{ ctx.labels.subtotal_col }}</th>
@@ -453,10 +365,9 @@
         {% for row in ctx.line_items %}
           <tr>
             <td class="col-item">{{ row.name }}</td>
-            <td class="col-qty">{{ row.quantity }}</td>
             <td class="col-unit">{{ row.unit }}</td>
-            <td class="col-price">{{ format_currency(row.unit_price_jpy) }}</td>
-            <td class="col-sub">{{ format_currency(row.subtotal_jpy) }}</td>
+            <td class="col-price num">{{ format_currency(row.unit_price_jpy) }}</td>
+            <td class="col-sub num">{{ format_currency(row.subtotal_jpy) }}</td>
           </tr>
         {% endfor %}
         {% set min_rows = 6 %}
@@ -465,7 +376,6 @@
           {% for i in range(empty_count) %}
             <tr class="empty-row">
               <td class="col-item">&nbsp;</td>
-              <td class="col-qty"></td>
               <td class="col-unit"></td>
               <td class="col-price"></td>
               <td class="col-sub"></td>
@@ -474,52 +384,41 @@
         {% endif %}
       </tbody>
     </table>
-    <div class="totals-row">
-      <div class="totals-spacer"></div>
-      <div class="totals-cell">
-        <table class="totals-table">
-          <tr>
-            <th>{{ ctx.labels.subtotal }}</th>
-            <td>{{ format_currency(ctx.subtotal_jpy) }}</td>
-          </tr>
-          <tr>
-            <th>{{ ctx.labels.tax }}</th>
-            <td>{{ format_currency(ctx.tax_jpy) }}</td>
-          </tr>
-          <tr class="grand-total">
-            <th>{{ ctx.labels.grand_total }}</th>
-            <td>{{ format_currency(ctx.grand_total_jpy) }}</td>
-          </tr>
-          <tr>
-            <th>{{ ctx.tax_percent_label }}</th>
-            <td>
-              {{ format_currency(ctx.subtotal_jpy) }}
-              <span class="tax-target-note">{{ ctx.labels.tax_target_note }}</span>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </div>
   </div>
 
-  {% if ctx.bank_details %}
-  <div class="footer-row">
-    <div class="footer-bank">
-      <h3>{{ ctx.labels.bank_details }}</h3>
-      <p class="bank-text">{{ ctx.bank_details }}</p>
-    </div>
-    <div class="footer-remarks">
-      <h3>{{ ctx.labels.remarks }}</h3>
+  <div class="summary-row">
+    <div class="summary-notes">
+      <div class="notes-heading">{{ ctx.labels.notes_heading }}</div>
       <div class="remarks-box">{{ ctx.remarks }}</div>
     </div>
+    <div class="summary-totals">
+      <table class="totals-table">
+        <tr>
+          <th>{{ ctx.labels.subtotal }}：</th>
+          <td>{{ format_currency(ctx.subtotal_jpy) }}</td>
+        </tr>
+        <tr>
+          <th>{{ ctx.tax_with_rate_label }}：</th>
+          <td>{{ format_currency(ctx.tax_jpy) }}</td>
+        </tr>
+        <tr class="grand-total">
+          <th>{{ ctx.labels.grand_total }}：</th>
+          <td>{{ format_currency(ctx.grand_total_jpy) }}</td>
+        </tr>
+      </table>
+    </div>
   </div>
-  {% else %}
-  <div class="footer-remarks-only">
-    <h3>{{ ctx.labels.remarks }}</h3>
-    <div class="remarks-box">{{ ctx.remarks }}</div>
-  </div>
-  {% endif %}
 
-  {% include '_questionnaire_appendix.html.j2' %}
+  <div class="payment-footer">
+    <table class="payment-header-table">
+      <tr>
+        <td class="payment-label">{{ ctx.labels.bank_details }}</td>
+        <td class="payment-due">{{ ctx.labels.payment_due }} {{ ctx.payment_terms }}</td>
+      </tr>
+    </table>
+    <div class="bank-box">{{ ctx.bank_details }}</div>
+  </div>
+
+  <hr class="footer-bar">
 </body>
 </html>

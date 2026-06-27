@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 
 export default function WelcomeHero() {
   const t = useTranslations("welcome");
@@ -19,12 +18,12 @@ export default function WelcomeHero() {
           {t("description")}
         </p>
         <div className="mt-8">
-          <Link
-            href="/login"
+          <a
+            href="#get-estimate"
             className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-blue-700"
           >
             {t("heroCta")}
-          </Link>
+          </a>
         </div>
       </div>
     </section>

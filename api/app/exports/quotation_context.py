@@ -8,66 +8,122 @@ from app.exports.report_context import build_report_context
 from app.models.estimate import Estimate
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-LOGO_PATH = "assets/mtech-logo.png"
 
 QUOTATION_LABELS: dict[str, dict[str, str]] = {
     "ja": {
-        "title": "見 積 書",
+        "title": "見積書",
+        "intro": "下記の通りお見積りいたします。",
         "issue_date": "発行日",
-        "payment_terms": "お支払条件",
-        "validity": "有効期限",
-        "total_amount": "合計金額",
+        "quote_number": "見積書番号",
+        "registration_number": "登録番号",
+        "project_name": "プロジェクト名",
+        "client": "お客様名",
+        "contact_person": "担当者",
+        "tel": "TEL",
+        "mail": "MAIL",
+        "total_amount_label": "合計金額",
         "item": "項目",
-        "quantity": "数量",
         "unit": "単位",
         "unit_price": "単価",
         "subtotal_col": "小計",
         "subtotal": "小計",
-        "tax": "消費税",
-        "grand_total": "計",
-        "tax_target": "10%対象",
+        "grand_total": "合計",
         "bank_details": "振込先",
-        "remarks": "備考",
+        "payment_due": "支払期日",
+        "notes_heading": "【備考】",
         "client_suffix": "御中",
-        "registration_number": "登録番号",
-        "tel": "TEL",
         "unit_lot": "式",
         "validity_until": "発行日より{days}日",
         "validity_note": "見積書有効期限は{days}日間です。",
-        "tax_target_note": "（税抜）",
-        "subject_prefix": "件名",
-        "quote_prefix": "見積番号",
     },
     "en": {
         "title": "QUOTATION",
+        "intro": "We are pleased to provide the following quotation.",
         "issue_date": "Issue Date",
-        "payment_terms": "Payment Terms",
-        "validity": "Validity",
-        "total_amount": "Total Amount",
+        "quote_number": "Quotation No.",
+        "registration_number": "Registration No.",
+        "project_name": "Project Name",
+        "client": "Client",
+        "contact_person": "Person in Charge",
+        "tel": "TEL",
+        "mail": "MAIL",
+        "total_amount_label": "Total Amount",
         "item": "Item",
-        "quantity": "Qty",
         "unit": "Unit",
         "unit_price": "Unit Price",
         "subtotal_col": "Subtotal",
         "subtotal": "Subtotal",
-        "tax": "Tax",
         "grand_total": "Total",
-        "tax_target": "Taxable (10%)",
         "bank_details": "Bank Transfer",
-        "remarks": "Remarks",
+        "payment_due": "Payment Due",
+        "notes_heading": "[Notes]",
         "client_suffix": "",
-        "registration_number": "Registration No.",
-        "tel": "Tel",
         "unit_lot": "lot",
         "validity_until": "{days} days from issue date",
         "validity_note": "This quotation is valid for {days} days.",
-        "tax_target_note": "(excl. tax)",
-        "subject_prefix": "Subject",
-        "quote_prefix": "Quote No.",
     },
 }
 
 DEFAULT_TAX_RATE = 0.10
+
+DEFAULT_BANK_DETAILS_JA = (
+    "株式会社Beyond AI\n"
+    "住信SBIネット銀行 法人第一支店（ 106） 普通口座 2112728"
+)
+DEFAULT_BANK_DETAILS_EN = (
+    "Beyond AI Co., Ltd.\n"
+    "SBI Sumishin Net Bank, Corporate First Branch (106), Ordinary Account 2112728"
+)
+
+DEFAULT_POSTAL_CODE = "103-0027"
+DEFAULT_ADDRESS_LINES_JA = [
+    "東京都中央区日本橋 2丁目1番3号",
+    "アーバンネット日本橋二丁目ビル 10階",
+]
+DEFAULT_COMPANY_TEL = "03-6262-0742"
+DEFAULT_COMPANY_EMAIL = "ai@beyondai.co.jp"
+
+DEFAULT_PAYMENT_TERMS_JA = "納品後7日以内"
+DEFAULT_PAYMENT_TERMS_EN = "Within 7 days after delivery"
+
+
+def _resolved_company_contact(locale: str) -> dict[str, Any]:
+    labels = QUOTATION_LABELS[locale]
+    postal_code = settings.quotation_company_postal_code.strip() or DEFAULT_POSTAL_CODE
+    address_lines = [
+        line.strip()
+        for line in settings.quotation_company_address.splitlines()
+        if line.strip()
+    ] or list(DEFAULT_ADDRESS_LINES_JA)
+    tel = settings.quotation_company_tel.strip() or DEFAULT_COMPANY_TEL
+    email = settings.quotation_company_email.strip() or DEFAULT_COMPANY_EMAIL
+
+    if locale == "ja":
+        address_body = "\n".join(address_lines)
+        contact_block = (
+            f"〒{postal_code}\n"
+            f"{address_body}\n"
+            f"\n"
+            f"{labels['tel']}：{tel}\n"
+            f"{labels['mail']} ：{email}"
+        )
+    else:
+        address_text = "\n".join(address_lines)
+        contact_block = (
+            f"Postal code {postal_code}\n"
+            f"{address_text}\n"
+            f"\n"
+            f"{labels['tel']}: {tel}\n"
+            f"{labels['mail']}: {email}"
+        )
+
+    return {
+        "postal_code": postal_code,
+        "address_lines": address_lines,
+        "tel": tel,
+        "email": email,
+        "contact_block": contact_block.strip(),
+    }
 
 
 def _build_line_items(nrc_line_items: list[dict[str, Any]], locale: str) -> list[dict[str, Any]]:
@@ -83,8 +139,8 @@ def _build_line_items(nrc_line_items: list[dict[str, Any]], locale: str) -> list
                 "name": name,
                 "quantity": 1,
                 "unit": unit,
-                "unit_price_jpy": cost,
-                "subtotal_jpy": cost,
+                "unit_price_jpy": int(round(float(cost))),
+                "subtotal_jpy": int(round(float(cost))),
             }
         )
     return rows
@@ -95,11 +151,11 @@ def _format_validity_text(locale: str, days: int) -> str:
     return template.format(days=days)
 
 
-def _tax_percent_label(tax_rate: float, locale: str) -> str:
+def _tax_with_rate_label(tax_rate: float, locale: str) -> str:
     pct = int(round(tax_rate * 100))
     if locale == "ja":
-        return f"{pct}%対象"
-    return f"Taxable ({pct}%)"
+        return f"消費税（{pct}%）"
+    return f"Consumption Tax ({pct}%)"
 
 
 def build_quotation_context(
@@ -131,22 +187,28 @@ def build_quotation_context(
     nrc_line_items = report["calculation"].get("nrc_line_items") or []
     line_items = _build_line_items(nrc_line_items, locale)
 
-    subtotal_jpy = int(report["executive_summary"]["nrc_total_jpy"])
+    subtotal_jpy = int(round(float(report["executive_summary"]["nrc_total_jpy"])))
     tax_jpy = int(round(subtotal_jpy * resolved_tax_rate))
     grand_total_jpy = subtotal_jpy + tax_jpy
 
     validity_days = settings.quotation_validity_days
     validity_date = generated_at + timedelta(days=validity_days)
 
-    payment_terms = (
+    configured_payment_terms = (
         settings.quotation_payment_terms_ja
         if locale == "ja"
         else settings.quotation_payment_terms_en
     )
-    bank_details = (
+    payment_terms = configured_payment_terms.strip() or (
+        DEFAULT_PAYMENT_TERMS_JA if locale == "ja" else DEFAULT_PAYMENT_TERMS_EN
+    )
+    configured_bank_details = (
         settings.quotation_bank_details_ja
         if locale == "ja"
         else settings.quotation_bank_details_en
+    )
+    bank_details = configured_bank_details.strip() or (
+        DEFAULT_BANK_DETAILS_JA if locale == "ja" else DEFAULT_BANK_DETAILS_EN
     )
     remarks = (
         settings.quotation_remarks_ja if locale == "ja" else settings.quotation_remarks_en
@@ -157,14 +219,15 @@ def build_quotation_context(
         client_display = f"{client_display}　{labels['client_suffix']}"
 
     project_name = report["project_summary"]["project_name"]
-    subject_line = f"{labels['subject_prefix']}：{project_name}"
     quote_number = f"Q{export_revision:03d}"
     validity_note = labels["validity_note"].format(days=validity_days)
+    brand = settings.quotation_company_brand.strip() or "Beyond AI"
+    company_contact = _resolved_company_contact(locale)
 
     return {
         "labels": labels,
         "locale": locale,
-        "logo_path": LOGO_PATH,
+        "intro": labels["intro"],
         "issue_date": format_date(generated_at, locale),
         "validity_date": format_date(validity_date, locale),
         "validity_text": _format_validity_text(locale, validity_days),
@@ -173,27 +236,26 @@ def build_quotation_context(
         "remarks": remarks,
         "client_name": client_display,
         "project_name": project_name,
-        "subject_line": subject_line,
         "quote_number": quote_number,
         "validity_note": validity_note,
         "estimate_id": report["project_summary"]["estimate_id"],
         "export_revision": export_revision,
         "company": {
             "name": settings.quotation_company_name,
-            "brand": settings.quotation_company_brand,
-            "postal_code": settings.quotation_company_postal_code,
-            "address": settings.quotation_company_address,
-            "tel": settings.quotation_company_tel,
-            "email": settings.quotation_company_email,
+            "brand": brand,
+            "postal_code": company_contact["postal_code"],
+            "address_lines": company_contact["address_lines"],
+            "tel": company_contact["tel"],
+            "email": company_contact["email"],
+            "contact_block": company_contact["contact_block"],
             "registration_number": settings.quotation_invoice_registration_number,
+            "contact_person": settings.quotation_contact_person,
         },
         "line_items": line_items,
         "subtotal_jpy": subtotal_jpy,
         "tax_jpy": tax_jpy,
         "grand_total_jpy": grand_total_jpy,
         "tax_rate": resolved_tax_rate,
-        "tax_percent_label": _tax_percent_label(resolved_tax_rate, locale),
+        "tax_with_rate_label": _tax_with_rate_label(resolved_tax_rate, locale),
         "template_dir": str(TEMPLATE_DIR),
-        "questionnaire_sections": report.get("questionnaire_sections") or [],
-        "questionnaire_appendix_title": report["labels"]["questionnaire_appendix"],
     }

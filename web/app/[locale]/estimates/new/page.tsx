@@ -3,8 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import NewEstimateForm from "@/components/NewEstimateForm";
-import { loginUrl } from "@/lib/authRedirect";
-import { createEstimate } from "@/lib/estimate";
+import { contactUrl } from "@/lib/authRedirect";
+import { createEstimate, fetchEstimates } from "@/lib/estimate";
+import type { UserProfile } from "@/lib/user-types";
 
 export default async function NewEstimatePage({
   params,
@@ -15,14 +16,21 @@ export default async function NewEstimatePage({
 }) {
   const { locale } = await params;
   const { template } = await searchParams;
-  const returnTo = template
-    ? `/${locale}/estimates/new?template=${encodeURIComponent(template)}`
-    : `/${locale}/estimates/new`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
 
   if (!token) {
-    redirect(loginUrl(locale, returnTo));
+    redirect(contactUrl(locale));
+  }
+
+  const { serverApiJson } = await import("@/lib/server-api");
+  const profile = await serverApiJson<UserProfile>("/auth/me", token.value);
+  if (profile.status === "ok" && profile.data.account_type === "contact") {
+    const estimates = await fetchEstimates(token.value);
+    if (estimates && estimates.length > 0) {
+      redirect(`/${locale}/estimates/${estimates[0].id}`);
+    }
+    redirect(contactUrl(locale));
   }
 
   if (template) {

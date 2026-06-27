@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import EstimateDetailContent from "@/components/EstimateDetailContent";
-import { loginUrl } from "@/lib/authRedirect";
+import { contactUrl } from "@/lib/authRedirect";
 import { fetchEstimateResult } from "@/lib/estimate";
+import type { UserProfile } from "@/lib/user-types";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +15,23 @@ export default async function EstimateDetailPage({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { locale, id } = await params;
-  const returnTo = `/${locale}/estimates/${id}`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
   const t = await getTranslations("estimates");
 
   if (!token) {
-    redirect(loginUrl(locale, returnTo));
+    redirect(contactUrl(locale));
   }
+
+  const { serverApiJson } = await import("@/lib/server-api");
+  const profile = await serverApiJson<UserProfile>("/auth/me", token.value);
+  const isContactUser =
+    profile.status === "ok" && profile.data.account_type === "contact";
 
   const result = await fetchEstimateResult(id, token.value, locale);
 
   if (result.status === "unauthorized") {
-    redirect(loginUrl(locale, returnTo));
+    redirect(contactUrl(locale));
   }
 
   if (result.status === "not_found") {
@@ -54,7 +59,7 @@ export default async function EstimateDetailPage({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <EstimateDetailContent estimate={estimate} />
+      <EstimateDetailContent estimate={estimate} isContactUser={isContactUser} />
     </div>
   );
 }

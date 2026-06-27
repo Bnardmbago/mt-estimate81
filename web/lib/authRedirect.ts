@@ -9,6 +9,10 @@ export function isSafeReturnPath(path: string | null | undefined): path is strin
   return !path.includes("\\");
 }
 
+export function contactUrl(locale: string): string {
+  return `/${locale}/contact`;
+}
+
 export function loginUrl(locale: string, returnTo?: string): string {
   const base = `/${locale}/login`;
   if (!returnTo || !isSafeReturnPath(returnTo)) {

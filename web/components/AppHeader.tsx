@@ -4,16 +4,20 @@ import LocaleSwitcher from "@/components/LocaleSwitcher";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "@/components/ThemeToggle";
 
+import type { AccountType } from "@/lib/user-types";
+
 type AppHeaderProps = {
   locale: string;
   isAuthenticated: boolean;
   isAdmin?: boolean;
+  accountType?: AccountType;
 };
 
 export default async function AppHeader({
   locale,
   isAuthenticated,
   isAdmin = false,
+  accountType = "full",
 }: AppHeaderProps) {
   const t = await getTranslations("nav");
 
@@ -24,6 +28,7 @@ export default async function AppHeader({
           locale={locale}
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}
+          accountType={accountType}
           labels={{
             welcome: t("welcome"),
             estimates: t("estimates"),
@@ -36,7 +41,9 @@ export default async function AppHeader({
         <div className="flex shrink-0 items-center gap-2">
           <ThemeToggle />
           <LocaleSwitcher />
-          {isAuthenticated && <LogoutButton locale={locale} />}
+          {isAuthenticated && (
+            <LogoutButton locale={locale} accountType={accountType} />
+          )}
         </div>
       </div>
     </header>

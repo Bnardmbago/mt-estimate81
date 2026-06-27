@@ -39,13 +39,14 @@ def test_quotation_company_from_settings():
 
 def test_quotation_ja_client_suffix():
     ctx = sample_quotation_context(locale="ja")
+    assert ctx["labels"]["client"] == "お客様名"
     assert ctx["client_name"].endswith("御中")
 
 
-def test_quotation_quote_number_and_subject():
+def test_quotation_quote_number_and_project():
     ctx = sample_quotation_context(export_revision=3)
     assert ctx["quote_number"] == "Q003"
-    assert "Portal Redesign" in ctx["subject_line"]
+    assert "Portal Redesign" in ctx["project_name"]
     assert "30" in ctx["validity_note"]
 
 
@@ -55,9 +56,40 @@ def test_quotation_en_labels():
     assert "御中" not in ctx["client_name"]
 
 
-def test_quotation_includes_questionnaire_appendix_context():
+def test_quotation_intro_and_tax_labels():
+    ctx_ja = sample_quotation_context(locale="ja")
+    assert ctx_ja["intro"] == "下記の通りお見積りいたします。"
+    assert ctx_ja["tax_with_rate_label"] == "消費税（10%）"
+    assert ctx_ja["company"]["brand"] == "Beyond AI"
+    assert ctx_ja["company"]["name"] == "株式会社 Beyond AI"
+    assert "〒103-0027" in ctx_ja["company"]["contact_block"]
+    assert "アーバンネット日本橋二丁目ビル 10階" in ctx_ja["company"]["contact_block"]
+    assert "TEL：03-6262-0742" in ctx_ja["company"]["contact_block"]
+    assert "MAIL ：ai@beyondai.co.jp" in ctx_ja["company"]["contact_block"]
+
+    ctx_en = sample_quotation_context(locale="en")
+    assert ctx_en["intro"] == "We are pleased to provide the following quotation."
+    assert ctx_en["tax_with_rate_label"] == "Consumption Tax (10%)"
+
+
+def test_quotation_excludes_questionnaire_appendix():
     ctx = sample_quotation_context()
-    assert ctx["questionnaire_appendix_title"] == "Project Questionnaire (Appendix)"
-    assert ctx["questionnaire_sections"]
-    spec = next(section for section in ctx["questionnaire_sections"] if section["id"] == "specification")
-    assert any(field["label"] == "Development approach" for field in spec["fields"])
+    assert "questionnaire_appendix_title" not in ctx
+    assert "questionnaire_sections" not in ctx
+
+
+def test_quotation_company_contact_defaults_when_settings_empty(monkeypatch):
+    monkeypatch.setattr(settings, "quotation_company_postal_code", "")
+    monkeypatch.setattr(settings, "quotation_company_address", "")
+    monkeypatch.setattr(settings, "quotation_company_tel", "")
+    monkeypatch.setattr(settings, "quotation_company_email", "")
+    ctx = sample_quotation_context(locale="ja")
+    assert "〒103-0027" in ctx["company"]["contact_block"]
+    assert "TEL：03-6262-0742" in ctx["company"]["contact_block"]
+
+
+def test_quotation_bank_details_default_when_setting_empty(monkeypatch):
+    monkeypatch.setattr(settings, "quotation_bank_details_ja", "")
+    ctx = sample_quotation_context(locale="ja")
+    assert "株式会社Beyond AI" in ctx["bank_details"]
+    assert "住信SBIネット銀行 法人第一支店（ 106） 普通口座 2112728" in ctx["bank_details"]

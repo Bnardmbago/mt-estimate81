@@ -11,6 +11,7 @@ type User = {
   email: string;
   display_name: string;
   company_name: string | null;
+  account_type: "full" | "contact";
   is_admin: boolean;
   is_active: boolean;
   preferred_locale: string;
@@ -22,16 +23,195 @@ type EditForm = {
   email: string;
   display_name: string;
   company_name: string;
+  account_type: "full" | "contact";
   preferred_locale: string;
   preferred_currency: Currency;
   is_admin: boolean;
   is_active: boolean;
+  password?: string;
 };
 
 const CURRENCIES: Currency[] = ["JPY", "USD", "PHP"];
 
 const inputClassName =
   "w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+type UserTableProps = {
+  users: User[];
+  t: ReturnType<typeof useTranslations<"admin.users">>;
+  showAdminColumn: boolean;
+  showResetPassword: boolean;
+  deletingId: string | null;
+  resettingId: string | null;
+  newPassword: string;
+  onOpenEdit: (user: User) => void;
+  onToggleActive: (user: User) => void;
+  onUpdateLocale: (user: User, locale: string) => void;
+  onUpdateCurrency: (user: User, currency: Currency) => void;
+  onDelete: (user: User) => void;
+  onStartResetPassword: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
+  onCancelResetPassword: () => void;
+  onNewPasswordChange: (password: string) => void;
+};
+
+function UserTable({
+  users,
+  t,
+  showAdminColumn,
+  showResetPassword,
+  deletingId,
+  resettingId,
+  newPassword,
+  onOpenEdit,
+  onToggleActive,
+  onUpdateLocale,
+  onUpdateCurrency,
+  onDelete,
+  onStartResetPassword,
+  onResetPassword,
+  onCancelResetPassword,
+  onNewPasswordChange,
+}: UserTableProps) {
+  if (users.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("email")}</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("displayName")}</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("companyName")}</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("locale")}</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("currency")}</th>
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("status")}</th>
+            {showAdminColumn ? (
+              <th className="px-3 py-2 text-left font-medium text-gray-700">{t("isAdmin")}</th>
+            ) : null}
+            <th className="px-3 py-2 text-left font-medium text-gray-700">{t("actions")}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 bg-white">
+          {users.map((user) => (
+            <tr key={user.id} className={!user.is_active ? "bg-gray-50 opacity-70" : undefined}>
+              <td className="px-3 py-2">{user.email}</td>
+              <td className="px-3 py-2">{user.display_name}</td>
+              <td className="px-3 py-2">{user.company_name ?? "—"}</td>
+              <td className="px-3 py-2">
+                <select
+                  value={user.preferred_locale}
+                  onChange={(event) => void onUpdateLocale(user, event.target.value)}
+                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                >
+                  <option value="ja">{t("localeJa")}</option>
+                  <option value="en">{t("localeEn")}</option>
+                </select>
+              </td>
+              <td className="px-3 py-2">
+                <select
+                  value={user.preferred_currency}
+                  onChange={(event) =>
+                    void onUpdateCurrency(user, event.target.value as Currency)
+                  }
+                  className="rounded border border-gray-300 px-2 py-1 text-sm"
+                >
+                  {CURRENCIES.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {t(`currency${currency}` as "currencyJPY")}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td className="px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => void onToggleActive(user)}
+                  className={`rounded px-2 py-1 text-xs font-medium ${
+                    user.is_active
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {user.is_active ? t("activeYes") : t("activeNo")}
+                </button>
+              </td>
+              {showAdminColumn ? (
+                <td className="px-3 py-2">
+                  <span
+                    className={`rounded px-2 py-1 text-xs font-medium ${
+                      user.is_admin
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {user.is_admin ? t("adminYes") : t("adminNo")}
+                  </span>
+                </td>
+              ) : null}
+              <td className="px-3 py-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenEdit(user)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {t("edit")}
+                  </button>
+                  {showResetPassword ? (
+                    <button
+                      type="button"
+                      onClick={() => onStartResetPassword(user.id)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {t("resetPassword")}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void onDelete(user)}
+                    disabled={deletingId === user.id}
+                    className="text-red-600 hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === user.id ? t("deleting") : t("delete")}
+                  </button>
+                </div>
+                {showResetPassword && resettingId === user.id && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="password"
+                      minLength={8}
+                      placeholder={t("newPassword")}
+                      value={newPassword}
+                      onChange={(event) => onNewPasswordChange(event.target.value)}
+                      className="rounded border border-gray-300 px-2 py-1 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void onResetPassword(user.id)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {t("savePassword")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onCancelResetPassword}
+                      className="text-gray-500 hover:underline"
+                    >
+                      {t("cancel")}
+                    </button>
+                  </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function UserManager() {
   const t = useTranslations("admin.users");
@@ -44,10 +224,12 @@ export default function UserManager() {
   const [resettingId, setResettingId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [upgradePassword, setUpgradePassword] = useState("");
   const [editForm, setEditForm] = useState<EditForm>({
     email: "",
     display_name: "",
     company_name: "",
+    account_type: "full",
     preferred_locale: "ja",
     preferred_currency: "JPY",
     is_admin: false,
@@ -86,11 +268,13 @@ export default function UserManager() {
       email: user.email,
       display_name: user.display_name,
       company_name: user.company_name ?? "",
+      account_type: user.account_type ?? "full",
       preferred_locale: user.preferred_locale,
       preferred_currency: user.preferred_currency,
       is_admin: user.is_admin,
       is_active: user.is_active,
     });
+    setUpgradePassword("");
     setError(null);
   }
 
@@ -129,9 +313,17 @@ export default function UserManager() {
     setSavingEdit(true);
     setError(null);
     try {
+      const payload: EditForm = { ...editForm };
+      if (
+        editingUser.account_type === "contact" &&
+        editForm.account_type === "full" &&
+        upgradePassword.trim()
+      ) {
+        payload.password = upgradePassword.trim();
+      }
       await apiJson<User>(`/admin/users/${editingUser.id}`, {
         method: "PATCH",
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       setEditingUser(null);
       await loadUsers();
@@ -224,6 +416,28 @@ export default function UserManager() {
   if (loading) {
     return <p className="text-sm text-gray-500">{t("loading")}</p>;
   }
+
+  const fullUsers = users.filter((user) => user.account_type !== "contact");
+  const contactUsers = users.filter((user) => user.account_type === "contact");
+
+  const userTableProps = {
+    t,
+    deletingId,
+    resettingId,
+    newPassword,
+    onOpenEdit: openEdit,
+    onToggleActive: toggleActive,
+    onUpdateLocale: updateLocale,
+    onUpdateCurrency: updateCurrency,
+    onDelete: handleDelete,
+    onStartResetPassword: setResettingId,
+    onResetPassword: handleResetPassword,
+    onCancelResetPassword: () => {
+      setResettingId(null);
+      setNewPassword("");
+    },
+    onNewPasswordChange: setNewPassword,
+  };
 
   return (
     <div className="space-y-8">
@@ -404,6 +618,35 @@ export default function UserManager() {
                 ))}
               </select>
             </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="mb-1 block font-medium text-gray-700">{t("accountType")}</span>
+              <select
+                value={editForm.account_type}
+                onChange={(event) =>
+                  setEditForm({
+                    ...editForm,
+                    account_type: event.target.value as "full" | "contact",
+                  })
+                }
+                className={inputClassName}
+              >
+                <option value="full">{t("accountTypeFull")}</option>
+                <option value="contact">{t("accountTypeContact")}</option>
+              </select>
+            </label>
+            {editingUser?.account_type === "contact" && editForm.account_type === "full" ? (
+              <label className="block text-sm sm:col-span-2">
+                <span className="mb-1 block font-medium text-gray-700">{t("upgradePassword")}</span>
+                <input
+                  type="password"
+                  minLength={8}
+                  required
+                  value={upgradePassword}
+                  onChange={(event) => setUpgradePassword(event.target.value)}
+                  className={inputClassName}
+                />
+              </label>
+            ) : null}
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -442,136 +685,33 @@ export default function UserManager() {
         </section>
       )}
 
-      <section>
-        <h2 className="mb-4 text-lg font-semibold">{t("listTitle")}</h2>
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("email")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("displayName")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("companyName")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("locale")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("currency")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("status")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("isAdmin")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">{t("actions")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {users.map((user) => (
-                <tr key={user.id} className={!user.is_active ? "bg-gray-50 opacity-70" : undefined}>
-                  <td className="px-3 py-2">{user.email}</td>
-                  <td className="px-3 py-2">{user.display_name}</td>
-                  <td className="px-3 py-2">{user.company_name ?? "—"}</td>
-                  <td className="px-3 py-2">
-                    <select
-                      value={user.preferred_locale}
-                      onChange={(event) => void updateLocale(user, event.target.value)}
-                      className="rounded border border-gray-300 px-2 py-1 text-sm"
-                    >
-                      <option value="ja">{t("localeJa")}</option>
-                      <option value="en">{t("localeEn")}</option>
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <select
-                      value={user.preferred_currency}
-                      onChange={(event) =>
-                        void updateCurrency(user, event.target.value as Currency)
-                      }
-                      className="rounded border border-gray-300 px-2 py-1 text-sm"
-                    >
-                      {CURRENCIES.map((currency) => (
-                        <option key={currency} value={currency}>
-                          {t(`currency${currency}` as "currencyJPY")}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => void toggleActive(user)}
-                      className={`rounded px-2 py-1 text-xs font-medium ${
-                        user.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {user.is_active ? t("activeYes") : t("activeNo")}
-                    </button>
-                  </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`rounded px-2 py-1 text-xs font-medium ${
-                        user.is_admin
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {user.is_admin ? t("adminYes") : t("adminNo")}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(user)}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {t("edit")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setResettingId(user.id)}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {t("resetPassword")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(user)}
-                        disabled={deletingId === user.id}
-                        className="text-red-600 hover:underline disabled:opacity-50"
-                      >
-                        {deletingId === user.id ? t("deleting") : t("delete")}
-                      </button>
-                    </div>
-                    {resettingId === user.id && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <input
-                          type="password"
-                          minLength={8}
-                          placeholder={t("newPassword")}
-                          value={newPassword}
-                          onChange={(event) => setNewPassword(event.target.value)}
-                          className="rounded border border-gray-300 px-2 py-1 text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleResetPassword(user.id)}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {t("savePassword")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setResettingId(null);
-                            setNewPassword("");
-                          }}
-                          className="text-gray-500 hover:underline"
-                        >
-                          {t("cancel")}
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="space-y-6">
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">{t("listTitleFull")}</h2>
+          {fullUsers.length === 0 ? (
+            <p className="text-sm text-gray-500">{t("emptyFull")}</p>
+          ) : (
+            <UserTable
+              {...userTableProps}
+              users={fullUsers}
+              showAdminColumn
+              showResetPassword
+            />
+          )}
+        </div>
+
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">{t("listTitleContact")}</h2>
+          {contactUsers.length === 0 ? (
+            <p className="text-sm text-gray-500">{t("emptyContact")}</p>
+          ) : (
+            <UserTable
+              {...userTableProps}
+              users={contactUsers}
+              showAdminColumn={false}
+              showResetPassword={false}
+            />
+          )}
         </div>
       </section>
     </div>

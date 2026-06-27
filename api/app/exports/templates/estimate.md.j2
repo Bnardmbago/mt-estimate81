@@ -1,224 +1,114 @@
 # {{ ctx.labels.title }}
 
 ## {{ ctx.labels.project_summary }}
-
 | | |
 |---|---|
 | {{ ctx.labels.project_name }} | {{ ctx.project_summary.project_name }} |
+| {{ ctx.labels.estimate_type }} | {{ ctx.project_summary.estimate_type }} |
 | {{ ctx.labels.client_name }} | {{ ctx.project_summary.client_name }} |
 | {{ ctx.labels.estimate_id }} | {{ ctx.project_summary.estimate_id }} |
 | {{ ctx.labels.export_revision }} | {{ ctx.project_summary.export_revision }} |
 | {{ ctx.labels.generated_date }} | {{ ctx.project_summary.generated_date }} |
-| {{ ctx.labels.estimate_type }} | {{ ctx.project_summary.estimate_type }} |
+| {{ ctx.labels.estimate_creator }} | {{ ctx.project_summary.estimate_creator }} |
 
 ## {{ ctx.labels.executive_cost_summary }}
-
-| {{ ctx.labels.item }} | {{ ctx.labels.amount_jpy }} |
-|---|---:|
-| {{ ctx.labels.nrc_total }} | {{ format_currency(ctx.executive_summary.nrc_total_jpy) }} |
-| {{ ctx.labels.monthly_rc }} | {{ format_currency(ctx.executive_summary.monthly_rc_jpy) }} |
-| {{ ctx.labels.annual_rc }} | {{ format_currency(ctx.executive_summary.annual_rc_jpy) }} |
-| **{{ ctx.labels.total_development_cost }}** | **{{ format_currency(ctx.executive_summary.nrc_total_jpy) }}** |
-| {{ ctx.labels.first_year_total_cost }} | {{ format_currency(ctx.executive_summary.first_year_total_jpy) }} |
-
-**{{ ctx.labels.confidence_score }}:** {{ "%.0f"|format(ctx.executive_summary.confidence_score) }}% — **{{ ctx.labels.accuracy_level }}:** {{ ctx.executive_summary.accuracy_label }}
-
-## {{ ctx.labels.questionnaire }}
-
-{% if ctx.questionnaire_sections %}
-{% for section in ctx.questionnaire_sections %}
-### {{ section.title }}
-
 | | |
 |---|---|
-{% for field in section.fields %}
+| {{ ctx.labels.total_development_cost }} | {{ format_currency(ctx.executive_summary.nrc_total_jpy) }} |
+| {{ ctx.labels.maintenance_cost_monthly_annual }} | {{ ctx.executive_display.maintenance_cost_display }} |
+| {{ ctx.labels.development_period }} | {{ ctx.executive_display.development_period_display }} |
+
+## {{ ctx.labels.questionnaire }}
+{%- if ctx.questionnaire_sections %}
+{%- for section in ctx.questionnaire_sections %}
+### {{ section.title }}
+| | |
+|---|---|
+{%- for field in section.fields %}
 | {{ field.label }} | {{ field.value }} |
-{% endfor %}
+{%- endfor %}
+{%- endfor %}
+{%- else %}
+- {{ ctx.labels.none }}
+{%- endif %}
 
-{% endfor %}
-{% else %}
-_{{ ctx.labels.none }}_
-{% endif %}
-
-## {{ ctx.labels.extracted_requirements }}
-
-{% if ctx.extracted.functional_requirements %}
-### {{ ctx.labels.functional_requirements }}
-{% for item in ctx.extracted.functional_requirements %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.non_functional_requirements %}
-### {{ ctx.labels.non_functional_requirements }}
-{% for item in ctx.extracted.non_functional_requirements %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.modules %}
-### {{ ctx.labels.modules }}
-{% for item in ctx.extracted.modules %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.user_roles %}
-### {{ ctx.labels.user_roles }}
-{% for item in ctx.extracted.user_roles %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.external_systems %}
-### {{ ctx.labels.external_systems }}
-{% for item in ctx.extracted.external_systems %}- {{ item }}
-{% endfor %}
-{% endif %}
+{%- set req_sections = [
+  (ctx.labels.functional_requirements, ctx.extracted.functional_requirements),
+  (ctx.labels.non_functional_requirements, ctx.extracted.non_functional_requirements),
+  (ctx.labels.modules, ctx.extracted.modules),
+  (ctx.labels.user_roles, ctx.extracted.user_roles),
+  (ctx.labels.external_systems, ctx.extracted.external_systems),
+] -%}
+{%- set has_requirements = false -%}
+{%- for _title, items in req_sections -%}
+{%- if items -%}
+{%- set has_requirements = true -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if has_requirements -%}
+{%- for title, items in req_sections -%}
+{%- if items %}
+## {{ title }}
+{%- for item in items %}
+- {{ item }}
+{%- endfor %}
+{%- endif -%}
+{%- endfor -%}
+{%- else %}
+## {{ ctx.labels.functional_requirements }}
+- {{ ctx.labels.none }}
+{%- endif %}
 
 ## {{ ctx.labels.feature_items }}
-
 | {{ ctx.labels.feature_name }} | {{ ctx.labels.feature_description }} | {{ ctx.labels.feature_phase }} | {{ ctx.labels.feature_role }} | {{ ctx.labels.feature_hours }} | {{ ctx.labels.feature_days }} |
 |---|---|---|---|---:|---:|
-{% for item in ctx.feature_items %}
+{%- for item in ctx.feature_items %}
 | {{ item.name }} | {{ item.description }} | {{ item.phase }} | {{ item.role }} | {{ format_hours(item.hours) }} | {{ format_effort_days(item.hours) }} |
-{% endfor %}
+{%- endfor %}
 
 ## {{ ctx.labels.effort_summary }}
-
 | | |
 |---|---:|
 | {{ ctx.labels.total_hours }} | {{ format_hours(ctx.effort_summary.total_hours) }} |
 | {{ ctx.labels.total_days }} | {{ format_effort_days(ctx.effort_summary.total_hours) }} |
-| {{ ctx.labels.estimated_duration }} | {{ "%.1f"|format(ctx.effort_summary.estimated_duration_days) }} {{ ctx.labels.days }} |
-| {{ ctx.labels.recommended_team_size }} | {{ ctx.effort_summary.recommended_team_size }} |
+| {{ ctx.labels.estimated_duration }} | {{ format_person_days(ctx.effort_summary.estimated_duration_days) }} {{ ctx.labels.days }} |
 
-## {{ ctx.labels.phase_breakdown }}
-
-| {{ ctx.labels.phase }} | {{ ctx.labels.hours }} | {{ ctx.labels.days }} | {{ ctx.labels.percentage }} |
-|---|---:|---:|---:|
-{% for row in ctx.calculation.phase_breakdown %}
-| {{ row.phase }} | {{ format_hours(row.hours) }} | {{ format_effort_days(row.hours) }} | {{ "%.0f"|format(row.percentage * 100) }}% |
-{% endfor %}
-
-{% if ctx.gantt and ctx.gantt.tasks %}
+{%- if ctx.gantt and ctx.gantt.tasks %}
 ## {{ ctx.labels.gantt_title }}
-
 {{ ctx.labels.gantt_assumption }}
-
 | | |
 |---|---|
 | {{ ctx.labels.gantt_project_start }} | {{ ctx.gantt.project_start_date }} |
 | {{ ctx.labels.gantt_project_end }} | {{ ctx.gantt.project_end_date }} |
 | {{ ctx.labels.gantt_total_working_days }} | {{ ctx.gantt.total_working_days }} |
-
-| {{ ctx.labels.gantt_task }} | {{ ctx.labels.phase }} | {{ ctx.labels.role }} | {{ ctx.labels.hours }} | {{ ctx.labels.gantt_start_date }} | {{ ctx.labels.gantt_end_date }} | {{ ctx.labels.gantt_duration_days }} | {{ ctx.labels.gantt_timeline_bar }} |
-|---|---|---|---|---|---|---:|---|
-{% for task in ctx.gantt.tasks %}
-| {{ task.name }} | {{ task.phase }} | {{ task.role }} | {{ format_hours(task.hours) }} | {{ task.start_date }} | {{ task.end_date }} | {{ task.duration_working_days }} | █ |
-{% endfor %}
-{% endif %}
-
-## {{ ctx.labels.role_breakdown }}
-
-| {{ ctx.labels.role }} | {{ ctx.labels.developers }} | {{ ctx.labels.hours }} | {{ ctx.labels.rate }} | {{ ctx.labels.cost }} |
-|---|---:|---:|---:|---:|
-{% for row in ctx.calculation.role_breakdown %}
-| {{ row.role }} | {{ row.personnel_count }} | {{ format_hours(row.hours) }} | {{ format_currency(row.rate_jpy) }} | {{ format_currency(row.cost_jpy) }} |
-{% endfor %}
-| **{{ ctx.labels.subtotal }}** | | | | **{{ format_currency(ctx.calculation.role_labor_subtotal_jpy) }}** |
+{%- endif %}
 
 ## {{ ctx.labels.nrc_detailed }}
-
 | {{ ctx.labels.category }} | {{ ctx.labels.item }} | {{ ctx.labels.cost }} |
 |---|---|---:|
-{% for row in ctx.calculation.nrc_line_items %}
+{%- for row in ctx.calculation.nrc_line_items %}
 | {{ row.category }} | {{ row.item }} | {{ format_currency(row.cost_jpy) }} |
-{% endfor %}
-| **{{ ctx.labels.nrc_total }}** | | **{{ format_currency(ctx.executive_summary.nrc_total_jpy) }}** |
+{%- endfor %}
+| {{ ctx.labels.nrc_total }} | | {{ format_currency(ctx.executive_summary.nrc_total_jpy) }} |
 
 ## {{ ctx.labels.rc_detailed }}
-
 | {{ ctx.labels.category }} | {{ ctx.labels.item }} | {{ ctx.labels.monthly }} | {{ ctx.labels.annual }} |
 |---|---|---:|---:|
-{% for row in ctx.calculation.rc_line_items %}
+{%- for row in ctx.calculation.rc_line_items %}
 | {{ row.category }} | {{ row.item }} | {{ format_currency(row.monthly_jpy) }} | {{ format_currency(row.annual_jpy) }} |
-{% endfor %}
-
-## {{ ctx.labels.cost_drivers_title }}
-
-{% if ctx.cost_drivers %}
-| {{ ctx.labels.driver }} | {{ ctx.labels.impact }} |
-|---|---:|
-{% for row in ctx.cost_drivers %}
-| {{ row.name }} | {{ format_currency(row.impact_jpy) }} |
-{% endfor %}
-{% else %}
-_{{ ctx.labels.none }}_
-{% endif %}
-
-## {{ ctx.labels.risks_gaps }}
-
-{% if ctx.extracted.risks %}
-### {{ ctx.labels.risks }}
-{% for item in ctx.extracted.risks %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.gaps %}
-### {{ ctx.labels.missing_information }}
-{% for item in ctx.extracted.gaps %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.estimation_warnings %}
-### {{ ctx.labels.estimation_warnings }}
-{% for item in ctx.extracted.estimation_warnings %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.assumption_risks %}
-### {{ ctx.labels.assumption_risks }}
-{% for item in ctx.extracted.assumption_risks %}- {{ item }}
-{% endfor %}
-{% endif %}
+{%- endfor %}
 
 ## {{ ctx.labels.estimate_exclusions }}
-
-{% if ctx.extracted.estimate_exclusions %}
-{% for item in ctx.extracted.estimate_exclusions %}- {{ item }}
-{% endfor %}
-{% else %}
-_{{ ctx.labels.none }}_
-{% endif %}
-
-## {{ ctx.labels.confidence_notes }}
-
-**{{ ctx.labels.confidence_score }}:** {{ "%.0f"|format(ctx.extracted.confidence_score) }}%
-
-{% if ctx.extracted.confidence_factors %}
-### {{ ctx.labels.confidence_factors }}
-{% for item in ctx.extracted.confidence_factors %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.missing_inputs %}
-### {{ ctx.labels.missing_inputs }}
-{% for item in ctx.extracted.missing_inputs %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.recommendations %}
-### {{ ctx.labels.recommendations }}
-{% for item in ctx.extracted.recommendations %}- {{ item }}
-{% endfor %}
-{% endif %}
-{% if ctx.extracted.confidence_notes %}
-{{ ctx.extracted.confidence_notes }}
-{% endif %}
-
-## {{ ctx.labels.rate_card_reference }}
-
-| | |
-|---|---|
-| {{ ctx.labels.rate_card_name }} | {{ ctx.rate_card_reference.name }} |
-| {{ ctx.labels.rate_card_version }} | {% if ctx.rate_card_reference.version_number is not none %}{{ ctx.rate_card_reference.version_number }}{% else %}{{ ctx.labels.none }}{% endif %} |
-| {{ ctx.labels.effective_date }} | {{ ctx.rate_card_reference.effective_date }} |
-| {{ ctx.labels.policy_version }} | {{ ctx.rate_card_reference.policy_version }} |
+{%- if ctx.extracted.estimate_exclusions %}
+{%- for item in ctx.extracted.estimate_exclusions %}
+- {{ item }}
+{%- endfor %}
+{%- else %}
+- {{ ctx.labels.none }}
+{%- endif %}
 
 ## {{ ctx.labels.approval }}
-
-**{{ ctx.labels.prepared_by }}:** {{ ctx.labels.prepared_by_value }}
-
-**{{ ctx.labels.reviewed_by }}:**
-
-**{{ ctx.labels.approved_by }}:**
-
-**{{ ctx.labels.approval_date }}:**
+- {{ ctx.labels.prepared_by }}: {{ ctx.labels.prepared_by_value }}
+- {{ ctx.labels.reviewed_by }}:
+- {{ ctx.labels.approved_by }}:
+- {{ ctx.labels.approval_date }}:

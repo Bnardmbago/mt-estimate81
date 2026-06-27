@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.service import hash_password
 from app.dependencies import get_current_user, get_db, require_admin
-from app.models.user import User
+from app.models.user import ACCOUNT_TYPE_CONTACT, ACCOUNT_TYPE_FULL, User
 from app.schemas.user import ResetPasswordRequest, UserCreate, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/admin/users", tags=["admin"])
@@ -134,6 +134,29 @@ async def update_user(
         user.preferred_locale = update_data["preferred_locale"]
     if "preferred_currency" in update_data:
         user.preferred_currency = update_data["preferred_currency"]
+
+    password = update_data.pop("password", None)
+
+    if "account_type" in update_data:
+        new_type = update_data["account_type"]
+        if new_type not in (ACCOUNT_TYPE_FULL, ACCOUNT_TYPE_CONTACT):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "Invalid account type", "code": "INVALID_ACCOUNT_TYPE"},
+            )
+        if user.account_type == ACCOUNT_TYPE_CONTACT and new_type == ACCOUNT_TYPE_FULL:
+            if not password:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "Password is required when upgrading a contact account to full",
+                        "code": "PASSWORD_REQUIRED",
+                    },
+                )
+            user.password_hash = hash_password(password)
+        user.account_type = new_type
+    elif password:
+        user.password_hash = hash_password(password)
 
     await db.commit()
     await db.refresh(user)

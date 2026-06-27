@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import RateCardEditor from "@/components/rate-cards/RateCardEditor";
+import { resolveAuthenticatedHome } from "@/lib/contact";
+import type { UserProfile } from "@/lib/user-types";
 
 export default async function RateCardsPage({
   params,
@@ -15,6 +17,12 @@ export default async function RateCardsPage({
 
   if (!token) {
     redirect(`/${locale}/login`);
+  }
+
+  const { serverApiJson } = await import("@/lib/server-api");
+  const profile = await serverApiJson<UserProfile>("/auth/me", token.value);
+  if (profile.status === "ok" && profile.data.account_type === "contact") {
+    redirect(await resolveAuthenticatedHome(locale, token.value));
   }
 
   return (

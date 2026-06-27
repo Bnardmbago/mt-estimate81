@@ -1,7 +1,12 @@
 import pytest
 
 from app.calculation.development_approach import DevelopmentApproach
-from app.calculation.engine import CalculationError, calculate_estimate, role_personnel_count
+from app.calculation.engine import (
+    CalculationError,
+    calculate_estimate,
+    filter_active_role_breakdown,
+    role_personnel_count,
+)
 from app.calculation.schemas import FeatureItemInput, RateCardSettings
 
 SAMPLE_RATE_CARD = RateCardSettings(
@@ -62,6 +67,19 @@ def test_role_personnel_count_minimum_one():
 
 def test_role_personnel_count_scales_with_hours():
     assert role_personnel_count(160, estimated_duration_days=10, total_days=20) == 2
+
+
+def test_filter_active_role_breakdown_excludes_zero_hour_roles():
+    rows = [
+        {"role": "PM", "hours": 0, "personnel_count": 0, "rate_jpy": 8000, "cost_jpy": 0},
+        {"role": "developer", "hours": 40, "personnel_count": 1, "rate_jpy": 6000, "cost_jpy": 240000},
+    ]
+    filtered = filter_active_role_breakdown(
+        rows,
+        estimated_duration_days=5,
+        total_days=5,
+    )
+    assert [row["role"] for row in filtered] == ["developer"]
 
 
 def test_role_breakdown_includes_personnel_count():

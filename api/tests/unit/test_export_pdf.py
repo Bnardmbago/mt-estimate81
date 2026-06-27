@@ -9,12 +9,8 @@ except OSError:
 else:
     del _WeasyprintHTML
 
-from app.exports.pdf import generate_preliminary_pdf, generate_quotation_pdf, generate_report_pdf
-from tests.unit.export_fixtures import (
-    sample_preliminary_context,
-    sample_quotation_context,
-    sample_report_context,
-)
+from app.exports.pdf import generate_quotation_pdf, generate_report_pdf
+from tests.unit.export_fixtures import sample_quotation_context, sample_report_context
 
 
 @pytest.fixture
@@ -63,27 +59,3 @@ def test_report_pdf_en_locale():
     content = generate_report_pdf(ctx)
     assert content.startswith(b"%PDF")
     assert len(content) > 5000
-
-
-@pytest.fixture
-def preliminary_context():
-    return sample_preliminary_context()
-
-
-def test_preliminary_pdf_starts_with_pdf_magic_bytes(preliminary_context):
-    content = generate_preliminary_pdf(preliminary_context)
-    assert content.startswith(b"%PDF")
-
-
-def test_preliminary_pdf_ja_locale():
-    ctx = sample_preliminary_context(locale="ja", generated_at=datetime(2026, 6, 7))
-    content = generate_preliminary_pdf(ctx)
-    assert content.startswith(b"%PDF")
-    assert len(content) > 1000
-
-
-def test_preliminary_pdf_en_locale():
-    ctx = sample_preliminary_context(locale="en", generated_at=datetime(2026, 6, 7))
-    content = generate_preliminary_pdf(ctx)
-    assert content.startswith(b"%PDF")
-    assert len(content) > 1000

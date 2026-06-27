@@ -4,17 +4,19 @@ from datetime import date, datetime
 from html import escape
 from typing import Any
 
-from app.exports.theme import BLUE_LIGHT, BLUE_PRIMARY
+from app.exports.theme import ACCENT, BORDER, PRIMARY, PRIMARY_LIGHT, SURFACE
 
 PHASE_COLORS: dict[str, str] = {
-    "requirement": f"#{BLUE_PRIMARY}",
-    "design": "#6B9BC3",
-    "development": f"#{BLUE_PRIMARY}",
-    "testing": "#F5C842",
-    "deployment": "#7BA3C9",
+    "requirement": f"#{PRIMARY}",
+    "design": f"#{ACCENT}",
+    "development": "#475569",
+    "testing": "#D97706",
+    "deployment": "#64748B",
+    "management": "#0EA5E9",
 }
 
-DEFAULT_BAR_COLOR = f"#{BLUE_PRIMARY}"
+DEFAULT_BAR_COLOR = f"#{PRIMARY}"
+BORDER_STROKE = f"#{BORDER}"
 
 
 def _parse_date(value: str) -> date:
@@ -25,7 +27,7 @@ def _phase_color(phase: str) -> str:
     return PHASE_COLORS.get(phase.strip().lower(), DEFAULT_BAR_COLOR)
 
 
-def _truncate(text: str, max_len: int = 28) -> str:
+def _truncate(text: str, max_len: int = 32) -> str:
     cleaned = text.strip()
     if len(cleaned) <= max_len:
         return cleaned
@@ -41,58 +43,91 @@ def build_gantt_svg(gantt: dict[str, Any]) -> str:
     project_end = _parse_date(str(gantt["project_end_date"]))
     total_days = max((project_end - project_start).days, 1)
 
-    label_width = 160
-    chart_width = 480
-    row_height = 18
-    header_height = 16
-    padding_top = 4
-    width = label_width + chart_width + 8
-    height = padding_top + header_height + len(tasks) * row_height + 8
+    label_width = 180
+    chart_width = 500
+    row_height = 24
+    header_height = 22
+    legend_height = 22
+    padding = 8
+    width = padding * 2 + label_width + chart_width
+    chart_rows_height = len(tasks) * row_height
+    height = padding * 2 + header_height + chart_rows_height + legend_height + 6
 
     ticks: list[str] = []
-    tick_count = min(5, total_days + 1)
+    tick_count = min(6, total_days + 1)
     for index in range(tick_count):
         offset = round(total_days * index / max(tick_count - 1, 1))
         tick_date = project_start.toordinal() + offset
         ticks.append(date.fromordinal(tick_date).isoformat())
 
+    chart_left = padding + label_width
+    chart_top = padding + header_height
+
     parts: list[str] = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" role="img">',
-        f'<rect width="{width}" height="{height}" fill="#ffffff"/>',
+        f'<rect x="0.5" y="0.5" width="{width - 1}" height="{height - 1}" '
+        f'fill="#ffffff" stroke="{BORDER_STROKE}" stroke-width="1" rx="4"/>',
     ]
 
     for index, tick in enumerate(ticks):
-        x = label_width + (chart_width * index / max(len(ticks) - 1, 1))
+        x = chart_left + (chart_width * index / max(len(ticks) - 1, 1))
         parts.append(
-            f'<text x="{x:.1f}" y="{padding_top + 10}" font-size="7" fill="#9ca3af" '
-            f'text-anchor="middle">{escape(tick)}</text>'
+            f'<line x1="{x:.1f}" y1="{chart_top}" x2="{x:.1f}" y2="{chart_top + chart_rows_height}" '
+            f'stroke="{BORDER_STROKE}" stroke-width="0.5"/>'
+        )
+        parts.append(
+            f'<text x="{x:.1f}" y="{padding + 14}" font-size="8" fill="#64748B" '
+            f'text-anchor="middle">{escape(tick[5:])}</text>'
         )
 
-    chart_top = padding_top + header_height
     parts.append(
-        f'<rect x="{label_width}" y="{chart_top}" width="{chart_width}" height="{len(tasks) * row_height}" '
-        f'fill="#{BLUE_LIGHT}" stroke="#{BLUE_PRIMARY}" stroke-width="0.5"/>'
+        f'<rect x="{chart_left}" y="{chart_top}" width="{chart_width}" height="{chart_rows_height}" '
+        f'fill="#{SURFACE}" rx="3"/>'
     )
 
+    phases_seen: dict[str, str] = {}
     for row_index, task in enumerate(tasks):
         y = chart_top + row_index * row_height
+        if row_index % 2 == 0:
+            parts.append(
+                f'<rect x="{padding}" y="{y}" width="{label_width + chart_width}" '
+                f'height="{row_height}" fill="#ffffff"/>'
+            )
+
         name = _truncate(str(task.get("name") or ""))
         parts.append(
-            f'<text x="4" y="{y + 12}" font-size="7" fill="#374151">{escape(name)}</text>'
+            f'<text x="{padding + 4}" y="{y + 15}" font-size="8" fill="#{PRIMARY}">'
+            f"{escape(name)}</text>"
         )
 
         task_start = _parse_date(str(task["start_date"]))
         task_end = _parse_date(str(task["end_date"]))
         start_offset = max((task_start - project_start).days, 0)
         end_offset = max((task_end - project_start).days, start_offset)
-        bar_left = label_width + (start_offset / total_days) * chart_width
-        bar_width = max(((end_offset - start_offset + 1) / (total_days + 1)) * chart_width, 4)
-        color = _phase_color(str(task.get("phase") or ""))
+        bar_left = chart_left + (start_offset / total_days) * chart_width
+        bar_width = max(((end_offset - start_offset + 1) / (total_days + 1)) * chart_width, 6)
+        phase = str(task.get("phase") or "")
+        color = _phase_color(phase)
+        phases_seen.setdefault(phase.lower(), color)
         parts.append(
-            f'<rect x="{bar_left:.1f}" y="{y + 3}" width="{bar_width:.1f}" height="{row_height - 6}" '
-            f'rx="2" fill="{color}"/>'
+            f'<rect x="{bar_left:.1f}" y="{y + 5}" width="{bar_width:.1f}" height="{row_height - 10}" '
+            f'rx="4" fill="{color}"/>'
         )
+
+    legend_y = chart_top + chart_rows_height + 8
+    legend_x = padding
+    for phase_key, color in sorted(phases_seen.items()):
+        if not phase_key:
+            continue
+        parts.append(
+            f'<rect x="{legend_x}" y="{legend_y}" width="10" height="10" fill="{color}" rx="2"/>'
+        )
+        parts.append(
+            f'<text x="{legend_x + 14}" y="{legend_y + 9}" font-size="7.5" fill="#64748B">'
+            f"{escape(phase_key)}</text>"
+        )
+        legend_x += 80
 
     parts.append("</svg>")
     return "".join(parts)

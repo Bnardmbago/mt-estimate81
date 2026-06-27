@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+import type { AccountType } from "@/lib/user-types";
+
 type LogoutButtonProps = {
   locale: string;
+  accountType?: AccountType;
 };
 
-export default function LogoutButton({ locale }: LogoutButtonProps) {
+export default function LogoutButton({ locale, accountType = "full" }: LogoutButtonProps) {
   const t = useTranslations("nav");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -21,7 +24,7 @@ export default function LogoutButton({ locale }: LogoutButtonProps) {
         method: "POST",
         credentials: "include",
       });
-      router.push(`/${locale}/login`);
+      router.push(accountType === "contact" ? `/${locale}/contact` : `/${locale}/login`);
       router.refresh();
     } finally {
       setLoading(false);

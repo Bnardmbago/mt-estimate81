@@ -3,13 +3,15 @@
   <h2 class="appendix-title">{{ ctx.questionnaire_appendix_title }}</h2>
   {% for section in ctx.questionnaire_sections %}
     <h3 class="appendix-section-title">{{ section.title }}</h3>
-    <table class="appendix-table">
-      {% for field in section.fields %}
-        <tr>
-          <th>{{ field.label }}</th>
-          <td>{{ field.value }}</td>
-        </tr>
-      {% endfor %}
+    <table class="qa-table">
+      <tbody>
+        {% for field in section.fields %}
+          <tr>
+            <th>{{ field.label }}</th>
+            <td>{{ field.value }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
   {% endfor %}
 </div>

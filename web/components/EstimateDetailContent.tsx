@@ -11,10 +11,12 @@ import type { EstimateDetail, EstimateDocument } from "@/lib/estimate";
 
 type EstimateDetailContentProps = {
   estimate: EstimateDetail;
+  isContactUser?: boolean;
 };
 
 export default function EstimateDetailContent({
   estimate,
+  isContactUser = false,
 }: EstimateDetailContentProps) {
   const formRef = useRef<EstimateFormHandle>(null);
   const [hasUploadedDocuments, setHasUploadedDocuments] = useState(
@@ -52,7 +54,7 @@ export default function EstimateDetailContent({
         initialDocuments={estimate.documents ?? []}
         onDocumentsChange={handleDocumentsChange}
       />
-      {isDraft ? (
+      {isDraft && !isContactUser ? (
         <section className="mt-8 border-t border-gray-200 pt-8">
           <EstimateRateCardPanel
             estimateId={estimate.id}
@@ -69,6 +71,7 @@ export default function EstimateDetailContent({
         estimate={estimate}
         formRef={formRef}
         hideDraftRateCard={isDraft}
+        isContactUser={isContactUser}
       />
     </>
   );

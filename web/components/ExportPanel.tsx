@@ -3,21 +3,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import CalculationBreakdown, { type CalculationResult } from "@/components/CalculationBreakdown";
+import { type CalculationResult } from "@/components/CalculationBreakdown";
 import ExportPreviewModal from "@/components/ExportPreviewModal";
 import { apiFetch, apiJson } from "@/lib/api";
 import { formatLocalTimestamp, parseUtcTimestamp } from "@/lib/datetime";
 import type { ExportRecord } from "@/lib/estimate";
 
-type ExportFormat = "pdf" | "xlsx" | "md";
-type PdfVersion = "pdf" | "pdf_quotation" | "pdf_preliminary";
+type ExportFormat = "pdf" | "xlsx" | "md" | "docx";
+type PdfVersion = "pdf" | "pdf_quotation";
+type DocxVersion = "docx" | "docx_quotation";
 type ExportLocale = "ja" | "en";
 
 type ExportPanelProps = {
   estimateId: string;
   estimateUpdatedAt: string;
   calculationResult: CalculationResult;
+  isContactUser?: boolean;
 };
+
+const CONTACT_EXPORT_LIMIT = 3;
 
 type UserProfile = {
   email: string;
@@ -28,17 +32,26 @@ type PreviewTarget = {
   format: string;
 };
 
-const FORMAT_OPTIONS: ExportFormat[] = ["pdf", "xlsx", "md"];
+const FORMAT_OPTIONS: ExportFormat[] = ["pdf", "xlsx", "md", "docx"];
 
-const PDF_VERSION_OPTIONS: PdfVersion[] = ["pdf", "pdf_quotation", "pdf_preliminary"];
+const PDF_VERSION_OPTIONS: PdfVersion[] = ["pdf", "pdf_quotation"];
+
+const DOCX_VERSION_OPTIONS: DocxVersion[] = ["docx", "docx_quotation"];
 
 const pdfVersionLabelKey: Record<
   PdfVersion,
-  "pdfVersionReport" | "pdfVersionQuotation" | "pdfVersionPreliminary"
+  "pdfVersionReport" | "pdfVersionQuotation"
 > = {
   pdf: "pdfVersionReport",
   pdf_quotation: "pdfVersionQuotation",
-  pdf_preliminary: "pdfVersionPreliminary",
+};
+
+const docxVersionLabelKey: Record<
+  DocxVersion,
+  "pdfVersionReport" | "pdfVersionQuotation"
+> = {
+  docx: "pdfVersionReport",
+  docx_quotation: "pdfVersionQuotation",
 };
 
 function exportFormatLabel(
@@ -47,16 +60,22 @@ function exportFormatLabel(
 ): string {
   if (format === "pdf") return t("pdfVersionReport");
   if (format === "pdf_quotation") return t("pdfVersionQuotation");
+  if (format === "docx") return t("pdfVersionReport");
+  if (format === "docx_quotation") return t("pdfVersionQuotation");
   if (format === "pdf_preliminary") return t("pdfVersionPreliminary");
   if (format === "xlsx") return t("formatXlsx");
   if (format === "md") return t("formatMd");
   return format.toUpperCase();
 }
 
-const formatLabelKey: Record<ExportFormat, "formatPdf" | "formatXlsx" | "formatMd"> = {
+const formatLabelKey: Record<
+  ExportFormat,
+  "formatPdf" | "formatXlsx" | "formatMd" | "formatDocx"
+> = {
   pdf: "formatPdf",
   xlsx: "formatXlsx",
   md: "formatMd",
+  docx: "formatDocx",
 };
 
 function parseApiError(payload: unknown, fallback: string): string {
@@ -84,6 +103,7 @@ export default function ExportPanel({
   estimateId,
   estimateUpdatedAt,
   calculationResult,
+  isContactUser = false,
 }: ExportPanelProps) {
   const locale = useLocale();
   const router = useRouter();
@@ -96,6 +116,7 @@ export default function ExportPanel({
     () => new Set(["pdf"]),
   );
   const [pdfVersion, setPdfVersion] = useState<PdfVersion>("pdf");
+  const [docxVersion, setDocxVersion] = useState<DocxVersion>("docx");
   const [selectedExportIds, setSelectedExportIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -195,7 +216,8 @@ export default function ExportPanel({
       let lastCreated: PreviewTarget | null = null;
 
       for (const format of selectedFormats) {
-        const exportFormat = format === "pdf" ? pdfVersion : format;
+        const exportFormat =
+          format === "pdf" ? pdfVersion : format === "docx" ? docxVersion : format;
         const response = await apiFetch(`/estimates/${estimateId}/export`, {
           method: "POST",
           body: JSON.stringify({ format: exportFormat, locale: exportLocale }),
@@ -212,6 +234,10 @@ export default function ExportPanel({
 
       await loadExports();
       router.refresh();
+
+      if (isContactUser && toEmail) {
+        setEmailSuccess(t("contactExportEmailed", { email: toEmail }));
+      }
 
       if (lastCreated) {
         setPreviewTarget(lastCreated);
@@ -295,8 +321,22 @@ export default function ExportPanel({
     }
   }
 
+  const exportsRemaining = CONTACT_EXPORT_LIMIT - exports.length;
+  const exportLimitReached = isContactUser && exports.length >= CONTACT_EXPORT_LIMIT;
+
   return (
     <section className="mt-8 border-t border-gray-200 pt-8">
+      {isContactUser ? (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+          {exportLimitReached
+            ? t("contactExportLimitReached", { limit: CONTACT_EXPORT_LIMIT })
+            : t("contactExportsRemaining", {
+                remaining: exportsRemaining,
+                limit: CONTACT_EXPORT_LIMIT,
+              })}
+          <p className="mt-1 text-blue-800 dark:text-blue-200">{t("contactAutoEmailNote")}</p>
+        </div>
+      ) : null}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -311,12 +351,9 @@ export default function ExportPanel({
         </div>
       </div>
 
-      <div className="mb-8 rounded-lg border border-gray-200 bg-white p-4">
+      <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
         <h3 className="text-base font-semibold text-gray-900">{t("includedDataTitle")}</h3>
-        <p className="mt-1 text-sm text-gray-500">{t("includedDataDescription")}</p>
-        <div className="mt-4">
-          <CalculationBreakdown result={calculationResult} embedded />
-        </div>
+        <p className="mt-1 text-sm text-gray-600">{t("includedDataDescription")}</p>
       </div>
 
       <div className="mb-4">
@@ -372,10 +409,29 @@ export default function ExportPanel({
               </div>
             </div>
           )}
+          {selectedFormats.has("docx") && (
+            <div className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-4">
+              <p className="mb-2 text-sm font-medium text-gray-700">{t("docxVersionLabel")}</p>
+              <div className="flex flex-col gap-2">
+                {DOCX_VERSION_OPTIONS.map((version) => (
+                  <label key={version} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="docx-version"
+                      checked={docxVersion === version}
+                      onChange={() => setDocxVersion(version)}
+                      className="border-gray-300 text-indigo-600"
+                    />
+                    {t(docxVersionLabelKey[version])}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => void handleExport()}
-            disabled={exporting || selectedFormats.size === 0}
+            disabled={exporting || selectedFormats.size === 0 || exportLimitReached}
             className="shrink-0 rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {exporting ? t("exporting") : t("exportButton")}
@@ -413,13 +469,15 @@ export default function ExportPanel({
                 className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <label className="flex items-start gap-3 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={selectedExportIds.has(record.id)}
-                    onChange={() => toggleExportSelection(record.id)}
-                    className="mt-0.5 rounded border-gray-300"
-                    aria-label={t("emailSelectLabel")}
-                  />
+                  {!isContactUser ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedExportIds.has(record.id)}
+                      onChange={() => toggleExportSelection(record.id)}
+                      className="mt-0.5 rounded border-gray-300"
+                      aria-label={t("emailSelectLabel")}
+                    />
+                  ) : null}
                   <span>
                     <span className="font-medium">{exportFormatLabel(record.format, t)}</span>
                     <span className="mx-2 text-gray-400">·</span>
@@ -446,38 +504,39 @@ export default function ExportPanel({
                   >
                     {t("download")}
                   </a>
-                  {isConfirmingDelete ? (
-                    <div className="inline-flex flex-wrap items-center gap-2">
-                      <span className="text-xs text-gray-600">{t("deleteConfirm")}</span>
+                  {!isContactUser &&
+                    (isConfirmingDelete ? (
+                      <div className="inline-flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-gray-600">{t("deleteConfirm")}</span>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDeleteId(null)}
+                          disabled={isDeleting}
+                          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          {t("deleteCancel")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(record.id)}
+                          disabled={isDeleting}
+                          className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {isDeleting ? t("deleting") : t("deleteConfirmAction")}
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => setConfirmingDeleteId(null)}
-                        disabled={isDeleting}
-                        className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        onClick={() => {
+                          setError(null);
+                          setConfirmingDeleteId(record.id);
+                        }}
+                        className="text-sm font-medium text-red-600 hover:text-red-800"
                       >
-                        {t("deleteCancel")}
+                        {t("delete")}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(record.id)}
-                        disabled={isDeleting}
-                        className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
-                      >
-                        {isDeleting ? t("deleting") : t("deleteConfirmAction")}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setConfirmingDeleteId(record.id);
-                      }}
-                      className="text-sm font-medium text-red-600 hover:text-red-800"
-                    >
-                      {t("delete")}
-                    </button>
-                  )}
+                    ))}
                 </div>
               </li>
               );
@@ -486,7 +545,7 @@ export default function ExportPanel({
         )}
       </div>
 
-      {exports.length > 0 && (
+      {!isContactUser && exports.length > 0 && (
         <div className="mt-6 rounded-md border border-gray-200 p-4">
           <h3 className="text-sm font-medium text-gray-900">{t("emailTitle")}</h3>
           <p className="mt-1 text-sm text-gray-500">{t("emailDescription")}</p>

@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import time
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Literal
@@ -38,7 +40,10 @@ from app.rate_cards.generation import (
     should_auto_tune_rate_card,
 )
 
-STUCK_EXTRACTION_MINUTES = 10
+logger = logging.getLogger(__name__)
+
+STUCK_EXTRACTION_MINUTES = 5
+EXTRACTION_AI_TIMEOUT_SECONDS = 120.0
 STUCK_EXTRACTION_ERROR = (
     "Extraction was interrupted or timed out. Please try again."
 )
@@ -90,6 +95,10 @@ async def _log_extraction_phase(
     user_id: uuid.UUID,
     phase: Literal["documents", "rate_card", "ai", "rate_card_tune"],
 ) -> None:
+    result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
+    estimate = result.scalar_one_or_none()
+    if estimate is not None:
+        estimate.updated_at = datetime.utcnow()
     await log_change(
         db,
         estimate_id=estimate_id,
@@ -162,16 +171,30 @@ async def _call_ai_provider(
     provider = await get_ai_provider(db)
     last_error: ValidationError | None = None
 
-    for _ in range(2):
+    for attempt in range(2):
         try:
-            return await provider.extract_requirements(
-                form_data,
-                document_texts,
-                locale,
-                rate_card_roles=rate_card_roles,
+            return await asyncio.wait_for(
+                provider.extract_requirements(
+                    form_data,
+                    document_texts,
+                    locale,
+                    rate_card_roles=rate_card_roles,
+                ),
+                timeout=EXTRACTION_AI_TIMEOUT_SECONDS,
             )
         except ValidationError as exc:
             last_error = exc
+            logger.warning(
+                "Extraction AI validation failed (attempt %s/2): %s",
+                attempt + 1,
+                exc,
+            )
+        except asyncio.TimeoutError as exc:
+            raise AppError(
+                "AI request timed out",
+                "AI_TIMEOUT",
+                status_code=504,
+            ) from exc
         except Exception as exc:
             if _is_timeout_error(exc):
                 raise AppError(
@@ -345,12 +368,26 @@ async def run_extraction(
         estimate.locale = locale
         form_data = resolve_localized_dict(estimate.form_data, locale, estimate.locale)
 
+        doc_chars = sum(len(text) for text in document_texts)
+        logger.info(
+            "Starting extraction AI for estimate %s (%s document chars, locale=%s)",
+            estimate_id,
+            doc_chars,
+            locale,
+        )
+        ai_started = time.monotonic()
         ai_result = await _call_ai_provider(
             db,
             form_data,
             document_texts,
             locale,
             rate_card_roles,
+        )
+        logger.info(
+            "Extraction AI completed for estimate %s in %.1fs (%s feature items)",
+            estimate_id,
+            time.monotonic() - ai_started,
+            len(ai_result.feature_items),
         )
 
         await db.execute(delete(FeatureItem).where(FeatureItem.estimate_id == estimate_id))

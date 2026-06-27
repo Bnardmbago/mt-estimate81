@@ -40,13 +40,23 @@ function GuideStepCard({
         </p>
 
         {step.href ? (
-          <Link
-            href={step.href}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            {stepCtaLabel}
-            <span aria-hidden>→</span>
-          </Link>
+          step.href.startsWith("#") ? (
+            <a
+              href={step.href}
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              {stepCtaLabel}
+              <span aria-hidden>→</span>
+            </a>
+          ) : (
+            <Link
+              href={step.href}
+              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              {stepCtaLabel}
+              <span aria-hidden>→</span>
+            </Link>
+          )
         ) : (
           <div className="mt-4 h-5" aria-hidden />
         )}

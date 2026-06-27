@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.calculation.development_approach import DevelopmentApproach
 from app.calculation.schemas import RateCardSettings
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_db, require_full_account
 from app.estimates.access import can_access_estimate
 from app.estimates.rate_card_stale import mark_rate_card_auto_tune_enabled
 from app.models.estimate import Estimate
@@ -187,7 +187,7 @@ async def _count_versions(db: AsyncSession, rate_card_id: uuid.UUID) -> int:
 
 @router.get("/fx-rates", response_model=FxRatesResponse)
 async def get_fx_rates(
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rates = await get_fx_service().get_public_rates()
     return FxRatesResponse(rates=rates)
@@ -196,7 +196,7 @@ async def get_fx_rates(
 @router.post("/apply-regional-standard", response_model=ApplyRegionalRatesResponse)
 async def apply_regional_standard_rates(
     body: ApplyRegionalRatesRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     currency = body.currency or body.settings.currency
     updated, roles_updated = await apply_regional_standard(
@@ -214,7 +214,7 @@ async def apply_regional_standard_rates(
 @router.get("/cards/options", response_model=list[RateCardOption])
 async def list_rate_card_options(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     return await rate_card_service.list_rate_card_options(db, user)
 
@@ -222,7 +222,7 @@ async def list_rate_card_options(
 @router.get("/cards", response_model=list[RateCardSummary])
 async def list_rate_cards(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     query = select(RateCard).order_by(RateCard.is_active.desc(), RateCard.created_at.desc())
     if not user.is_admin:
@@ -239,7 +239,7 @@ async def list_rate_cards(
 async def get_rate_card_by_id(
     card_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_rate_card_for_user(db, card_id, user)
     version = await _get_latest_version(db, rate_card.id)
@@ -256,7 +256,7 @@ async def update_rate_card_by_id(
     card_id: uuid.UUID,
     body: RateCardUpdate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     _validate_phase_percentages(body.settings)
 
@@ -291,7 +291,7 @@ async def update_rate_card_by_id(
 async def create_rate_card(
     body: RateCardCreate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     name = body.name.strip()
 
@@ -351,7 +351,7 @@ async def _list_estimates_for_card(
 async def list_rate_card_estimates(
     card_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     await rate_card_service.get_rate_card_for_user(db, card_id, user)
 
@@ -376,7 +376,7 @@ async def suggest_rate_card_section(
     card_id: uuid.UUID,
     body: RateCardAiSuggestRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     return await suggest_rate_card_section_for_card(db, card_id, body, user)
 
@@ -386,7 +386,7 @@ async def duplicate_rate_card(
     card_id: uuid.UUID,
     body: RateCardDuplicate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     source = await rate_card_service.get_rate_card_for_user(db, card_id, user)
     source_version = await _get_latest_version(db, source.id)
@@ -423,7 +423,7 @@ async def duplicate_rate_card(
 async def activate_rate_card(
     card_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.set_active_rate_card(db, card_id, user)
 
@@ -444,7 +444,7 @@ async def activate_rate_card(
 async def delete_rate_card(
     card_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_rate_card_for_user(db, card_id, user)
 
@@ -496,7 +496,7 @@ async def delete_rate_card(
 @router.get("/active", response_model=ActiveRateCardResponse)
 async def get_active_rate_card(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_active_rate_card(db, user)
     if not rate_card:
@@ -518,7 +518,7 @@ async def get_active_rate_card(
 @router.get("/versions", response_model=list[RateCardVersionResponse])
 async def list_rate_card_versions(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_active_rate_card(db, user)
     if not rate_card:
@@ -544,7 +544,7 @@ async def list_rate_card_versions(
 async def get_rate_card_version(
     version_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_active_rate_card(db, user)
     if not rate_card:
@@ -562,7 +562,7 @@ async def rename_rate_card_version(
     version_id: uuid.UUID,
     body: RateCardVersionLabelUpdate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_active_rate_card(db, user)
     if not rate_card:
@@ -585,7 +585,7 @@ async def update_rate_card_version(
     version_id: uuid.UUID,
     body: RateCardVersionUpdate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     _validate_phase_percentages(body.settings)
 
@@ -615,7 +615,7 @@ async def update_rate_card_version(
 async def delete_rate_card_version(
     version_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     rate_card = await rate_card_service.get_active_rate_card(db, user)
     if not rate_card:
@@ -654,7 +654,7 @@ async def delete_rate_card_version(
 async def update_rate_card(
     body: RateCardUpdate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     _validate_phase_percentages(body.settings)
 

@@ -21,7 +21,9 @@ from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 from app.models.estimate import Estimate, EstimateStatus, Export, ExportFormat
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.config import settings
 from app.storage.factory import get_storage_backend
+from app.users.access import is_contact_user
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,9 @@ FORMAT_EXTENSIONS = {
     ExportFormat.XLSX.value: "xlsx",
     ExportFormat.PDF.value: "pdf",
     ExportFormat.PDF_QUOTATION.value: "pdf",
-    ExportFormat.PDF_PRELIMINARY.value: "pdf",
+    ExportFormat.DOCX.value: "docx",
+    ExportFormat.DOCX_QUOTATION.value: "docx",
+    "pdf_preliminary": "pdf",
 }
 
 CONTENT_TYPES = {
@@ -38,7 +42,13 @@ CONTENT_TYPES = {
     ExportFormat.XLSX.value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ExportFormat.PDF.value: "application/pdf",
     ExportFormat.PDF_QUOTATION.value: "application/pdf",
-    ExportFormat.PDF_PRELIMINARY.value: "application/pdf",
+    ExportFormat.DOCX.value: (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ),
+    ExportFormat.DOCX_QUOTATION.value: (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ),
+    "pdf_preliminary": "application/pdf",
 }
 
 
@@ -93,6 +103,8 @@ def _generate_content(
     export_revision: int,
     generated_at: datetime,
     tax_rate: float,
+    show_watermark: bool = False,
+    export_user_display_name: str | None = None,
 ) -> bytes:
     report_context = build_report_context(
         estimate,
@@ -102,6 +114,7 @@ def _generate_content(
         rate_card_version_number=rate_card_version_number,
         rate_card_effective_date=rate_card_effective_date,
         export_revision=export_revision,
+        export_user_display_name=export_user_display_name,
     )
 
     if export_format == ExportFormat.MD.value:
@@ -114,7 +127,7 @@ def _generate_content(
     if export_format == ExportFormat.PDF.value:
         from app.exports.pdf import generate_report_pdf
 
-        return generate_report_pdf(report_context)
+        return generate_report_pdf(report_context, show_watermark=show_watermark)
 
     if export_format == ExportFormat.PDF_QUOTATION.value:
         from app.exports.pdf import generate_quotation_pdf
@@ -129,13 +142,17 @@ def _generate_content(
             export_revision=export_revision,
             tax_rate=tax_rate,
         )
-        return generate_quotation_pdf(quotation_context)
+        return generate_quotation_pdf(quotation_context, show_watermark=show_watermark)
 
-    if export_format == ExportFormat.PDF_PRELIMINARY.value:
-        from app.exports.pdf import generate_preliminary_pdf
-        from app.exports.preliminary_context import build_preliminary_context
+    if export_format == ExportFormat.DOCX.value:
+        from app.exports.docx import generate_report_docx
 
-        preliminary_context = build_preliminary_context(
+        return generate_report_docx(report_context)
+
+    if export_format == ExportFormat.DOCX_QUOTATION.value:
+        from app.exports.docx import generate_quotation_docx
+
+        quotation_context = build_quotation_context(
             estimate,
             locale,
             generated_at=generated_at,
@@ -145,7 +162,7 @@ def _generate_content(
             export_revision=export_revision,
             tax_rate=tax_rate,
         )
-        return generate_preliminary_pdf(preliminary_context)
+        return generate_quotation_docx(quotation_context)
 
     raise AppError(
         f"Export format '{export_format}' is not yet implemented",
@@ -161,6 +178,50 @@ def _export_filename(export_record: Export) -> str:
     return f"estimate-{format_label}-{export_record.locale}.{extension}"
 
 
+async def _auto_email_single_export(
+    db: AsyncSession,
+    estimate: Estimate,
+    export_record: Export,
+    to_email: str,
+    user: User,
+) -> None:
+    storage = get_storage_backend()
+    if not await storage.exists(export_record.storage_path):
+        return
+
+    content = await storage.read(export_record.storage_path)
+    content_type = CONTENT_TYPES.get(export_record.format, "application/octet-stream")
+    attachment = EmailAttachment(
+        filename=_export_filename(export_record),
+        content=content,
+        content_type=content_type,
+    )
+    subject = f"Estimate export: {estimate.project_name}"
+    body_text = (
+        f"Your estimate export for project: {estimate.project_name}\n\n"
+        f"Attached file: {attachment.filename}"
+    )
+    smtp_config = await get_smtp_config(db)
+    await send_email_with_attachments(
+        to_email=to_email,
+        subject=subject,
+        body_text=body_text,
+        attachments=[attachment],
+        config=smtp_runtime_config(smtp_config),
+    )
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="export_emailed",
+        changes={
+            "to_email": to_email,
+            "export_ids": [str(export_record.id)],
+            "auto": True,
+        },
+    )
+
+
 async def export_estimate(
     db: AsyncSession,
     estimate_id: uuid.UUID,
@@ -169,6 +230,14 @@ async def export_estimate(
     user: User,
 ) -> Export:
     estimate = await _get_estimate_for_export(db, estimate_id, user)
+
+    if is_contact_user(user) and len(estimate.exports) >= settings.contact_export_limit:
+        raise AppError(
+            f"Contact accounts are limited to {settings.contact_export_limit} exports per estimate",
+            "CONTACT_EXPORT_LIMIT",
+            status_code=403,
+            details={"limit": settings.contact_export_limit},
+        )
 
     if estimate.status not in (
         EstimateStatus.CALCULATED.value,
@@ -199,6 +268,11 @@ async def export_estimate(
     export_id = uuid.uuid4()
     extension = FORMAT_EXTENSIONS[export_format]
     storage_path = f"exports/{estimate_id}/{export_id}.{extension}"
+    show_watermark = is_contact_user(user) and export_format in (
+        ExportFormat.PDF.value,
+        ExportFormat.PDF_QUOTATION.value,
+    )
+    export_user_display_name = user.display_name.strip() or user.email
 
     try:
         content = _generate_content(
@@ -211,6 +285,8 @@ async def export_estimate(
             export_revision=export_revision,
             generated_at=generated_at,
             tax_rate=tax_rate,
+            show_watermark=show_watermark,
+            export_user_display_name=export_user_display_name,
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)
@@ -245,6 +321,10 @@ async def export_estimate(
             "export_id": str(export_id),
         },
     )
+
+    if is_contact_user(user):
+        await _auto_email_single_export(db, estimate, export_record, user.email, user)
+
     await db.commit()
     await db.refresh(export_record)
     return export_record
@@ -292,7 +372,7 @@ async def download_export(
     suffix = ""
     if export_record.format == ExportFormat.PDF_QUOTATION.value:
         suffix = "-quotation"
-    elif export_record.format == ExportFormat.PDF_PRELIMINARY.value:
+    elif export_record.format == "pdf_preliminary":
         suffix = "-preliminary"
     filename = f"estimate-{export_record.estimate_id}{suffix}.{extension}"
     content_type = CONTENT_TYPES.get(export_record.format, "application/octet-stream")
@@ -322,6 +402,13 @@ async def delete_export(
     export_record, estimate = row
     require_estimate_access(estimate, user)
 
+    if is_contact_user(user):
+        raise AppError(
+            "Contact accounts cannot delete exports",
+            "CONTACT_ACCESS_DENIED",
+            status_code=403,
+        )
+
     storage = get_storage_backend()
     if await storage.exists(export_record.storage_path):
         await storage.delete(export_record.storage_path)
@@ -338,6 +425,13 @@ async def send_exports_email(
     message: str | None,
     user: User,
 ) -> dict:
+    if is_contact_user(user):
+        raise AppError(
+            "Contact accounts receive exports automatically by email",
+            "CONTACT_ACCESS_DENIED",
+            status_code=403,
+        )
+
     estimate = await _get_estimate_for_export(db, estimate_id, user)
 
     unique_ids = list(dict.fromkeys(export_ids))

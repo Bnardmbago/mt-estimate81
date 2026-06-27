@@ -82,6 +82,49 @@ def _send_sync(
             server.send_message(message)
 
 
+async def send_email(
+    *,
+    to_email: str,
+    subject: str,
+    body_text: str,
+    config: SMTPRuntimeConfig | None = None,
+) -> None:
+    runtime_config = config or default_smtp_runtime_config()
+
+    if not smtp_configured(runtime_config):
+        if settings.app_env == "development":
+            logger.info(
+                "Email not sent (SMTP not configured): to=%s subject=%s",
+                to_email,
+                subject,
+            )
+            return
+
+        raise AppError(
+            "Email is not configured on the server",
+            "EMAIL_NOT_CONFIGURED",
+            status_code=503,
+        )
+
+    try:
+        await asyncio.to_thread(
+            _send_sync,
+            to_email=to_email,
+            subject=subject,
+            body_text=body_text,
+            attachments=[],
+            config=runtime_config,
+        )
+    except Exception as exc:
+        logger.exception("Failed to send email to %s", to_email)
+        raise AppError(
+            "Failed to send email",
+            "EMAIL_SEND_FAILED",
+            status_code=502,
+            details={"reason": str(exc)},
+        ) from exc
+
+
 async def send_email_with_attachments(
     *,
     to_email: str,

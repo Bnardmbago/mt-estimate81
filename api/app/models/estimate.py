@@ -31,9 +31,10 @@ class EstimateStatus(str, enum.Enum):
 class ExportFormat(str, enum.Enum):
     PDF = "pdf"
     PDF_QUOTATION = "pdf_quotation"
-    PDF_PRELIMINARY = "pdf_preliminary"
     XLSX = "xlsx"
     MD = "md"
+    DOCX = "docx"
+    DOCX_QUOTATION = "docx_quotation"
 
 
 class Estimate(Base):

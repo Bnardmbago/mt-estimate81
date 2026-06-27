@@ -2,12 +2,22 @@ from datetime import datetime
 from typing import Any
 
 from app.ai.schemas import accuracy_level_from_score
-from app.calculation.engine import HOURS_PER_EFFORT_DAY, role_personnel_count
-from app.config import settings
+from app.calculation.engine import (
+    HOURS_PER_EFFORT_DAY,
+    filter_active_role_breakdown,
+    role_personnel_count,
+)
 from app.exports.markdown import (
     LABELS,
     _build_feature_rows,
+    format_currency,
     format_date,
+    format_person_days,
+)
+from app.exports.export_i18n import (
+    localize_calculation_for_export,
+    localize_feature_rows,
+    localize_gantt,
 )
 from app.exports.gantt_svg import build_gantt_svg
 from app.exports.questionnaire import (
@@ -66,11 +76,6 @@ def _resolve_estimate_type(extracted: dict[str, Any], form_data: dict[str, Any])
     return ""
 
 
-def _accuracy_label(level: str, locale: str) -> str:
-    labels = LABELS[locale]
-    return labels.get(f"accuracy_{level}", level)
-
-
 def _enrich_role_breakdown(
     role_breakdown: list[dict[str, Any]],
     *,
@@ -100,6 +105,7 @@ def build_report_context(
     rate_card_version_number: int | None,
     rate_card_effective_date: datetime | None,
     export_revision: int,
+    export_user_display_name: str | None = None,
 ) -> dict[str, Any]:
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
@@ -117,16 +123,45 @@ def build_report_context(
     rc = calculation.get("rc") or {}
 
     estimate_type = _resolve_estimate_type(extracted, form_data)
-    cost_drivers = calculation.get("cost_drivers") or extracted.get("cost_drivers") or []
     total_days = float(calculation.get("total_effort_days") or 0)
     estimated_duration_days = float(
         calculation.get("estimated_duration_days") or total_days or 0
     )
-    role_breakdown = _enrich_role_breakdown(
-        calculation.get("role_breakdown") or [],
+    role_breakdown = filter_active_role_breakdown(
+        _enrich_role_breakdown(
+            calculation.get("role_breakdown") or [],
+            estimated_duration_days=estimated_duration_days,
+            total_days=total_days,
+        ),
         estimated_duration_days=estimated_duration_days,
         total_days=total_days,
     )
+    calculation_payload = {
+        **calculation,
+        "phase_breakdown": calculation.get("phase_breakdown") or [],
+        "role_breakdown": role_breakdown,
+        "nrc_line_items": calculation.get("nrc_line_items") or [],
+        "rc_line_items": calculation.get("rc_line_items") or [],
+        "role_labor_subtotal_jpy": int(round(float(nrc.get("labor_jpy") or 0))),
+    }
+    calculation_payload = localize_calculation_for_export(calculation_payload, locale)
+    feature_items = localize_feature_rows(_build_feature_rows(estimate), locale)
+    gantt = localize_gantt(calculation.get("gantt") or {}, locale)
+
+    nrc_total_jpy = int(round(float(nrc.get("total_jpy") or 0)))
+    monthly_rc_jpy = int(round(float(rc.get("monthly_total_jpy") or 0)))
+    annual_rc_jpy = int(round(float(rc.get("annual_total_jpy") or 0)))
+    duration_days = float(
+        calculation.get("estimated_duration_days") or calculation.get("total_effort_days") or 0
+    )
+    creator_display = (export_user_display_name or "").strip() or "—"
+    executive_display = {
+        "development_cost_jpy": nrc_total_jpy,
+        "maintenance_cost_display": (
+            f"{format_currency(monthly_rc_jpy)} / {format_currency(annual_rc_jpy)}"
+        ),
+        "development_period_display": f"{format_person_days(duration_days)} {labels['days']}",
+    }
 
     return {
         "labels": labels,
@@ -139,16 +174,15 @@ def build_report_context(
             "export_revision": export_revision,
             "estimate_type": estimate_type or labels["none"],
             "generated_date": format_date(generated_at, locale),
+            "estimate_creator": creator_display,
         },
         "executive_summary": {
-            "nrc_total_jpy": int(nrc.get("total_jpy") or 0),
-            "monthly_rc_jpy": int(rc.get("monthly_total_jpy") or 0),
-            "annual_rc_jpy": int(rc.get("annual_total_jpy") or 0),
-            "first_year_total_jpy": int(calculation.get("first_year_total_jpy") or 0),
-            "confidence_score": extracted["confidence_score"],
-            "accuracy_level": extracted["accuracy_level"],
-            "accuracy_label": _accuracy_label(extracted["accuracy_level"], locale),
+            "nrc_total_jpy": nrc_total_jpy,
+            "monthly_rc_jpy": monthly_rc_jpy,
+            "annual_rc_jpy": annual_rc_jpy,
+            "first_year_total_jpy": int(round(float(calculation.get("first_year_total_jpy") or 0))),
         },
+        "executive_display": executive_display,
         "questionnaire_sections": questionnaire_sections,
         "form_fields": build_flat_form_fields(
             form_data,
@@ -156,7 +190,7 @@ def build_report_context(
             locale,
         ),
         "extracted": extracted,
-        "feature_items": _build_feature_rows(estimate),
+        "feature_items": feature_items,
         "effort_summary": {
             "total_hours": calculation.get("total_effort_hours", 0),
             "total_days": calculation.get("total_effort_days", 0),
@@ -165,26 +199,7 @@ def build_report_context(
             ),
             "recommended_team_size": calculation.get("recommended_team_size", 1),
         },
-        "calculation": {
-            **calculation,
-            "phase_breakdown": calculation.get("phase_breakdown") or [],
-            "role_breakdown": role_breakdown,
-            "nrc_line_items": calculation.get("nrc_line_items") or [],
-            "rc_line_items": calculation.get("rc_line_items") or [],
-            "role_labor_subtotal_jpy": int(nrc.get("labor_jpy") or 0),
-        },
-        "cost_drivers": cost_drivers,
-        "rate_card_reference": {
-            "name": rate_card_name or labels["none"],
-            "version_number": rate_card_version_number,
-            "effective_date": format_date(rate_card_effective_date, locale)
-            if rate_card_effective_date
-            else labels["none"],
-            "policy_version": settings.calculation_policy_version,
-            "rate_card_currency": calculation.get("source_currency"),
-            "rate_card_region": calculation.get("source_region"),
-            "fx_snapshot": calculation.get("fx_snapshot"),
-        },
-        "gantt": calculation.get("gantt") or {},
-        "gantt_chart_svg": build_gantt_svg(calculation.get("gantt") or {}),
+        "calculation": calculation_payload,
+        "gantt": gantt,
+        "gantt_chart_svg": build_gantt_svg(gantt),
     }

@@ -22,6 +22,7 @@ def report_context():
 def test_format_currency():
     assert format_currency(1234567) == "¥1,234,567"
     assert format_currency(0) == "¥0"
+    assert format_currency(1234.6) == "¥1,235"
 
 
 def test_format_currency_yen():
@@ -51,10 +52,11 @@ def test_format_hours():
 
 def test_markdown_export_contains_first_year_total(report_context):
     md = generate_markdown(report_context)
-    assert "Total Development Cost (deployment and Delivery acceptance)" in md
-    assert "First Year Total Cost" in md
+    assert "Development cost" in md
+    assert "Maintenance & operations (monthly / annual)" in md
+    assert "Development period" in md
     assert "Developers" in md
-    assert "¥2,740,000" in md
+    assert "¥700,000" in md
     assert "¥" in md
 
 
@@ -66,37 +68,75 @@ def test_markdown_export_contains_effort_summary(report_context):
 
 
 def test_markdown_export_ja_locale():
-    ctx = sample_report_context(locale="ja", generated_at=datetime(2026, 6, 7))
+    ctx = sample_report_context(
+        locale="ja",
+        generated_at=datetime(2026, 6, 7),
+        export_user_display_name="山田太郎",
+    )
     md = generate_markdown(ctx)
-    assert "初年度合計コスト" in md
+    assert "開発コストの概要" in md
+    assert "開発費用" in md
+    assert "保守運用費用　月額 /年間" in md
+    assert "開発期間" in md
+    assert "見積作成者" in md
+    assert "山田太郎" in md
     assert "2026年6月7日" in md
-    assert "¥2,740,000" in md
+    assert "¥700,000" in md
+    assert "初年度合計コスト" not in md
+    assert "エグゼクティブコストサマリー" not in md
+    assert "抽出要件" not in md
+    assert "## 機能要件" in md
+    assert "## 機能詳細" in md
+    assert "推奨チーム人数" not in md
+    assert "フェーズ内訳" not in md
+    assert "ロール内訳" not in md
+    assert "## 非経常費用  内訳" in md
+    assert "## ランニングコスト  内訳" in md
+    assert "（NRC）" not in md
+    assert "（RC）" not in md
+    assert ".0 日" not in md
+    assert "Rate Card Reference" not in md
+    assert "AI Confidence" not in md
+    assert "Cost Drivers" not in md
+    assert "リスク・ギャップ" not in md
+    assert "| 実装 |" in md
+    assert "| 開発者 |" in md
 
 
 def test_markdown_export_all_report_sections(report_context):
     md = generate_markdown(report_context)
     sections = [
         "Project Summary",
-        "Executive Cost Summary",
-        "Key Assumptions",
-        "Input Assumptions",
-        "Extracted Requirements",
+        "Development Cost Summary",
+        "Functional Requirements",
         "Feature Line Items",
         "Effort Summary",
-        "Phase Breakdown",
         "Project Timeline (Gantt)",
-        "Role Breakdown",
         "NRC Breakdown (Detailed)",
         "RC Breakdown (Detailed)",
-        "Cost Drivers",
-        "Risks & Gaps",
         "Estimate Exclusions",
-        "AI Confidence Notes",
-        "Rate Card Reference",
         "Approval",
     ]
     for section in sections:
         assert section in md
+    removed = [
+        "Role Breakdown",
+        "Phase Breakdown",
+        "Cost Drivers",
+        "Risks & Gaps",
+        "AI Confidence Notes",
+        "Rate Card Reference",
+    ]
+    for section in removed:
+        assert section not in md
+
+
+def test_markdown_export_gantt_omits_task_table(report_context):
+    md = generate_markdown(report_context)
+    assert "Project Timeline (Gantt)" in md
+    assert "Project start" in md
+    assert "2026-06-09" in md
+    assert "2026-06-09 | 2026-06-13 |" not in md
 
 
 def test_markdown_export_feature_effort_days(report_context):
@@ -105,11 +145,12 @@ def test_markdown_export_feature_effort_days(report_context):
     assert "| User login & auth | OAuth and session management | development | developer | 40 | 5 |" in md
 
 
-def test_markdown_export_rate_card_reference():
+def test_markdown_export_omits_internal_sections():
     ctx = sample_report_context(
         rate_card_name="2026 Standard Rates",
         rate_card_version_number=2,
     )
     md = generate_markdown(ctx)
-    assert "2026 Standard Rates" in md
-    assert "| Version | 2 |" in md
+    assert "2026 Standard Rates" not in md
+    assert "Rate Card Reference" not in md
+    assert "Cost Drivers" not in md

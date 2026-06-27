@@ -6,8 +6,13 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.ai_config import get_ai_config
+from app.admin.smtp_config import get_smtp_config, smtp_runtime_config
+from app.config import settings
 from app.dependencies import get_db, require_admin
+from app.email.smtp import smtp_configured
+from app.rate_cards.system import get_system_rate_card
 from app.documents.hermes_client import HermesClient
+from app.estimates.extraction import STUCK_EXTRACTION_MINUTES
 from app.models.estimate import Estimate, EstimateStatus
 from app.models.user import User
 from app.storage.factory import get_storage_backend
@@ -25,9 +30,17 @@ class SystemHealthResponse(BaseModel):
     stuck_extractions: int
     storage_usage_bytes: int
     app_version: str = "0.1.0"
+    smtp_configured: bool
+    turnstile_configured: bool
+    contact_export_limit: int
+    contact_magic_link_ttl_minutes: int
+    system_rate_card_configured: bool
 
 
-async def count_estimates_stuck_extracting(db: AsyncSession, minutes: int = 10) -> int:
+async def count_estimates_stuck_extracting(
+    db: AsyncSession,
+    minutes: int = STUCK_EXTRACTION_MINUTES,
+) -> int:
     threshold = datetime.utcnow() - timedelta(minutes=minutes)
     result = await db.execute(
         select(func.count())
@@ -59,6 +72,9 @@ async def system_health(
     storage = get_storage_backend()
     stuck = await count_estimates_stuck_extracting(db)
     ai_config = await get_ai_config(db)
+    smtp_config = await get_smtp_config(db)
+    smtp_runtime = smtp_runtime_config(smtp_config)
+    system_rate_card = await get_system_rate_card(db)
 
     return SystemHealthResponse(
         database=database,
@@ -69,4 +85,9 @@ async def system_health(
         anthropic_api_key_configured=bool(ai_config.anthropic_api_key),
         stuck_extractions=stuck,
         storage_usage_bytes=await storage.usage(),
+        smtp_configured=smtp_configured(smtp_runtime),
+        turnstile_configured=bool(settings.turnstile_secret_key.strip()),
+        contact_export_limit=settings.contact_export_limit,
+        contact_magic_link_ttl_minutes=settings.contact_magic_link_ttl_minutes,
+        system_rate_card_configured=system_rate_card is not None,
     )

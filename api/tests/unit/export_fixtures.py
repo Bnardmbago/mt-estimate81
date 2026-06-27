@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime
 from types import SimpleNamespace
 
-from app.exports.preliminary_context import build_preliminary_context
 from app.exports.quotation_context import build_quotation_context
 from app.exports.report_context import build_report_context
 from app.i18n.localized_content import store_localized_dict
@@ -163,6 +162,7 @@ def sample_report_context(
     rate_card_version_number: int | None = 2,
     rate_card_effective_date: datetime | None = None,
     export_revision: int = 1,
+    export_user_display_name: str | None = None,
 ):
     estimate = estimate or sample_estimate_with_calculation()
     return build_report_context(
@@ -173,6 +173,7 @@ def sample_report_context(
         rate_card_version_number=rate_card_version_number,
         rate_card_effective_date=rate_card_effective_date or datetime(2026, 1, 1),
         export_revision=export_revision,
+        export_user_display_name=export_user_display_name,
     )
 
 
@@ -189,30 +190,6 @@ def sample_quotation_context(
 ):
     estimate = estimate or sample_estimate_with_calculation()
     return build_quotation_context(
-        estimate,
-        locale,
-        generated_at=generated_at or datetime(2026, 6, 7),
-        rate_card_name=rate_card_name,
-        rate_card_version_number=rate_card_version_number,
-        rate_card_effective_date=rate_card_effective_date or datetime(2026, 1, 1),
-        export_revision=export_revision,
-        tax_rate=tax_rate,
-    )
-
-
-def sample_preliminary_context(
-    estimate=None,
-    *,
-    locale: str = "en",
-    generated_at: datetime | None = None,
-    rate_card_name: str | None = "2026 Standard Rates",
-    rate_card_version_number: int | None = 2,
-    rate_card_effective_date: datetime | None = None,
-    export_revision: int = 1,
-    tax_rate: float = 0.10,
-):
-    estimate = estimate or sample_estimate_with_calculation()
-    return build_preliminary_context(
         estimate,
         locale,
         generated_at=generated_at or datetime(2026, 6, 7),

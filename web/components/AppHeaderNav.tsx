@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
+import type { AccountType } from "@/lib/user-types";
 
 type NavLabels = {
   welcome: string;
@@ -24,6 +25,7 @@ type AppHeaderNavProps = {
   locale: string;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  accountType: AccountType;
   labels: NavLabels;
 };
 
@@ -75,6 +77,7 @@ export default function AppHeaderNav({
   locale,
   isAuthenticated,
   isAdmin,
+  accountType,
   labels,
 }: AppHeaderNavProps) {
   const t = useTranslations("nav");
@@ -82,6 +85,8 @@ export default function AppHeaderNav({
   const panelId = useId();
   const navRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const isContactUser = accountType === "contact";
 
   const items: NavItem[] = [
     {
@@ -92,28 +97,31 @@ export default function AppHeaderNav({
   ];
 
   if (isAuthenticated) {
-    items.push(
-      {
-        href: `/${locale}/estimates`,
-        label: labels.estimates,
-        match: (path) => path === "/estimates" || path.startsWith("/estimates/"),
-      },
-      {
-        href: `/${locale}/rate-cards`,
-        label: labels.rateCards,
-        match: (path) => path === "/rate-cards" || path.startsWith("/rate-cards/"),
-      },
-      {
-        href: `/${locale}/proof-of-concept`,
-        label: labels.proofOfConcept,
-        match: (path) => path === "/proof-of-concept" || path.startsWith("/proof-of-concept/"),
-      },
-      {
-        href: `/${locale}/help`,
-        label: labels.help,
-        match: (path) => path === "/help" || path.startsWith("/help/"),
-      },
-    );
+    items.push({
+      href: `/${locale}/estimates`,
+      label: labels.estimates,
+      match: (path) => path === "/estimates" || path.startsWith("/estimates/"),
+    });
+
+    if (!isContactUser) {
+      items.push(
+        {
+          href: `/${locale}/rate-cards`,
+          label: labels.rateCards,
+          match: (path) => path === "/rate-cards" || path.startsWith("/rate-cards/"),
+        },
+        {
+          href: `/${locale}/proof-of-concept`,
+          label: labels.proofOfConcept,
+          match: (path) => path === "/proof-of-concept" || path.startsWith("/proof-of-concept/"),
+        },
+        {
+          href: `/${locale}/help`,
+          label: labels.help,
+          match: (path) => path === "/help" || path.startsWith("/help/"),
+        },
+      );
+    }
 
     if (isAdmin) {
       items.push({

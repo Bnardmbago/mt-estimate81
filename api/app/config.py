@@ -19,18 +19,28 @@ class Settings(BaseSettings):
     calculation_policy_version: str = "1.0.0"
     fx_refresh_interval_seconds: int = 3600
 
-    quotation_company_name: str = "MTECH Corporation"
-    quotation_company_brand: str = "MTECH"
-    quotation_company_postal_code: str = ""
-    quotation_company_address: str = ""
-    quotation_company_tel: str = ""
-    quotation_company_email: str = ""
+    quotation_company_name: str = "株式会社 Beyond AI"
+    quotation_company_brand: str = "Beyond AI"
+    quotation_company_postal_code: str = "103-0027"
+    quotation_company_address: str = (
+        "東京都中央区日本橋 2丁目1番3号\n"
+        "アーバンネット日本橋二丁目ビル 10階"
+    )
+    quotation_company_tel: str = "03-6262-0742"
+    quotation_company_email: str = "ai@beyondai.co.jp"
     quotation_invoice_registration_number: str = ""
-    quotation_payment_terms_ja: str = "納品後30日以内"
-    quotation_payment_terms_en: str = "Within 30 days after delivery"
+    quotation_contact_person: str = ""
+    quotation_payment_terms_ja: str = "納品後7日以内"
+    quotation_payment_terms_en: str = "Within 7 days after delivery"
     quotation_validity_days: int = 30
-    quotation_bank_details_ja: str = ""
-    quotation_bank_details_en: str = ""
+    quotation_bank_details_ja: str = (
+        "株式会社Beyond AI\n"
+        "住信SBIネット銀行 法人第一支店（ 106） 普通口座 2112728"
+    )
+    quotation_bank_details_en: str = (
+        "Beyond AI Co., Ltd.\n"
+        "SBI Sumishin Net Bank, Corporate First Branch (106), Ordinary Account 2112728"
+    )
     quotation_remarks_ja: str = "ご検討のほど、よろしくお願い申し上げます。"
     quotation_remarks_en: str = "Thank you for your consideration."
 
@@ -40,6 +50,14 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
     smtp_use_tls: bool = True
+
+    web_base_url: str = "http://localhost:3000"
+    turnstile_secret_key: str = ""
+    contact_jwt_expiry_hours: int = 72
+    contact_magic_link_ttl_minutes: int = 15
+    contact_export_limit: int = 3
+    contact_magic_link_rate_limit_per_email: int = 3
+    contact_magic_link_rate_limit_per_ip: int = 10
 
 
 settings = Settings()

@@ -2,15 +2,21 @@ import json
 from typing import Any, Literal
 
 MAX_DOCUMENT_CHARS = 80_000
+# Smaller cap for requirement extraction keeps AI latency predictable on large specs.
+MAX_EXTRACTION_DOCUMENT_CHARS = 40_000
 
 
-def _truncate_document_texts(texts: list[str]) -> tuple[list[str], str | None]:
+def _truncate_document_texts(
+    texts: list[str],
+    *,
+    max_chars: int = MAX_DOCUMENT_CHARS,
+) -> tuple[list[str], str | None]:
     combined_len = sum(len(text) for text in texts)
-    if combined_len <= MAX_DOCUMENT_CHARS:
+    if combined_len <= max_chars:
         return texts, None
 
     truncated: list[str] = []
-    remaining = MAX_DOCUMENT_CHARS
+    remaining = max_chars
     for text in texts:
         if remaining <= 0:
             break
@@ -22,7 +28,7 @@ def _truncate_document_texts(texts: list[str]) -> tuple[list[str], str | None]:
             remaining = 0
 
     note = (
-        f"Document texts were truncated from {combined_len:,} to {MAX_DOCUMENT_CHARS:,} characters. "
+        f"Document texts were truncated from {combined_len:,} to {max_chars:,} characters. "
         "Some content may be missing from the analysis."
     )
     return truncated, note
@@ -49,7 +55,9 @@ def build_system_prompt(locale: Literal["ja", "en"]) -> str:
         "assumption_risks, and estimate_exclusions (items not included in this estimate).\n"
         "Set estimate_type from the project (e.g. web application, mobile app, integration).\n"
         "Provide cost_drivers as major factors affecting cost with signed impact_jpy in JPY "
-        "(positive means cost increase)."
+        "(positive means cost increase).\n"
+        "For large documents, prioritize the highest-impact features and keep feature_items "
+        "focused (roughly 25–45 items) unless the scope clearly requires more."
     )
 
 
@@ -59,7 +67,10 @@ def build_user_prompt(
     rate_card_roles: list[dict[str, Any]] | None = None,
 ) -> str:
     roles = rate_card_roles or []
-    truncated_texts, truncation_note = _truncate_document_texts(texts)
+    truncated_texts, truncation_note = _truncate_document_texts(
+        texts,
+        max_chars=MAX_EXTRACTION_DOCUMENT_CHARS,
+    )
 
     sections = [
         "## Questionnaire Answers",

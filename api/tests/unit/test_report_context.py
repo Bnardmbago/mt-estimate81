@@ -53,6 +53,56 @@ def test_report_context_enriches_role_breakdown_developers():
     assert row["personnel_count"] == 4
 
 
+def test_report_context_filters_inactive_role_breakdown_rows():
+    estimate = sample_estimate_with_calculation()
+    estimate.calculation_result["role_breakdown"] = [
+        {"role": "PM", "hours": 0, "personnel_count": 0, "rate_jpy": 8000, "cost_jpy": 0},
+        {
+            "role": "developer",
+            "hours": 40,
+            "personnel_count": 1,
+            "rate_jpy": 6000,
+            "cost_jpy": 240000,
+        },
+    ]
+
+    ctx = build_report_context(
+        estimate,
+        "en",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="Standard",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+    )
+
+    roles = [row["role"] for row in ctx["calculation"]["role_breakdown"]]
+    assert roles == ["developer"]
+
+
+def test_report_context_ja_labels_and_executive_display():
+    ctx = build_report_context(
+        sample_estimate_with_calculation(),
+        "ja",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="Standard",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=2,
+        export_user_display_name="テストユーザー",
+    )
+    labels = ctx["labels"]
+    assert labels["client_name"] == "お客様名"
+    assert labels["estimate_type"] == "システムの種類"
+    assert labels["estimate_id"] == "見積番号"
+    assert labels["executive_cost_summary"] == "開発コストの概要"
+    assert ctx["project_summary"]["estimate_creator"] == "テストユーザー"
+    assert ctx["executive_display"]["development_cost_jpy"] == 700000
+    assert "¥170,000" in ctx["executive_display"]["maintenance_cost_display"]
+    assert ctx["executive_display"]["development_period_display"].endswith("日")
+    assert ".0 " not in ctx["executive_display"]["development_period_display"]
+
+
 def test_report_context_includes_gantt_chart_svg():
     estimate = sample_estimate_with_calculation()
     ctx = build_report_context(
@@ -89,7 +139,8 @@ def test_report_context_legacy_extracted_data_fallbacks():
     assert ctx["extracted"]["confidence_score"] == 60.0
     assert ctx["extracted"]["accuracy_level"] == "medium"
     assert ctx["extracted"]["estimate_exclusions"] == []
-    assert ctx["rate_card_reference"]["name"] == "None"
+    assert "rate_card_reference" not in ctx
+    assert "cost_drivers" not in ctx
 
 
 def test_report_context_project_summary_fields():
@@ -218,3 +269,6 @@ def test_report_context_resolves_i18n_extracted_data():
 
     assert ctx_ja["extracted"]["functional_requirements"] == ["ログイン"]
     assert ctx_ja["project_summary"]["estimate_type"] == "Webアプリ"
+    assert ctx_ja["feature_items"][0]["phase"] == "実装"
+    assert ctx_ja["feature_items"][0]["role"] == "開発者"
+    assert ctx_ja["calculation"]["nrc_line_items"][0]["category"] == "開発"

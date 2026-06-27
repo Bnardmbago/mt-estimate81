@@ -1,5 +1,55 @@
 const API_BASE = "/api";
 
+export type ApiErrorPayload = {
+  error?: string;
+  code?: string;
+  details?: Record<string, unknown>;
+};
+
+export function parseApiErrorPayload(
+  payload: unknown,
+  fallback: string,
+): { message: string; code?: string } {
+  if (typeof payload !== "object" || payload === null) {
+    return { message: fallback };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const nested =
+    typeof record.detail === "object" && record.detail !== null
+      ? (record.detail as Record<string, unknown>)
+      : null;
+
+  const error =
+    (typeof record.error === "string" && record.error) ||
+    (nested && typeof nested.error === "string" ? nested.error : null);
+  const code =
+    (typeof record.code === "string" && record.code) ||
+    (nested && typeof nested.code === "string" ? nested.code : undefined);
+
+  if (error) {
+    return { message: error, code };
+  }
+
+  if (typeof record.detail === "string") {
+    return { message: record.detail };
+  }
+
+  if (Array.isArray(record.detail)) {
+    const message = record.detail
+      .map((item: { msg?: string; loc?: string[] }) =>
+        item.loc ? `${item.loc.join(".")}: ${item.msg ?? "invalid"}` : item.msg,
+      )
+      .filter(Boolean)
+      .join("; ");
+    if (message) {
+      return { message };
+    }
+  }
+
+  return { message: fallback };
+}
+
 export function withLocaleHeaders(locale: string, options: RequestInit = {}): RequestInit {
   const headers = new Headers(options.headers);
   headers.set("X-Display-Locale", locale);
@@ -38,25 +88,8 @@ export async function apiJson<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    const payload =
-      typeof error.error === "string"
-        ? error
-        : typeof error.detail === "object"
-          ? error.detail
-          : error;
-    throw new Error(
-      typeof payload.error === "string"
-        ? payload.error
-        : typeof error.detail === "string"
-          ? error.detail
-          : Array.isArray(error.detail)
-            ? error.detail
-                .map((item: { msg?: string; loc?: string[] }) =>
-                  item.loc ? `${item.loc.join(".")}: ${item.msg ?? "invalid"}` : item.msg,
-                )
-                .join("; ")
-            : response.statusText,
-    );
+    const { message } = parseApiErrorPayload(error, response.statusText);
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;

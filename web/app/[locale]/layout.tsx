@@ -6,6 +6,7 @@ import { routing, type Locale } from "@/i18n/routing";
 import AppHeader from "@/components/AppHeader";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import ThemeScript from "@/components/ThemeScript";
+import type { AccountType } from "@/lib/user-types";
 import "../globals.css";
 
 export function generateStaticParams() {
@@ -30,14 +31,19 @@ export default async function LocaleLayout({
   const token = cookieStore.get("access_token")?.value;
   const isAuthenticated = Boolean(token);
   let isAdmin = false;
+  let accountType: AccountType = "full";
 
   if (isAuthenticated && token) {
     const { serverApiJson } = await import("@/lib/server-api");
     const profile = await serverApiJson<{
       is_admin: boolean;
       is_active: boolean;
+      account_type: AccountType;
     }>("/auth/me", token);
-    isAdmin = profile.status === "ok" && profile.data.is_admin && profile.data.is_active;
+    if (profile.status === "ok") {
+      isAdmin = profile.data.is_admin && profile.data.is_active;
+      accountType = profile.data.account_type ?? "full";
+    }
   }
 
   return (
@@ -48,7 +54,12 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
-            <AppHeader locale={locale} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
+            <AppHeader
+              locale={locale}
+              isAuthenticated={isAuthenticated}
+              isAdmin={isAdmin}
+              accountType={accountType}
+            />
             <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
           </ThemeProvider>
         </NextIntlClientProvider>

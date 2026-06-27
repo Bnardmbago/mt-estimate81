@@ -130,9 +130,9 @@
   </div>
 
   <div class="section">
-    <h2>{{ labels.extracted_requirements }}</h2>
+    {% if extracted.functional_requirements or extracted.non_functional_requirements or extracted.user_roles or extracted.modules or extracted.external_systems %}
     {% if extracted.functional_requirements %}
-      <h3>{{ labels.functional_requirements }}</h3>
+      <h2>{{ labels.functional_requirements }}</h2>
       <ul>
         {% for item in extracted.functional_requirements %}
           <li>{{ item }}</li>
@@ -140,7 +140,7 @@
       </ul>
     {% endif %}
     {% if extracted.non_functional_requirements %}
-      <h3>{{ labels.non_functional_requirements }}</h3>
+      <h2>{{ labels.non_functional_requirements }}</h2>
       <ul>
         {% for item in extracted.non_functional_requirements %}
           <li>{{ item }}</li>
@@ -148,7 +148,7 @@
       </ul>
     {% endif %}
     {% if extracted.user_roles %}
-      <h3>{{ labels.user_roles }}</h3>
+      <h2>{{ labels.user_roles }}</h2>
       <ul>
         {% for item in extracted.user_roles %}
           <li>{{ item }}</li>
@@ -156,7 +156,7 @@
       </ul>
     {% endif %}
     {% if extracted.modules %}
-      <h3>{{ labels.modules }}</h3>
+      <h2>{{ labels.modules }}</h2>
       <ul>
         {% for item in extracted.modules %}
           <li>{{ item }}</li>
@@ -164,14 +164,15 @@
       </ul>
     {% endif %}
     {% if extracted.external_systems %}
-      <h3>{{ labels.external_systems }}</h3>
+      <h2>{{ labels.external_systems }}</h2>
       <ul>
         {% for item in extracted.external_systems %}
           <li>{{ item }}</li>
         {% endfor %}
       </ul>
     {% endif %}
-    {% if not extracted.functional_requirements and not extracted.non_functional_requirements and not extracted.user_roles and not extracted.modules and not extracted.external_systems %}
+    {% else %}
+      <h2>{{ labels.functional_requirements }}</h2>
       <p class="muted">{{ labels.none }}</p>
     {% endif %}
   </div>
@@ -213,52 +214,6 @@
   </div>
 
   <div class="section">
-    <h2>{{ labels.phase_breakdown }}</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>{{ labels.phase }}</th>
-          <th class="num">{{ labels.hours }}</th>
-          <th class="num">{{ labels.percentage }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in calculation.phase_breakdown %}
-          <tr>
-            <td>{{ row.phase }}</td>
-            <td class="num">{{ format_hours(row.hours) }}</td>
-            <td class="num">{{ "%.0f"|format(row.percentage * 100) }}%</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section">
-    <h2>{{ labels.role_breakdown }}</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>{{ labels.role }}</th>
-          <th class="num">{{ labels.hours }}</th>
-          <th class="num">{{ labels.rate }}</th>
-          <th class="num">{{ labels.cost }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in calculation.role_breakdown %}
-          <tr>
-            <td>{{ row.role }}</td>
-            <td class="num">{{ format_hours(row.hours) }}</td>
-            <td class="num">{{ format_currency(row.rate_jpy) }}</td>
-            <td class="num">{{ format_currency(row.cost_jpy) }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section">
     <h2>{{ labels.nrc_breakdown }}</h2>
     <table>
       <tr><th>{{ labels.labor }}</th><td class="num">{{ format_currency(calculation.nrc.labor_jpy) }}</td></tr>
@@ -292,49 +247,6 @@
   <div class="section">
     <h2>{{ labels.first_year_total }}</h2>
     <p class="highlight">{{ format_currency(calculation.first_year_total_jpy) }}</p>
-  </div>
-
-  <div class="section">
-    <h2>{{ labels.risks_gaps }}</h2>
-    {% if extracted.risks %}
-      <h3>{{ labels.risks }}</h3>
-      <ul>
-        {% for item in extracted.risks %}
-          <li>{{ item }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    {% if extracted.gaps %}
-      <h3>{{ labels.gaps }}</h3>
-      <ul>
-        {% for item in extracted.gaps %}
-          <li>{{ item }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    {% if not extracted.risks and not extracted.gaps %}
-      <p class="muted">{{ labels.none }}</p>
-    {% endif %}
-  </div>
-
-  <div class="section">
-    <h2>{{ labels.confidence_notes }}</h2>
-    {% if extracted.confidence_notes %}
-      <p class="field-value">{{ extracted.confidence_notes }}</p>
-    {% else %}
-      <p class="muted">{{ labels.none }}</p>
-    {% endif %}
-  </div>
-
-  <div class="section">
-    <h2>{{ labels.rate_card_reference }}</h2>
-    <table>
-      <tr><th>{{ labels.rate_card_name }}</th><td>{{ rate_card_name or labels.none }}</td></tr>
-      <tr>
-        <th>{{ labels.rate_card_version }}</th>
-        <td>{% if rate_card_version_number is not none %}{{ rate_card_version_number }}{% else %}{{ labels.none }}{% endif %}</td>
-      </tr>
-    </table>
   </div>
 </body>
 </html>

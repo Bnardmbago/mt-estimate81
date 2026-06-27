@@ -5,176 +5,55 @@
   <title>{{ ctx.labels.title }}</title>
   <style>
     {% include '_export_theme.css.j2' %}
-    @page { size: A4; margin: 10mm 8mm; }
-    @font-face {
-      font-family: "Noto Sans JP";
-      src: local("Noto Sans CJK JP"), local("Noto Sans JP");
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
-      font-size: 8pt;
-      line-height: 1.25;
-      color: var(--export-text-body);
-      margin: 0;
-    }
-    h1 {
-      font-size: 13pt;
-      font-weight: 700;
-      margin: 0 0 8pt;
-      color: var(--export-text-on-primary);
-      background: var(--export-blue-primary);
-      padding: 6pt 10pt;
-      border-bottom: none;
-    }
-    h2 {
-      font-size: 9pt;
-      font-weight: 700;
-      margin: 8pt 0 4pt;
-      color: var(--export-text-body);
-      background: var(--export-yellow-section);
-      border-bottom: 2px solid var(--export-blue-primary);
-      padding: 3pt 6pt;
-    }
-    h3 {
-      font-size: 8pt;
-      font-weight: 600;
-      margin: 4pt 0 2pt;
-      color: var(--export-blue-primary);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 2pt 0 6pt;
-      font-size: 7.5pt;
-    }
-    th, td {
-      border: 1px solid var(--export-border);
-      padding: 2pt 4pt;
-      text-align: left;
-      vertical-align: top;
-    }
-    th {
-      background: var(--export-blue-primary);
-      color: var(--export-text-on-primary);
-      font-weight: 600;
-    }
-    tbody tr:nth-child(odd):not(.total-row) td { background: var(--export-blue-light); }
-    tbody tr:nth-child(even):not(.total-row) td { background: #fff; }
-    .num { text-align: right; }
-    .total-row td, .total-row th {
-      font-weight: 700;
-      background: var(--export-yellow-total) !important;
-    }
-    .executive-box {
-      border: 1px solid var(--export-blue-primary);
-      background: var(--export-blue-light);
-      padding: 6pt 8pt;
-      margin: 4pt 0 8pt;
-      page-break-inside: avoid;
-    }
-    .executive-box h2 {
-      margin-top: 0;
-      border-bottom: none;
-      padding-bottom: 0;
-      background: transparent;
-    }
-    .first-year-highlight {
-      font-size: 10pt;
-      font-weight: 700;
-      color: var(--export-blue-primary);
-      background: var(--export-yellow-total);
-      padding: 2pt 4pt;
-    }
-    ul { margin: 2pt 0 4pt; padding-left: 14pt; }
-    li { margin-bottom: 1pt; }
-    .muted { color: #6b7280; font-style: italic; font-size: 7pt; }
-    .field-value { margin: 0 0 4pt; white-space: pre-wrap; font-size: 7.5pt; }
-    .section { margin-bottom: 4pt; }
-    .signature-line {
-      border-bottom: 1px solid var(--export-border-light);
-      min-height: 14pt;
-      margin-top: 2pt;
-    }
-    .note { font-size: 7pt; color: #6b7280; margin: 0 0 4pt; }
-    .gantt-chart { margin: 4pt 0 6pt; page-break-inside: avoid; }
-    .gantt-chart svg { max-width: 100%; height: auto; display: block; }
-    p { margin: 2pt 0 4pt; }
-    .questionnaire-appendix { page-break-before: always; margin-top: 8pt; }
-    .appendix-title {
-      font-size: 10pt;
-      font-weight: 700;
-      background: var(--export-blue-primary);
-      color: var(--export-text-on-primary);
-      padding: 4pt 8pt;
-      margin: 0 0 6pt;
-    }
-    .appendix-section-title {
-      font-size: 8pt;
-      font-weight: 700;
-      background: var(--export-yellow-section);
-      border-left: 3px solid var(--export-blue-primary);
-      padding: 2pt 6pt;
-      margin: 6pt 0 3pt;
-    }
-    .appendix-table th {
-      background: var(--export-blue-primary);
-      color: var(--export-text-on-primary);
-    }
-    .appendix-table tbody tr:nth-child(odd) td { background: var(--export-blue-light); }
-    .appendix-table tbody tr:nth-child(even) td { background: #fff; }
+    {% include '_pdf_base.css.j2' %}
+    {% if show_watermark %}
+    {% include '_watermark.css.j2' %}
+    {% endif %}
   </style>
 </head>
 <body>
+  {% if show_watermark %}
+  <div class="contact-watermark">Contact Estimate</div>
+  {% endif %}
   <h1>{{ ctx.labels.title }}</h1>
 
-  <div class="section">
-      <h2>{{ ctx.labels.project_summary }}</h2>
-      <table>
+  <div class="section-card section">
+    <h2>{{ ctx.labels.project_summary }}</h2>
+    <table class="qa-table">
+      <tbody>
         <tr><th>{{ ctx.labels.project_name }}</th><td>{{ ctx.project_summary.project_name }}</td></tr>
+        <tr><th>{{ ctx.labels.estimate_type }}</th><td>{{ ctx.project_summary.estimate_type }}</td></tr>
         <tr><th>{{ ctx.labels.client_name }}</th><td>{{ ctx.project_summary.client_name }}</td></tr>
         <tr><th>{{ ctx.labels.estimate_id }}</th><td>{{ ctx.project_summary.estimate_id }}</td></tr>
         <tr><th>{{ ctx.labels.export_revision }}</th><td>{{ ctx.project_summary.export_revision }}</td></tr>
         <tr><th>{{ ctx.labels.generated_date }}</th><td>{{ ctx.project_summary.generated_date }}</td></tr>
-        <tr><th>{{ ctx.labels.estimate_type }}</th><td>{{ ctx.project_summary.estimate_type }}</td></tr>
-      </table>
-    </div>
+        <tr><th>{{ ctx.labels.estimate_creator }}</th><td>{{ ctx.project_summary.estimate_creator }}</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-    <div class="section executive-box">
-      <h2>{{ ctx.labels.executive_cost_summary }}</h2>
-      <table>
-        <thead>
-          <tr><th>{{ ctx.labels.item }}</th><th class="num">{{ ctx.labels.amount_jpy }}</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>{{ ctx.labels.nrc_total }}</td><td class="num">{{ format_currency(ctx.executive_summary.nrc_total_jpy) }}</td></tr>
-          <tr><td>{{ ctx.labels.monthly_rc }}</td><td class="num">{{ format_currency(ctx.executive_summary.monthly_rc_jpy) }}</td></tr>
-          <tr><td>{{ ctx.labels.annual_rc }}</td><td class="num">{{ format_currency(ctx.executive_summary.annual_rc_jpy) }}</td></tr>
-          <tr class="total-row">
-            <td>{{ ctx.labels.total_development_cost }}</td>
-            <td class="num first-year-highlight">{{ format_currency(ctx.executive_summary.nrc_total_jpy) }}</td>
-          </tr>
-          <tr>
-            <td>{{ ctx.labels.first_year_total_cost }}</td>
-            <td class="num">{{ format_currency(ctx.executive_summary.first_year_total_jpy) }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>
-        <strong>{{ ctx.labels.confidence_score }}:</strong> {{ "%.0f"|format(ctx.executive_summary.confidence_score) }}% —
-        <strong>{{ ctx.labels.accuracy_level }}:</strong> {{ ctx.executive_summary.accuracy_label }}
-      </p>
-    </div>
+  <div class="section-card section">
+    <h2>{{ ctx.labels.executive_cost_summary }}</h2>
+    <table class="qa-table">
+      <tbody>
+        <tr><th>{{ ctx.labels.total_development_cost }}</th><td class="num">{{ format_currency(ctx.executive_summary.nrc_total_jpy) }}</td></tr>
+        <tr><th>{{ ctx.labels.maintenance_cost_monthly_annual }}</th><td class="num">{{ ctx.executive_display.maintenance_cost_display }}</td></tr>
+        <tr><th>{{ ctx.labels.development_period }}</th><td class="num">{{ ctx.executive_display.development_period_display }}</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.questionnaire }}</h2>
     {% if ctx.questionnaire_sections %}
       {% for section in ctx.questionnaire_sections %}
         <h3>{{ section.title }}</h3>
-        <table>
-          {% for field in section.fields %}
-            <tr><th>{{ field.label }}</th><td>{{ field.value }}</td></tr>
-          {% endfor %}
+        <table class="qa-table">
+          <tbody>
+            {% for field in section.fields %}
+              <tr><th>{{ field.label }}</th><td>{{ field.value }}</td></tr>
+            {% endfor %}
+          </tbody>
         </table>
       {% endfor %}
     {% else %}
@@ -182,36 +61,47 @@
     {% endif %}
   </div>
 
-  <div class="section">
-    <h2>{{ ctx.labels.extracted_requirements }}</h2>
+  {% if ctx.extracted.functional_requirements or ctx.extracted.non_functional_requirements or ctx.extracted.modules or ctx.extracted.user_roles or ctx.extracted.external_systems %}
     {% if ctx.extracted.functional_requirements %}
-      <h3>{{ ctx.labels.functional_requirements }}</h3>
-      <ul>{% for item in ctx.extracted.functional_requirements %}<li>{{ item }}</li>{% endfor %}</ul>
+  <div class="section-card section">
+    <h2>{{ ctx.labels.functional_requirements }}</h2>
+    <ul>{% for item in ctx.extracted.functional_requirements %}<li>{{ item }}</li>{% endfor %}</ul>
+  </div>
     {% endif %}
     {% if ctx.extracted.non_functional_requirements %}
-      <h3>{{ ctx.labels.non_functional_requirements }}</h3>
-      <ul>{% for item in ctx.extracted.non_functional_requirements %}<li>{{ item }}</li>{% endfor %}</ul>
+  <div class="section-card section">
+    <h2>{{ ctx.labels.non_functional_requirements }}</h2>
+    <ul>{% for item in ctx.extracted.non_functional_requirements %}<li>{{ item }}</li>{% endfor %}</ul>
+  </div>
     {% endif %}
     {% if ctx.extracted.modules %}
-      <h3>{{ ctx.labels.modules }}</h3>
-      <ul>{% for item in ctx.extracted.modules %}<li>{{ item }}</li>{% endfor %}</ul>
+  <div class="section-card section">
+    <h2>{{ ctx.labels.modules }}</h2>
+    <ul>{% for item in ctx.extracted.modules %}<li>{{ item }}</li>{% endfor %}</ul>
+  </div>
     {% endif %}
     {% if ctx.extracted.user_roles %}
-      <h3>{{ ctx.labels.user_roles }}</h3>
-      <ul>{% for item in ctx.extracted.user_roles %}<li>{{ item }}</li>{% endfor %}</ul>
+  <div class="section-card section">
+    <h2>{{ ctx.labels.user_roles }}</h2>
+    <ul>{% for item in ctx.extracted.user_roles %}<li>{{ item }}</li>{% endfor %}</ul>
+  </div>
     {% endif %}
     {% if ctx.extracted.external_systems %}
-      <h3>{{ ctx.labels.external_systems }}</h3>
-      <ul>{% for item in ctx.extracted.external_systems %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if not ctx.extracted.functional_requirements and not ctx.extracted.non_functional_requirements and not ctx.extracted.modules and not ctx.extracted.user_roles and not ctx.extracted.external_systems %}
-      <p class="muted">{{ ctx.labels.none }}</p>
-    {% endif %}
+  <div class="section-card section">
+    <h2>{{ ctx.labels.external_systems }}</h2>
+    <ul>{% for item in ctx.extracted.external_systems %}<li>{{ item }}</li>{% endfor %}</ul>
   </div>
+    {% endif %}
+  {% else %}
+  <div class="section-card section">
+    <h2>{{ ctx.labels.functional_requirements }}</h2>
+    <p class="muted">{{ ctx.labels.none }}</p>
+  </div>
+  {% endif %}
 
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.feature_items }}</h2>
-    <table>
+    <table class="data-table">
       <thead>
         <tr>
           <th>{{ ctx.labels.feature_name }}</th>
@@ -237,114 +127,37 @@
     </table>
   </div>
 
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.effort_summary }}</h2>
-    <table>
-      <tr><th>{{ ctx.labels.total_hours }}</th><td class="num">{{ format_hours(ctx.effort_summary.total_hours) }}</td></tr>
-      <tr><th>{{ ctx.labels.total_days }}</th><td class="num">{{ format_effort_days(ctx.effort_summary.total_hours) }}</td></tr>
-      <tr><th>{{ ctx.labels.estimated_duration }}</th><td class="num">{{ "%.1f"|format(ctx.effort_summary.estimated_duration_days) }} {{ ctx.labels.days }}</td></tr>
-      <tr><th>{{ ctx.labels.recommended_team_size }}</th><td class="num">{{ ctx.effort_summary.recommended_team_size }}</td></tr>
-    </table>
-  </div>
-
-  <div class="section">
-    <h2>{{ ctx.labels.phase_breakdown }}</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>{{ ctx.labels.phase }}</th>
-          <th class="num">{{ ctx.labels.hours }}</th>
-          <th class="num">{{ ctx.labels.days }}</th>
-          <th class="num">{{ ctx.labels.percentage }}</th>
-        </tr>
-      </thead>
+    <table class="qa-table">
       <tbody>
-        {% for row in ctx.calculation.phase_breakdown %}
-          <tr>
-            <td>{{ row.phase }}</td>
-            <td class="num">{{ format_hours(row.hours) }}</td>
-            <td class="num">{{ format_effort_days(row.hours) }}</td>
-            <td class="num">{{ "%.0f"|format(row.percentage * 100) }}%</td>
-          </tr>
-        {% endfor %}
+        <tr><th>{{ ctx.labels.total_hours }}</th><td class="num">{{ format_hours(ctx.effort_summary.total_hours) }}</td></tr>
+        <tr><th>{{ ctx.labels.total_days }}</th><td class="num">{{ format_effort_days(ctx.effort_summary.total_hours) }}</td></tr>
+        <tr><th>{{ ctx.labels.estimated_duration }}</th><td class="num">{{ format_person_days(ctx.effort_summary.estimated_duration_days) }} {{ ctx.labels.days }}</td></tr>
       </tbody>
     </table>
   </div>
 
   {% if ctx.gantt and ctx.gantt.tasks %}
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.gantt_title }}</h2>
     <p class="note">{{ ctx.labels.gantt_assumption }}</p>
-    <table>
-      <tr><th>{{ ctx.labels.gantt_project_start }}</th><td>{{ ctx.gantt.project_start_date }}</td></tr>
-      <tr><th>{{ ctx.labels.gantt_project_end }}</th><td>{{ ctx.gantt.project_end_date }}</td></tr>
-      <tr><th>{{ ctx.labels.gantt_total_working_days }}</th><td class="num">{{ ctx.gantt.total_working_days }}</td></tr>
+    <table class="qa-table">
+      <tbody>
+        <tr><th>{{ ctx.labels.gantt_project_start }}</th><td>{{ ctx.gantt.project_start_date }}</td></tr>
+        <tr><th>{{ ctx.labels.gantt_project_end }}</th><td>{{ ctx.gantt.project_end_date }}</td></tr>
+        <tr><th>{{ ctx.labels.gantt_total_working_days }}</th><td class="num">{{ ctx.gantt.total_working_days }}</td></tr>
+      </tbody>
     </table>
     {% if ctx.gantt_chart_svg %}
     <div class="gantt-chart">{{ ctx.gantt_chart_svg | safe }}</div>
     {% endif %}
-    <table>
-      <thead>
-        <tr>
-          <th>{{ ctx.labels.gantt_task }}</th>
-          <th>{{ ctx.labels.phase }}</th>
-          <th>{{ ctx.labels.role }}</th>
-          <th class="num">{{ ctx.labels.hours }}</th>
-          <th>{{ ctx.labels.gantt_start_date }}</th>
-          <th>{{ ctx.labels.gantt_end_date }}</th>
-          <th class="num">{{ ctx.labels.gantt_duration_days }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for task in ctx.gantt.tasks %}
-          <tr>
-            <td>{{ task.name }}</td>
-            <td>{{ task.phase }}</td>
-            <td>{{ task.role }}</td>
-            <td class="num">{{ format_hours(task.hours) }}</td>
-            <td>{{ task.start_date }}</td>
-            <td>{{ task.end_date }}</td>
-            <td class="num">{{ task.duration_working_days }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
   </div>
   {% endif %}
 
-  <div class="section">
-    <h2>{{ ctx.labels.role_breakdown }}</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>{{ ctx.labels.role }}</th>
-          <th class="num">{{ ctx.labels.developers }}</th>
-          <th class="num">{{ ctx.labels.hours }}</th>
-          <th class="num">{{ ctx.labels.rate }}</th>
-          <th class="num">{{ ctx.labels.cost }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in ctx.calculation.role_breakdown %}
-          <tr>
-            <td>{{ row.role }}</td>
-            <td class="num">{{ row.personnel_count }}</td>
-            <td class="num">{{ format_hours(row.hours) }}</td>
-            <td class="num">{{ format_currency(row.rate_jpy) }}</td>
-            <td class="num">{{ format_currency(row.cost_jpy) }}</td>
-          </tr>
-        {% endfor %}
-        <tr class="total-row">
-          <th colspan="4">{{ ctx.labels.subtotal }}</th>
-          <td class="num">{{ format_currency(ctx.calculation.role_labor_subtotal_jpy) }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.nrc_detailed }}</h2>
-    <table>
+    <table class="data-table">
       <thead>
         <tr><th>{{ ctx.labels.category }}</th><th>{{ ctx.labels.item }}</th><th class="num">{{ ctx.labels.cost }}</th></tr>
       </thead>
@@ -365,9 +178,9 @@
     <p class="muted">{{ ctx.labels.nrc_total_formula }}</p>
   </div>
 
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.rc_detailed }}</h2>
-    <table>
+    <table class="data-table">
       <thead>
         <tr>
           <th>{{ ctx.labels.category }}</th>
@@ -399,91 +212,18 @@
     </table>
   </div>
 
-  <div class="section">
-    <h2>{{ ctx.labels.cost_drivers_title }}</h2>
-    {% if ctx.cost_drivers %}
-      <table>
-        <thead><tr><th>{{ ctx.labels.driver }}</th><th class="num">{{ ctx.labels.impact }}</th></tr></thead>
-        <tbody>
-          {% for row in ctx.cost_drivers %}
-            <tr>
-              <td>{{ row.name }}</td>
-              <td class="num">{{ format_currency(row.impact_jpy) }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="muted">{{ ctx.labels.none }}</p>
-    {% endif %}
-  </div>
-
-  <div class="section">
-    <h2>{{ ctx.labels.risks_gaps }}</h2>
-    {% if ctx.extracted.risks %}
-      <h3>{{ ctx.labels.risks }}</h3>
-      <ul>{% for item in ctx.extracted.risks %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if ctx.extracted.gaps %}
-      <h3>{{ ctx.labels.missing_information }}</h3>
-      <ul>{% for item in ctx.extracted.gaps %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if ctx.extracted.estimation_warnings %}
-      <h3>{{ ctx.labels.estimation_warnings }}</h3>
-      <ul>{% for item in ctx.extracted.estimation_warnings %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if ctx.extracted.assumption_risks %}
-      <h3>{{ ctx.labels.assumption_risks }}</h3>
-      <ul>{% for item in ctx.extracted.assumption_risks %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if not ctx.extracted.risks and not ctx.extracted.gaps and not ctx.extracted.estimation_warnings and not ctx.extracted.assumption_risks %}
-      <p class="muted">{{ ctx.labels.none }}</p>
-    {% endif %}
-  </div>
-
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.estimate_exclusions }}</h2>
     {% if ctx.extracted.estimate_exclusions %}
-      <ul>{% for item in ctx.extracted.estimate_exclusions %}<li>{{ item }}</li>{% endfor %}</ul>
+      <div class="req-group">
+        <ul>{% for item in ctx.extracted.estimate_exclusions %}<li>{{ item }}</li>{% endfor %}</ul>
+      </div>
     {% else %}
       <p class="muted">{{ ctx.labels.none }}</p>
     {% endif %}
   </div>
 
-  <div class="section">
-    <h2>{{ ctx.labels.confidence_notes }}</h2>
-    <p><strong>{{ ctx.labels.confidence_score }}:</strong> {{ "%.0f"|format(ctx.extracted.confidence_score) }}%</p>
-    {% if ctx.extracted.confidence_factors %}
-      <h3>{{ ctx.labels.confidence_factors }}</h3>
-      <ul>{% for item in ctx.extracted.confidence_factors %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if ctx.extracted.missing_inputs %}
-      <h3>{{ ctx.labels.missing_inputs }}</h3>
-      <ul>{% for item in ctx.extracted.missing_inputs %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if ctx.extracted.recommendations %}
-      <h3>{{ ctx.labels.recommendations }}</h3>
-      <ul>{% for item in ctx.extracted.recommendations %}<li>{{ item }}</li>{% endfor %}</ul>
-    {% endif %}
-    {% if ctx.extracted.confidence_notes %}
-      <p class="field-value">{{ ctx.extracted.confidence_notes }}</p>
-    {% endif %}
-  </div>
-
-  <div class="section">
-    <h2>{{ ctx.labels.rate_card_reference }}</h2>
-    <table>
-      <tr><th>{{ ctx.labels.rate_card_name }}</th><td>{{ ctx.rate_card_reference.name }}</td></tr>
-      <tr>
-        <th>{{ ctx.labels.rate_card_version }}</th>
-        <td>{% if ctx.rate_card_reference.version_number is not none %}{{ ctx.rate_card_reference.version_number }}{% else %}{{ ctx.labels.none }}{% endif %}</td>
-      </tr>
-      <tr><th>{{ ctx.labels.effective_date }}</th><td>{{ ctx.rate_card_reference.effective_date }}</td></tr>
-      <tr><th>{{ ctx.labels.policy_version }}</th><td>{{ ctx.rate_card_reference.policy_version }}</td></tr>
-    </table>
-  </div>
-
-  <div class="section">
+  <div class="section-card section">
     <h2>{{ ctx.labels.approval }}</h2>
     <p><strong>{{ ctx.labels.prepared_by }}:</strong> {{ ctx.labels.prepared_by_value }}</p>
     <p><strong>{{ ctx.labels.reviewed_by }}:</strong></p>

@@ -15,13 +15,19 @@ from app.rate_cards.defaults import DEFAULT_RATE_CARD_NAME, DEFAULT_RATE_CARD_SE
 
 async def _ensure_rate_card(db, admin_id) -> None:
     existing = await db.execute(select(RateCard).where(RateCard.is_active.is_(True)))
-    if existing.scalar_one_or_none():
-        print("Active rate card already exists")
+    active_card = existing.scalar_one_or_none()
+    if active_card:
+        if not active_card.is_system:
+            active_card.is_system = True
+            print("Marked active rate card as system card")
+        else:
+            print("Active system rate card already exists")
         return
 
     rate_card = RateCard(
         name=DEFAULT_RATE_CARD_NAME,
         is_active=True,
+        is_system=True,
         created_by=admin_id,
     )
     db.add(rate_card)

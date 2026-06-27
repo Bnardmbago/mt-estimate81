@@ -1,3 +1,5 @@
+from html import escape
+
 from app.exports.gantt_svg import build_gantt_svg
 
 
@@ -21,7 +23,27 @@ def test_build_gantt_svg_returns_svg_markup():
 
     assert svg.startswith("<svg")
     assert "User login" in svg
-    assert "#4f46e5" in svg
+    assert 'stroke="#E2E8F0"' in svg
+    assert 'rx="4"' in svg
+    assert "development" in svg
+
+
+def test_build_gantt_svg_escapes_task_names():
+    gantt = {
+        "project_start_date": "2026-06-09",
+        "project_end_date": "2026-06-10",
+        "tasks": [
+            {
+                "name": "<script>alert</script>",
+                "phase": "testing",
+                "start_date": "2026-06-09",
+                "end_date": "2026-06-10",
+            }
+        ],
+    }
+    svg = build_gantt_svg(gantt)
+    assert escape("<script>alert</script>")[:20] in svg
+    assert "<script>" not in svg
 
 
 def test_build_gantt_svg_empty_without_tasks():

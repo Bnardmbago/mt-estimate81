@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.service import decode_access_token
 from app.database import get_db as _get_db
 from app.models.user import User
+from app.users.access import require_full_user
 
 get_db = _get_db
 
@@ -68,6 +69,11 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
             status_code=403,
             detail={"error": "Admin access required", "code": "ADMIN_REQUIRED"},
         )
+    return user
+
+
+async def require_full_account(user: User = Depends(get_current_user)) -> User:
+    require_full_user(user)
     return user
 
 

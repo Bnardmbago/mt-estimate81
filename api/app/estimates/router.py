@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import SessionLocal
-from app.dependencies import get_content_locale, get_current_user, get_db, get_display_locale
+from app.dependencies import get_content_locale, get_current_user, get_db, get_display_locale, require_full_account
 from app.estimates import ai_suggest_form, extraction, service
 from app.models.user import User
 from app.schemas.estimate import (
@@ -142,7 +142,7 @@ async def suggest_estimate_form(
 async def generate_estimate_rate_card(
     estimate_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     from app.rate_cards.generation import generate_rate_card_for_estimate
 
@@ -153,7 +153,7 @@ async def generate_estimate_rate_card(
 async def tune_estimate_rate_card_from_extraction(
     estimate_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
     display_locale: str | None = Depends(get_display_locale),
 ):
     estimate = await service.tune_rate_card_from_extraction(db, user, estimate_id)
@@ -165,7 +165,7 @@ async def create_estimate_rate_card(
     estimate_id: uuid.UUID,
     body: CreateEstimateRateCardRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_full_account),
 ):
     estimate = await service.create_rate_card_for_estimate(db, user, estimate_id, body)
     return await service.estimate_to_detail(db, estimate)

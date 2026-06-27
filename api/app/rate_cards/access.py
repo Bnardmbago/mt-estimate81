@@ -5,6 +5,8 @@ from app.models.user import User
 
 
 def can_access_rate_card(rate_card: RateCard, user: User) -> bool:
+    if rate_card.is_system:
+        return True
     return user.is_admin or rate_card.created_by == user.id
 
 

@@ -5,6 +5,7 @@
     "proofOfConcept": "Proof Of Concept",
     "admin": "Admin",
     "welcome": "Welcome",
+    "contact": "Contact Estimate",
     "help": "Help",
     "logout": "Logout",
     "openMenu": "Open menu",
@@ -114,7 +115,8 @@
     "progressRateCard": "Generating rate card with AI…",
     "progressRateCardTune": "Tuning rate card from extracted requirements…",
     "progressAi": "Analyzing requirements with AI…",
-    "progressHint": "This usually takes 30–90 seconds depending on document size and AI response time.",
+    "progressElapsed": "Elapsed: {seconds}s",
+    "progressHint": "Usually 30–90 seconds for small specs; large documents may take 2–3 minutes.",
     "extractError": "Failed to start extraction",
     "saveFormBeforeExtract": "Save the form first. Fill in all required fields before extracting requirements, or upload documents to make form fields optional.",
     "rateCardLabel": "Rate card",
@@ -220,7 +222,9 @@
     "formatPdf": "PDF",
     "formatXlsx": "Excel",
     "formatMd": "Markdown",
+    "formatDocx": "DOCX",
     "pdfVersionLabel": "PDF version",
+    "docxVersionLabel": "DOCX version",
     "pdfVersionReport": "Detailed report",
     "pdfVersionQuotation": "Formal quotation",
     "pdfVersionPreliminary": "Preliminary estimate (概算見積書)",
@@ -244,7 +248,7 @@
     "emailError": "Failed to send email",
     "emailSelectRequired": "Select at least one export to send",
     "includedDataTitle": "Calculation data included in export",
-    "includedDataDescription": "PDF, Excel, and Markdown exports include the same calculation breakdown shown below.",
+    "includedDataDescription": "PDF, Excel, and Markdown exports include the full calculation breakdown (phases, roles, NRC, RC, and totals) shown in the Calculate section above.",
     "preview": "Preview",
     "previewTitle": "Export preview",
     "previewClose": "Close",
@@ -252,12 +256,17 @@
     "previewLoading": "Loading preview…",
     "previewError": "Failed to load preview",
     "previewXlsxHint": "Excel files cannot be previewed in the browser. Download the file to open it.",
+    "previewDocxHint": "Word documents cannot be previewed in the browser. Download the file to open it.",
     "delete": "Delete",
     "deleting": "Deleting…",
     "deleteConfirm": "Delete this export file?",
     "deleteConfirmAction": "Delete",
     "deleteCancel": "Cancel",
-    "deleteError": "Failed to delete export"
+    "deleteError": "Failed to delete export",
+    "contactExportsRemaining": "{remaining} of {limit} exports remaining for this estimate",
+    "contactExportLimitReached": "Export limit reached ({limit} per estimate)",
+    "contactAutoEmailNote": "Each export is emailed automatically to your verified address.",
+    "contactExportEmailed": "Export sent to {email}"
   },
   "calculation": {
     "title": "Calculation Results",
@@ -279,7 +288,7 @@
     "daysFormula": "Person-days = hours ÷ 8",
     "phaseBreakdown": "Phase breakdown",
     "roleBreakdown": "Role breakdown",
-    "roleBreakdownHint": "Lists every role from the active rate card. Hours follow feature assignments, then shift to match phase targets (e.g. requirement work to PM, testing work to QA) without changing the total.",
+    "roleBreakdownHint": "Shows roles with assigned hours and headcount. Hours follow feature assignments, then shift to match phase targets (e.g. requirement work to PM, testing work to QA) without changing the total.",
     "phase": "Phase",
     "role": "Role",
     "personnel": "Developers",
@@ -319,8 +328,8 @@
   },
   "gantt": {
     "title": "Project Timeline (Gantt)",
-    "description": "Sequential schedule derived from extracted feature items and rate-card phase order.",
-    "assumption": "Working days Mon–Fri only; tasks run one after another; no public holidays.",
+    "description": "Parallel schedule by role; task duration scales with headcount from the calculation.",
+    "assumption": "Working days Mon–Fri only; tasks may overlap across roles and phases; duration = hours ÷ (headcount × 8).",
     "startDate": "Project start date",
     "saveStartDate": "Save start date",
     "refresh": "Refresh timeline",
@@ -650,6 +659,10 @@
       "loadError": "Failed to load users",
       "createTitle": "Create user",
       "listTitle": "Users",
+      "listTitleFull": "Full accounts",
+      "listTitleContact": "Contact estimate accounts",
+      "emptyFull": "No full accounts yet.",
+      "emptyContact": "No contact estimate accounts yet.",
       "email": "Email",
       "displayName": "Display name",
       "companyName": "Company name",
@@ -686,7 +699,11 @@
       "newPassword": "New password",
       "savePassword": "Save",
       "cancel": "Cancel",
-      "resetError": "Failed to reset password"
+      "resetError": "Failed to reset password",
+      "accountType": "Account type",
+      "accountTypeFull": "Full",
+      "accountTypeContact": "Contact estimate",
+      "upgradePassword": "Password for full account upgrade"
     },
     "aiSettings": {
       "loading": "Loading AI settings…",
@@ -770,8 +787,8 @@
       "hermes": "Hermes",
       "appVersion": "App version",
       "storageUsage": "Storage usage",
-      "stuckExtractions": "Stuck extractions (>10 min)",
-      "stuckWarning": "Some estimates have been extracting for more than 10 minutes.",
+      "stuckExtractions": "Stuck extractions (>5 min)",
+      "stuckWarning": "Some estimates have been extracting for more than 5 minutes.",
       "aiConfig": "AI configuration",
       "provider": "Provider",
       "model": "Model",
@@ -781,11 +798,18 @@
       "notConfigured": "Not configured",
       "statusOk": "OK",
       "statusError": "Error",
-      "statusUnreachable": "Unreachable"
+      "statusUnreachable": "Unreachable",
+      "contactAccess": "Contact estimate access",
+      "smtp": "SMTP (magic links & export email)",
+      "turnstile": "Turnstile (contact form CAPTCHA)",
+      "contactExportLimit": "Export limit per estimate",
+      "contactMagicLinkTtl": "Magic link validity",
+      "systemRateCard": "System rate card",
+      "minutes": "{count} min"
     },
     "formulas": {
       "title": "Formulas",
-      "intro": "Reference for how estimates, rate cards, variance, and KPIs are calculated. Estimates use the selected rate card version when set; otherwise the active rate card for the current user. Administrators can access all rate cards.",
+      "intro": "Reference for how estimates, rate cards, variance, and KPIs are calculated. Contact users (magic-link access) use the system rate card automatically. Full users use the selected rate card version when set; otherwise the active rate card. Administrators can access all rate cards.",
       "columns": {
         "metric": "Metric",
         "formula": "Formula",
@@ -798,7 +822,7 @@
           {
             "metric": "Rate card resolution",
             "formula": "estimate.rate_card_id → that card's version; else user's active rate card",
-            "notes": "Frozen rate_card_version_id on recalculate unless recalculate_with_current_rates=true"
+            "notes": "Contact users: system rate card (is_system) attached automatically. Frozen rate_card_version_id on recalculate unless recalculate_with_current_rates=true"
           },
           {
             "metric": "Total effort (hours)",
@@ -911,7 +935,7 @@
           {
             "metric": "NRC labor, setup, contingency, overhead",
             "formula": "amount_jpy × multiplier",
-            "notes": "Role rates in breakdown are recalculated from discounted costs"
+            "notes": "Hourly rates in breakdown stay at rate card values; only cost_jpy is discounted"
           },
           {
             "metric": "RC monthly and annual",
@@ -989,6 +1013,47 @@
             "metric": "Development approach",
             "formula": "Required rate card setting",
             "notes": "Influences effort and team size multipliers on estimates"
+          },
+          {
+            "metric": "System rate card",
+            "formula": "is_system = true",
+            "notes": "Shared default for contact users; managed by administrators"
+          }
+        ]
+      },
+      "contactAccess": {
+        "title": "Contact estimate access",
+        "description": "Rules for magic-link contact users (account_type = contact).",
+        "rows": [
+          {
+            "metric": "Account type",
+            "formula": "account_type = contact",
+            "notes": "Magic-link auth; admins may upgrade to a full account"
+          },
+          {
+            "metric": "Estimates per email",
+            "formula": "max 1 active estimate",
+            "notes": "Enforced server-side per verified email address"
+          },
+          {
+            "metric": "Rate card",
+            "formula": "system rate card (is_system = true)",
+            "notes": "Attached automatically; rate card UI hidden for contact users"
+          },
+          {
+            "metric": "Export limit",
+            "formula": "3 exports per estimate (default)",
+            "notes": "Configurable via CONTACT_EXPORT_LIMIT"
+          },
+          {
+            "metric": "Export delivery",
+            "formula": "auto-email to verified address on each export",
+            "notes": "Requires SMTP configuration"
+          },
+          {
+            "metric": "PDF watermark",
+            "formula": "\"Contact Estimate\" overlay on PDF exports",
+            "notes": "Excel and Markdown exports are not watermarked"
           }
         ]
       },
@@ -1026,7 +1091,7 @@
     },
     "help": {
       "title": "Resources",
-      "description": "Browse guides, FAQs, and reference docs for the full estimate workflow—rate card setup, AI document extraction, cost calculation, and export in Japanese or English.",
+      "description": "Browse guides, FAQs, and reference docs for contact estimate access (magic link), full-user workflows, AI extraction, cost calculation, and export in Japanese or English.",
       "search": {
         "placeholder": "Search guides, FAQs, and documentation…",
         "clear": "Clear search",
@@ -1042,6 +1107,12 @@
       },
       "articles": [
         {
+          "id": "contact-estimate-access",
+          "title": "Contact estimate access",
+          "summary": "Magic-link sign-in, one estimate per email, system rate card, and export limits.",
+          "body": "Visitors request access from the welcome page with email, name or company, and a Turnstile check. A magic link valid for 15 minutes signs them in and opens their estimate—one estimate per verified email. Contact users use the system rate card automatically (no rate card management UI). After calculation they may export up to three times per estimate in PDF, Excel, or Markdown; each export is emailed to their address and PDFs include a Contact Estimate watermark. Administrators can upgrade contact accounts to full users with password login and rate card access."
+        },
+        {
           "id": "rate-cards-basics",
           "title": "Rate card basics",
           "summary": "How rate cards define roles, phases, and rates used in every estimate.",
@@ -1051,7 +1122,7 @@
           "id": "export-formats",
           "title": "Export formats",
           "summary": "PDF, Excel, and Markdown exports in Japanese or English.",
-          "body": "After calculation, export the estimate from the detail page. PDF is suited for client delivery, Excel for further analysis, and Markdown for documentation. Display locale controls the language of labels and formatted content in the export."
+          "body": "After calculation, export the estimate from the detail page. PDF is suited for client delivery, Excel for further analysis, and Markdown for documentation. Display locale controls the language of labels and formatted content in the export. Contact users are limited to three exports per estimate; each export is emailed automatically and PDFs include a Contact Estimate watermark."
         },
         {
           "id": "locale-switching",
@@ -1069,7 +1140,7 @@
         {
           "id": "who-can-use",
           "question": "Who can use the system?",
-          "answer": "Access is credential-based. Accounts are created by your organization—sign in with the email and password provided to you. If you need an account or cannot log in, contact your administrator."
+          "answer": "Two access paths exist. Contact users request a magic link from the welcome page—no password required—and receive one estimate per verified email with the system rate card. Full users sign in with email and password created by an administrator and can manage rate cards, multiple estimates, and the full feature set. Contact your administrator if you need a full account or cannot sign in."
         },
         {
           "id": "supported-languages",
@@ -1084,7 +1155,17 @@
         {
           "id": "export-options",
           "question": "What export formats are available?",
-          "answer": "After calculation, export your estimate as PDF for client delivery, Excel for further analysis, or Markdown for documentation. Exports are available in Japanese or English."
+          "answer": "After calculation, export your estimate as PDF for client delivery, Excel for further analysis, or Markdown for documentation. Exports are available in Japanese or English. Contact users may export up to three times per estimate; each export is emailed to their verified address and PDFs include a Contact Estimate watermark."
+        },
+        {
+          "id": "contact-magic-link",
+          "question": "How does contact magic-link access work?",
+          "answer": "From the welcome page, enter your email and complete the security check. You receive a one-time link valid for 15 minutes. Opening it signs you in and opens your estimate. Each verified email address may have one active contact estimate. Request a new link if the previous one expired."
+        },
+        {
+          "id": "contact-export-limit",
+          "question": "Why is my export limit reached?",
+          "answer": "Contact estimate access allows up to three exports per estimate (PDF, Excel, or Markdown combined). Each successful export counts toward the limit and is emailed to your address. If you need additional exports, contact your administrator."
         },
         {
           "id": "estimate-statuses",
@@ -1113,7 +1194,7 @@
           "id": "estimate-workflow",
           "title": "Estimate workflow",
           "summary": "End-to-end flow from form entry to exported deliverable.",
-          "body": "Create an estimate and complete the project form. Optionally upload documents for AI extraction. Review and edit the feature list and hours. Select or confirm the active rate card. Run calculation to generate phase breakdown, Gantt timeline, and cost summary. Export in your preferred format when ready for client delivery."
+          "body": "Contact users: request a magic link on the welcome page, verify email, and complete the project form on the auto-created estimate. Full users: create an estimate and complete the project form. Both paths: optionally upload documents for AI extraction, review and edit the feature list and hours, then run calculation (contact users use the system rate card automatically). Export in your preferred format when ready—contact users receive exports by email with a three-export limit and PDF watermark."
         },
         {
           "id": "rate-card-fields",
@@ -1282,11 +1363,38 @@
     "defaultBadge": "Default",
     "changeWarning": "Changing the template replaces the field layout. Values for removed fields will be dropped."
   },
+  "contact": {
+    "title": "Contact Estimate Access",
+    "description": "Enter your details to receive a magic link and create one estimate.",
+    "email": "Email",
+    "displayName": "Your name (required if no company)",
+    "companyName": "Company name (required if no name)",
+    "submit": "Send Link",
+    "submitting": "Sending…",
+    "error": "Could not send the magic link. Please try again.",
+    "errorNetwork": "Could not reach the server. Check your connection and API URL, then try again.",
+    "errorNameOrCompany": "Enter your name or company name.",
+    "errorEmailNotConfigured": "Email is not configured on the server. Ask an administrator to set up SMTP.",
+    "errorEmailSendFailed": "Failed to send the magic link email. Please try again later.",
+    "errorCaptchaFailed": "CAPTCHA verification failed. Please try again.",
+    "errorCaptchaNotConfigured": "CAPTCHA is not configured on the server.",
+    "errorRateLimit": "Too many requests. Please wait and try again.",
+    "errorFullAccount": "This email belongs to a full account. Please sign in with password.",
+    "checkEmailTitle": "Check your email",
+    "checkEmailBody": "We sent an access link to {email}. It expires in a few minutes.",
+    "fullAccountHint": "Already have a full account?",
+    "fullAccountLink": "Sign in",
+    "verifying": "Verifying your link…",
+    "verifyError": "This link is invalid or has expired.",
+    "verifyMissingToken": "Missing verification token."
+  },
   "welcome": {
     "title": "Welcome",
     "description": "AI-powered software project estimation.",
     "loginLink": "New here? Explore the welcome guide",
-    "heroCta": "Sign in",
+    "heroCta": "Get your estimate",
+    "getEstimateTitle": "Request estimate access",
+    "getEstimateDescription": "Enter your details to receive a magic link and create one estimate.",
     "footerCta": "Ready to get started?",
     "footerCtaButton": "Sign in to your account",
     "helpLink": "Signed in? Visit Help for FAQs and guides.",
@@ -1294,25 +1402,25 @@
       "eyebrow": "Workflow",
       "title": "How it works",
       "stepCta": "Get started",
-      "intro": "Follow these steps to create a software project estimate from client requirements through to export.",
+      "intro": "Request access with your email, verify the magic link, and complete one estimate from project form through export. Standard rates apply automatically—no rate card setup required.",
       "steps": [
         {
           "icon": "login",
-          "title": "Sign in",
-          "description": "Log in with your email and password to access the system.",
-          "href": "/login"
+          "title": "Request access",
+          "description": "Enter your email, name or company, and complete the security check. We send a one-time magic link to your inbox.",
+          "href": "#get-estimate"
         },
         {
-          "icon": "rateCard",
-          "title": "Set up rate cards",
-          "description": "Define roles, hourly rates, phase splits, and overhead settings. Activate a rate card to apply it when you calculate estimates.",
-          "href": "/rate-cards"
+          "icon": "review",
+          "title": "Verify your email",
+          "description": "Open the magic link within 15 minutes. You are signed in and taken to your estimate—one estimate per verified email address.",
+          "href": null
         },
         {
           "icon": "create",
-          "title": "Create an estimate",
-          "description": "Start a new estimate and fill in the 21-field project form with client and scope details.",
-          "href": "/estimates/new"
+          "title": "Complete the project form",
+          "description": "Fill in the 21-field project form with client and scope details on your estimate page.",
+          "href": null
         },
         {
           "icon": "upload",
@@ -1329,13 +1437,13 @@
         {
           "icon": "calculate",
           "title": "Calculate costs",
-          "description": "Run the calculation engine to produce NRC, RC, and first-year totals in JPY.",
+          "description": "Run the calculation engine using the system rate card to produce NRC, RC, and first-year totals in JPY.",
           "href": null
         },
         {
           "icon": "export",
           "title": "Export results",
-          "description": "Download PDF, Excel, or Markdown reports in Japanese or English.",
+          "description": "Export up to three times per estimate in PDF, Excel, or Markdown. Each export is emailed to you; PDFs include a Contact Estimate watermark.",
           "href": null
         }
       ]

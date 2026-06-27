@@ -128,6 +128,9 @@ async def should_auto_tune_rate_card(db: AsyncSession, estimate: Estimate) -> bo
         return False
     if not get_rate_card_auto_tune_enabled(estimate):
         return False
+    rate_card = await db.get(RateCard, estimate.rate_card_id)
+    if rate_card is not None and rate_card.is_system:
+        return False
     linked_count = await _count_estimates_for_rate_card(db, estimate.rate_card_id)
     return linked_count <= 1
 

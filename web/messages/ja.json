@@ -5,6 +5,7 @@
     "proofOfConcept": "概念実証（PoC）",
     "admin": "管理",
     "welcome": "ようこそ",
+    "contact": "お問い合わせ見積",
     "help": "ヘルプ",
     "logout": "ログアウト",
     "openMenu": "メニューを開く",
@@ -114,7 +115,8 @@
     "progressRateCard": "AIでレートカードを生成中…",
     "progressRateCardTune": "抽出結果からレートカードを調整中…",
     "progressAi": "AIで要件を分析中…",
-    "progressHint": "ドキュメントのサイズやAIの応答時間により、通常30〜90秒ほどかかります。",
+    "progressElapsed": "経過時間: {seconds}秒",
+    "progressHint": "小さな仕様書は通常30〜90秒、大きなドキュメントは2〜3分かかることがあります。",
     "extractError": "抽出の開始に失敗しました",
     "saveFormBeforeExtract": "フォームを保存してください。必須項目を入力するか、ドキュメントをアップロードしてフォーム入力を省略できます。",
     "rateCardLabel": "レートカード",
@@ -220,7 +222,9 @@
     "formatPdf": "PDF",
     "formatXlsx": "Excel",
     "formatMd": "Markdown",
+    "formatDocx": "DOCX",
     "pdfVersionLabel": "PDFバージョン",
+    "docxVersionLabel": "DOCXバージョン",
     "pdfVersionReport": "詳細レポート",
     "pdfVersionQuotation": "見積書",
     "pdfVersionPreliminary": "概算見積書",
@@ -244,7 +248,7 @@
     "emailError": "メール送信に失敗しました",
     "emailSelectRequired": "送信するエクスポートを1件以上選択してください",
     "includedDataTitle": "エクスポートに含まれる計算結果",
-    "includedDataDescription": "PDF・Excel・Markdownには、以下と同じ計算内訳が含まれます。",
+    "includedDataDescription": "PDF・Excel・Markdownには、上の「計算」セクションと同じ計算内訳（フェーズ、ロール、NRC、RC、合計）が含まれます。",
     "preview": "プレビュー",
     "previewTitle": "エクスポートプレビュー",
     "previewClose": "閉じる",
@@ -252,12 +256,17 @@
     "previewLoading": "プレビューを読み込み中…",
     "previewError": "プレビューの読み込みに失敗しました",
     "previewXlsxHint": "Excelファイルはブラウザ内でプレビューできません。ダウンロードして開いてください。",
+    "previewDocxHint": "Wordファイルはブラウザ内でプレビューできません。ダウンロードして開いてください。",
     "delete": "削除",
     "deleting": "削除中…",
     "deleteConfirm": "このエクスポートファイルを削除しますか？",
     "deleteConfirmAction": "削除する",
     "deleteCancel": "キャンセル",
-    "deleteError": "エクスポートの削除に失敗しました"
+    "deleteError": "エクスポートの削除に失敗しました",
+    "contactExportsRemaining": "この見積のエクスポート残り {remaining}/{limit} 回",
+    "contactExportLimitReached": "エクスポート上限（{limit}回）に達しました",
+    "contactAutoEmailNote": "エクスポートは認証済みメールアドレスに自動送信されます。",
+    "contactExportEmailed": "{email} にエクスポートを送信しました"
   },
   "calculation": {
     "title": "計算結果",
@@ -279,7 +288,7 @@
     "daysFormula": "人日 = 時間 ÷ 8",
     "phaseBreakdown": "フェーズ内訳",
     "roleBreakdown": "ロール内訳",
-    "roleBreakdownHint": "有効なレートカードの全ロールを表示します。工数は機能項目の割当を基準に、フェーズ目標（例: 要件定義→PM、テスト→QA）に合わせて再配分します（合計工数は変わりません）。",
+    "roleBreakdownHint": "工数とヘッドカウントが割り当てられたロールのみ表示します。工数は機能項目の割当を基準に、フェーズ目標（例: 要件定義→PM、テスト→QA）に合わせて再配分します（合計工数は変わりません）。",
     "phase": "フェーズ",
     "role": "ロール",
     "personnel": "開発者数",
@@ -319,8 +328,8 @@
   },
   "gantt": {
     "title": "プロジェクトタイムライン（ガント）",
-    "description": "抽出された機能項目とレートカードのフェーズ順から算出した逐次スケジュールです。",
-    "assumption": "稼働日は月〜金のみ。タスクは順番に実行。祝日は考慮しません。",
+    "description": "ロール別の並行スケジュール。タスク期間は計算の人数（ヘッドカウント）に応じて短縮されます。",
+    "assumption": "稼働日は月〜金のみ。ロールやフェーズをまたいでタスクが重なる場合があります。期間 = 時間 ÷ (人数 × 8)。",
     "startDate": "プロジェクト開始日",
     "saveStartDate": "開始日を保存",
     "refresh": "タイムラインを更新",
@@ -650,6 +659,10 @@
       "loadError": "ユーザーの読み込みに失敗しました",
       "createTitle": "ユーザー作成",
       "listTitle": "ユーザー一覧",
+      "listTitleFull": "フルアカウント",
+      "listTitleContact": "お問い合わせ見積アカウント",
+      "emptyFull": "フルアカウントはまだありません。",
+      "emptyContact": "お問い合わせ見積アカウントはまだありません。",
       "email": "メール",
       "displayName": "表示名",
       "companyName": "会社名",
@@ -686,7 +699,11 @@
       "newPassword": "新しいパスワード",
       "savePassword": "保存",
       "cancel": "キャンセル",
-      "resetError": "パスワードのリセットに失敗しました"
+      "resetError": "パスワードのリセットに失敗しました",
+      "accountType": "アカウント種別",
+      "accountTypeFull": "フル",
+      "accountTypeContact": "お問い合わせ見積",
+      "upgradePassword": "フルアカウント化用パスワード"
     },
     "aiSettings": {
       "loading": "AI設定を読み込み中…",
@@ -770,8 +787,8 @@
       "hermes": "Hermes",
       "appVersion": "アプリバージョン",
       "storageUsage": "ストレージ使用量",
-      "stuckExtractions": "停止中の抽出（10分以上）",
-      "stuckWarning": "10分以上抽出状態の見積があります。",
+      "stuckExtractions": "停止中の抽出（5分以上）",
+      "stuckWarning": "5分以上抽出状態の見積があります。",
       "aiConfig": "AI設定",
       "provider": "プロバイダー",
       "model": "モデル",
@@ -781,11 +798,18 @@
       "notConfigured": "未設定",
       "statusOk": "正常",
       "statusError": "エラー",
-      "statusUnreachable": "接続不可"
+      "statusUnreachable": "接続不可",
+      "contactAccess": "コンタクト見積アクセス",
+      "smtp": "SMTP（マジックリンク・エクスポートメール）",
+      "turnstile": "Turnstile（コンタクトフォームCAPTCHA）",
+      "contactExportLimit": "見積あたりのエクスポート上限",
+      "contactMagicLinkTtl": "マジックリンク有効期限",
+      "systemRateCard": "システムレートカード",
+      "minutes": "{count} 分"
     },
     "formulas": {
       "title": "計算式リファレンス",
-      "intro": "見積、レートカード、差異、KPIの計算方法のリファレンスです。見積にレートカードが指定されている場合はそのバージョンを、未指定の場合は現在ユーザーのアクティブなレートカードを使用します。管理者はすべてのレートカードにアクセスできます。",
+      "intro": "見積、レートカード、差異、KPIの計算方法のリファレンスです。コンタクトユーザー（マジックリンクアクセス）はシステムレートカードを自動使用します。フルユーザーは見積に指定されたレートカードバージョン、未指定時はアクティブなレートカードを使用します。管理者はすべてのレートカードにアクセスできます。",
       "columns": {
         "metric": "項目",
         "formula": "計算式",
@@ -798,7 +822,7 @@
           {
             "metric": "レートカードの解決",
             "formula": "estimate.rate_card_id → そのカードのバージョン、未設定時はユーザーのアクティブカード",
-            "notes": "再計算時は rate_card_version_id を固定（recalculate_with_current_rates=true を除く）"
+            "notes": "コンタクトユーザー: システムレートカード（is_system）を自動付与。再計算時は rate_card_version_id を固定（recalculate_with_current_rates=true を除く）"
           },
           {
             "metric": "総工数（時間）",
@@ -911,7 +935,7 @@
           {
             "metric": "NRC人件費・セットアップ・予備費・間接費",
             "formula": "amount_jpy × 乗数",
-            "notes": "内訳のロール単価は割引後コストから再計算"
+            "notes": "内訳の時間単価はレートカード値のまま。割引されるのは cost_jpy のみ"
           },
           {
             "metric": "RC月次・年次",
@@ -989,6 +1013,47 @@
             "metric": "開発アプローチ",
             "formula": "レートカード必須設定",
             "notes": "見積の工数・チーム規模係数に影響"
+          },
+          {
+            "metric": "システムレートカード",
+            "formula": "is_system = true",
+            "notes": "コンタクトユーザー向け共有デフォルト。管理者が管理"
+          }
+        ]
+      },
+      "contactAccess": {
+        "title": "コンタクト見積アクセス",
+        "description": "マジックリンクのコンタクトユーザー（account_type = contact）のルール。",
+        "rows": [
+          {
+            "metric": "アカウント種別",
+            "formula": "account_type = contact",
+            "notes": "マジックリンク認証。管理者がフルアカウントへ昇格可能"
+          },
+          {
+            "metric": "メールあたりの見積数",
+            "formula": "最大1件のアクティブ見積",
+            "notes": "確認済みメールアドレスごとにサーバー側で強制"
+          },
+          {
+            "metric": "レートカード",
+            "formula": "システムレートカード（is_system = true）",
+            "notes": "自動付与。コンタクトユーザーにはレートカードUI非表示"
+          },
+          {
+            "metric": "エクスポート上限",
+            "formula": "見積あたり3回（デフォルト）",
+            "notes": "CONTACT_EXPORT_LIMIT で設定可能"
+          },
+          {
+            "metric": "エクスポート配信",
+            "formula": "各エクスポートを確認済みアドレスへ自動メール",
+            "notes": "SMTP設定が必要"
+          },
+          {
+            "metric": "PDF透かし",
+            "formula": "PDFエクスポートに「Contact Estimate」透かし",
+            "notes": "Excel・Markdownには透かしなし"
           }
         ]
       },
@@ -1026,7 +1091,7 @@
     },
     "help": {
       "title": "リソース",
-      "description": "レートカード設定、AI文書抽出、コスト計算、日英エクスポートまで、見積ワークフローに関するガイド・FAQ・リファレンスをご覧ください。",
+      "description": "コンタクト見積アクセス（マジックリンク）、フルユーザーワークフロー、AI抽出、コスト計算、日英エクスポートに関するガイド・FAQ・リファレンスをご覧ください。",
       "search": {
         "placeholder": "ガイド、FAQ、ドキュメントを検索…",
         "clear": "検索をクリア",
@@ -1042,6 +1107,12 @@
       },
       "articles": [
         {
+          "id": "contact-estimate-access",
+          "title": "コンタクト見積アクセス",
+          "summary": "マジックリンクサインイン、メールあたり1見積、システムレートカード、エクスポート上限。",
+          "body": "訪問者はウェルカムページからメール、お名前または会社名、Turnstileチェックでアクセスを申請します。15分有効のマジックリンクでサインインし見積が開きます—確認済みメールあたり1件です。コンタクトユーザーはシステムレートカードを自動使用（レートカード管理UIなし）。計算後、見積あたり最大3回PDF・Excel・Markdownでエクスポートでき、各エクスポートはメールで届き、PDFにはContact Estimateの透かしが入ります。管理者はコンタクトアカウントをパスワードログインとレートカードアクセス付きのフルユーザーへ昇格できます。"
+        },
+        {
           "id": "rate-cards-basics",
           "title": "レートカードの基本",
           "summary": "レートカードが見積ごとのロール、フェーズ、レートをどう定義するか。",
@@ -1051,7 +1122,7 @@
           "id": "export-formats",
           "title": "エクスポート形式",
           "summary": "日本語または英語のPDF、Excel、Markdownエクスポート。",
-          "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。"
+          "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。コンタクトユーザーは見積あたり3回まで。各エクスポートは自動メールされ、PDFにはContact Estimateの透かしが入ります。"
         },
         {
           "id": "locale-switching",
@@ -1069,7 +1140,7 @@
         {
           "id": "who-can-use",
           "question": "誰がこのシステムを利用できますか？",
-          "answer": "アクセスは認証情報に基づきます。アカウントは組織内で作成されます—付与されたメールアドレスとパスワードでサインインしてください。アカウントが必要な場合やログインできない場合は、管理者にお問い合わせください。"
+          "answer": "2つのアクセス方法があります。コンタクトユーザーはウェルカムページからマジックリンクを申請（パスワード不要）し、確認済みメールあたり1件の見積とシステムレートカードを利用します。フルユーザーは管理者が作成したメールとパスワードでサインインし、レートカード、複数見積、全機能を利用できます。フルアカウントが必要な場合やサインインできない場合は管理者にお問い合わせください。"
         },
         {
           "id": "supported-languages",
@@ -1084,7 +1155,17 @@
         {
           "id": "export-options",
           "question": "利用できるエクスポート形式は？",
-          "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。"
+          "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。コンタクトユーザーは見積あたり最大3回。各エクスポートは確認済みアドレスへメールされ、PDFにはContact Estimateの透かしが入ります。"
+        },
+        {
+          "id": "contact-magic-link",
+          "question": "コンタクトのマジックリンクアクセスはどう動作しますか？",
+          "answer": "ウェルカムページでメールを入力しセキュリティチェックを完了すると、15分有効のワンタイムリンクが届きます。リンクを開くとサインインし見積が開きます。確認済みメールアドレスにつき1件のアクティブなコンタクト見積です。期限切れの場合は新しいリンクを再申請してください。"
+        },
+        {
+          "id": "contact-export-limit",
+          "question": "エクスポート上限に達したのはなぜですか？",
+          "answer": "コンタクト見積アクセスでは見積あたり最大3回（PDF・Excel・Markdown合算）エクスポートできます。成功したエクスポートは上限にカウントされ、アドレスへメールされます。追加が必要な場合は管理者にお問い合わせください。"
         },
         {
           "id": "estimate-statuses",
@@ -1113,7 +1194,7 @@
           "id": "estimate-workflow",
           "title": "見積ワークフロー",
           "summary": "フォーム入力からエクスポートまでの一連の流れ。",
-          "body": "見積を作成しプロジェクトフォームを完成させます。必要に応じてAI抽出用に文書をアップロードします。機能一覧と工数をレビュー・編集します。アクティブなレートカードを確認します。計算を実行してフェーズ内訳、ガント、コストサマリーを生成します。クライアント提出の準備ができたら希望形式でエクスポートします。"
+          "body": "コンタクトユーザー: ウェルカムページでマジックリンクを申請し、メール確認後、自動作成された見積でプロジェクトフォームを入力。フルユーザー: 見積を作成しプロジェクトフォームを入力。共通: 必要に応じて文書をアップロードしてAI抽出、機能一覧と工数をレビュー・編集し、計算を実行（コンタクトユーザーはシステムレートカードを自動使用）。準備ができたら希望形式でエクスポート—コンタクトユーザーは3回上限・メール配信・PDF透かし付き。"
         },
         {
           "id": "rate-card-fields",
@@ -1282,11 +1363,38 @@
     "defaultBadge": "デフォルト",
     "changeWarning": "テンプレートを変更すると項目構成が置き換わります。削除された項目の値は失われます。"
   },
+  "contact": {
+    "title": "お問い合わせ見積アクセス",
+    "description": "情報を入力してマジックリンクを受け取り、見積を1件作成できます。",
+    "email": "メールアドレス",
+    "displayName": "お名前（会社名がない場合は必須）",
+    "companyName": "会社名（お名前がない場合は必須）",
+    "submit": "マジックリンクを送信",
+    "submitting": "送信中…",
+    "error": "マジックリンクを送信できませんでした。もう一度お試しください。",
+    "errorNetwork": "サーバーに接続できませんでした。接続とAPI URLを確認してから再度お試しください。",
+    "errorNameOrCompany": "お名前または会社名を入力してください。",
+    "errorEmailNotConfigured": "サーバーでメールが設定されていません。管理者にSMTPの設定を依頼してください。",
+    "errorEmailSendFailed": "マジックリンクのメール送信に失敗しました。しばらくしてから再度お試しください。",
+    "errorCaptchaFailed": "CAPTCHAの確認に失敗しました。もう一度お試しください。",
+    "errorCaptchaNotConfigured": "サーバーでCAPTCHAが設定されていません。",
+    "errorRateLimit": "リクエストが多すぎます。しばらく待ってから再度お試しください。",
+    "errorFullAccount": "このメールはフルアカウント用です。パスワードでサインインしてください。",
+    "checkEmailTitle": "メールを確認してください",
+    "checkEmailBody": "{email} にアクセスリンクを送信しました。数分で期限切れになります。",
+    "fullAccountHint": "フルアカウントをお持ちですか？",
+    "fullAccountLink": "サインイン",
+    "verifying": "リンクを確認しています…",
+    "verifyError": "リンクが無効か期限切れです。",
+    "verifyMissingToken": "認証トークンがありません。"
+  },
   "welcome": {
     "title": "ようこそ",
     "description": "AIを活用したソフトウェアプロジェクト見積。",
     "loginLink": "初めての方はこちら：ウェルカムガイド",
-    "heroCta": "サインイン",
+    "heroCta": "見積を始める",
+    "getEstimateTitle": "見積アクセスを申請",
+    "getEstimateDescription": "情報を入力してマジックリンクを受け取り、見積を1件作成できます。",
     "footerCta": "始める準備はできましたか？",
     "footerCtaButton": "アカウントにサインイン",
     "helpLink": "サインイン済みの方はヘルプでFAQとガイドをご覧ください。",
@@ -1294,25 +1402,25 @@
       "eyebrow": "ワークフロー",
       "title": "使い方",
       "stepCta": "始める",
-      "intro": "クライアント要件からエクスポートまで、ソフトウェアプロジェクト見積を作成する手順です。",
+      "intro": "メールでアクセスを申請し、マジックリンクを確認して、プロジェクトフォームからエクスポートまで1件の見積を完了します。標準レートが自動適用され、レートカードの設定は不要です。",
       "steps": [
         {
           "icon": "login",
-          "title": "サインイン",
-          "description": "メールアドレスとパスワードでログインし、システムにアクセスします。",
-          "href": "/login"
+          "title": "アクセスを申請",
+          "description": "メールアドレス、お名前または会社名を入力し、セキュリティチェックを完了します。ワンタイムのマジックリンクをお送りします。",
+          "href": "#get-estimate"
         },
         {
-          "icon": "rateCard",
-          "title": "レートカードを設定",
-          "description": "ロール、時間単価、フェーズ配分、間接費などを定義します。アクティブなレートカードが見積計算に適用されます。",
-          "href": "/rate-cards"
+          "icon": "review",
+          "title": "メールを確認",
+          "description": "15分以内にマジックリンクを開いてください。サインイン後、見積ページへ移動します。確認済みメールアドレスにつき1件の見積です。",
+          "href": null
         },
         {
           "icon": "create",
-          "title": "見積を作成",
-          "description": "新規見積を開始し、21項目のプロジェクトフォームにクライアントとスコープの情報を入力します。",
-          "href": "/estimates/new"
+          "title": "プロジェクトフォームを入力",
+          "description": "見積ページで21項目のプロジェクトフォームにクライアントとスコープの情報を入力します。",
+          "href": null
         },
         {
           "icon": "upload",
@@ -1329,13 +1437,13 @@
         {
           "icon": "calculate",
           "title": "コストを計算",
-          "description": "計算エンジンを実行し、NRC、RC、初年度合計を円で算出します。",
+          "description": "システムレートカードを使って計算エンジンを実行し、NRC、RC、初年度合計を円で算出します。",
           "href": null
         },
         {
           "icon": "export",
           "title": "結果をエクスポート",
-          "description": "日本語または英語でPDF、Excel、Markdownレポートをダウンロードします。",
+          "description": "見積あたり最大3回、PDF・Excel・Markdownでエクスポートできます。各エクスポートはメールで届き、PDFにはContact Estimateの透かしが入ります。",
           "href": null
         }
       ]

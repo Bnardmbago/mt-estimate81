@@ -12,6 +12,7 @@ from app.models.estimate import (
 )
 from app.models.form_template import FormTemplate
 from app.models.system_config import SystemConfig
+from app.models.contact_magic_link import ContactMagicLink
 from app.models.user import User
 
 __all__ = [

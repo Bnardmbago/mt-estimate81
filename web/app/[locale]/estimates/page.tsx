@@ -3,8 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import EstimatesList from "@/components/EstimatesList";
-import { loginUrl } from "@/lib/authRedirect";
+import { contactUrl } from "@/lib/authRedirect";
 import { fetchEstimates } from "@/lib/estimate";
+import type { UserProfile } from "@/lib/user-types";
 
 export default async function EstimatesPage({
   params,
@@ -12,20 +13,33 @@ export default async function EstimatesPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const returnTo = `/${locale}/estimates`;
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token");
 
   if (!token) {
-    redirect(loginUrl(locale, returnTo));
+    redirect(contactUrl(locale));
   }
 
-  const t = await getTranslations("estimates");
+  const { serverApiJson } = await import("@/lib/server-api");
+  const profile = await serverApiJson<UserProfile>("/auth/me", token.value);
+  if (profile.status !== "ok") {
+    redirect(contactUrl(locale));
+  }
+
   const estimates = await fetchEstimates(token.value);
 
   if (estimates === null) {
-    redirect(loginUrl(locale, returnTo));
+    redirect(contactUrl(locale));
   }
+
+  if (profile.data.account_type === "contact") {
+    if (estimates.length > 0) {
+      redirect(`/${locale}/estimates/${estimates[0].id}`);
+    }
+    redirect(contactUrl(locale));
+  }
+
+  const t = await getTranslations("estimates");
 
   return (
     <div>

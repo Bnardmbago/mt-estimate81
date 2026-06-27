@@ -19,6 +19,7 @@ type EstimateExtractionProps = {
   estimate: EstimateDetail;
   formRef?: RefObject<EstimateFormHandle | null>;
   hideDraftRateCard?: boolean;
+  isContactUser?: boolean;
 };
 
 type EstimateStatusResponse = {
@@ -79,6 +80,7 @@ export default function EstimateExtraction({
   estimate,
   formRef,
   hideDraftRateCard = false,
+  isContactUser = false,
 }: EstimateExtractionProps) {
   const router = useRouter();
   const locale = useLocale();
@@ -92,6 +94,8 @@ export default function EstimateExtraction({
     estimate.project_start_date ?? null,
   );
   const extractionPendingRef = useRef(false);
+  const extractionStartedAtRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     setStatus(estimate.status);
@@ -169,6 +173,30 @@ export default function EstimateExtraction({
       setError(pollError instanceof Error ? pollError.message : t("extractError"));
     }
   }, [estimate.id, locale, router, t]);
+
+  useEffect(() => {
+    if (status !== "extracting" && !extracting) {
+      extractionStartedAtRef.current = null;
+      setElapsedSeconds(0);
+      return;
+    }
+
+    if (extractionStartedAtRef.current === null) {
+      extractionStartedAtRef.current = Date.now();
+    }
+
+    const updateElapsed = () => {
+      const startedAt = extractionStartedAtRef.current;
+      if (startedAt === null) {
+        return;
+      }
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    };
+
+    updateElapsed();
+    const interval = window.setInterval(updateElapsed, 1000);
+    return () => window.clearInterval(interval);
+  }, [status, extracting]);
 
   useEffect(() => {
     if (status !== "extracting" && !extracting) {
@@ -251,6 +279,11 @@ export default function EstimateExtraction({
       <section className="mt-8 border-t border-gray-200 pt-8">
         <h2 className="mb-1 text-lg font-semibold">{t("extractingTitle")}</h2>
         <p className="text-sm text-gray-500">{progressLabel}</p>
+        {elapsedSeconds > 0 && (
+          <p className="mt-1 text-xs text-gray-400">
+            {t("progressElapsed", { seconds: elapsedSeconds })}
+          </p>
+        )}
         <p className="mt-1 text-xs text-gray-400">{t("progressHint")}</p>
         <div className="mt-4 h-2 w-full max-w-md overflow-hidden rounded-full bg-gray-200">
           <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-500" />
@@ -279,17 +312,19 @@ export default function EstimateExtraction({
 
     return (
       <div>
-        <EstimateRateCardPanel
-          estimateId={estimate.id}
-          rateCardId={estimate.rate_card_id}
-          rateCardName={estimate.rate_card_name}
-          complexityProfile={estimate.complexity_profile ?? null}
-          rateCardAutoTuned={estimate.rate_card_auto_tuned ?? false}
-          rateCardTuneRecommended={estimate.rate_card_tune_recommended ?? false}
-          rateCardAutoTuneEnabled={estimate.rate_card_auto_tune_enabled ?? true}
-          readOnly={status === "completed"}
-        />
-        {rateCardStale && canReExtract && (
+        {!isContactUser ? (
+          <EstimateRateCardPanel
+            estimateId={estimate.id}
+            rateCardId={estimate.rate_card_id}
+            rateCardName={estimate.rate_card_name}
+            complexityProfile={estimate.complexity_profile ?? null}
+            rateCardAutoTuned={estimate.rate_card_auto_tuned ?? false}
+            rateCardTuneRecommended={estimate.rate_card_tune_recommended ?? false}
+            rateCardAutoTuneEnabled={estimate.rate_card_auto_tune_enabled ?? true}
+            readOnly={status === "completed"}
+          />
+        ) : null}
+        {rateCardStale && canReExtract && !isContactUser && (
           <div
             className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
             role="status"
@@ -337,12 +372,14 @@ export default function EstimateExtraction({
         <EstimateCalculation
           estimate={estimate}
           projectStartDate={projectStartDate}
+          isContactUser={isContactUser}
         />
         {showExportPanel && estimate.calculation_result && (
           <ExportPanel
             estimateId={estimate.id}
             estimateUpdatedAt={estimate.updated_at}
             calculationResult={estimate.calculation_result as CalculationResult}
+            isContactUser={isContactUser}
           />
         )}
         {estimate.calculation_result && (
@@ -362,7 +399,7 @@ export default function EstimateExtraction({
       <section className="mt-8 border-t border-gray-200 pt-8">
         <h2 className="mb-1 text-lg font-semibold">{t("extractTitle")}</h2>
         <p className="mb-4 text-sm text-gray-500">{t("extractDescription")}</p>
-        {!hideDraftRateCard ? (
+        {!hideDraftRateCard && !isContactUser ? (
           <EstimateRateCardPanel
             estimateId={estimate.id}
             rateCardId={estimate.rate_card_id}

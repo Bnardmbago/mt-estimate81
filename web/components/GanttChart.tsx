@@ -12,6 +12,7 @@ export type GanttTask = {
   role: string;
   hours: number;
   effort_days: number;
+  personnel_count?: number;
   start_date: string;
   end_date: string;
   duration_working_days: number;
@@ -106,6 +107,7 @@ export default function GanttChart({
   onStartDateChange,
 }: GanttChartProps) {
   const t = useTranslations("gantt");
+  const tCalc = useTranslations("calculation");
   const { locale, translatePhase, translateRole } = useDisplayLabels();
   const [startDate, setStartDate] = useState(initialStartDate ?? defaultStartDateValue());
   const [gantt, setGantt] = useState<GanttData | null>(initialGantt);
@@ -315,6 +317,7 @@ export default function GanttChart({
                   <th className="px-3 py-2 text-left font-medium text-gray-700">{t("task")}</th>
                   <th className="px-3 py-2 text-left font-medium text-gray-700">{t("phase")}</th>
                   <th className="px-3 py-2 text-left font-medium text-gray-700">{t("role")}</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-700">{tCalc("headcount")}</th>
                   <th className="px-3 py-2 text-right font-medium text-gray-700">{t("hours")}</th>
                   <th className="px-3 py-2 text-left font-medium text-gray-700">{t("startDate")}</th>
                   <th className="px-3 py-2 text-left font-medium text-gray-700">{t("endDate")}</th>
@@ -327,6 +330,7 @@ export default function GanttChart({
                     <td className="px-3 py-2">{task.name}</td>
                     <td className="px-3 py-2">{translatePhase(task.phase)}</td>
                     <td className="px-3 py-2">{translateRole(task.role)}</td>
+                    <td className="px-3 py-2 text-right">{task.personnel_count ?? 1}</td>
                     <td className="px-3 py-2 text-right">{task.hours}</td>
                     <td className="px-3 py-2">{formatDisplayDate(task.start_date, locale)}</td>
                     <td className="px-3 py-2">{formatDisplayDate(task.end_date, locale)}</td>

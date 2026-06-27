@@ -21,22 +21,23 @@ def estimate():
     return sample_estimate_with_calculation()
 
 
-def test_excel_workbook_has_nine_sheets(report_context, estimate):
+def test_excel_workbook_has_seven_sheets(report_context, estimate):
     content = generate_excel(report_context, estimate)
     wb = _load_workbook_from_bytes(content)
 
     expected_sheets = list(SHEET_NAMES["en"].values())
     assert wb.sheetnames == expected_sheets
-    assert len(wb.sheetnames) == 9
+    assert len(wb.sheetnames) == 7
 
 
-def test_excel_timeline_sheet_contains_gantt_tasks(report_context, estimate):
+def test_excel_timeline_sheet_contains_gantt_summary(report_context, estimate):
     content = generate_excel(report_context, estimate)
     wb = _load_workbook_from_bytes(content)
 
     timeline_sheet = wb[SHEET_NAMES["en"]["timeline"]]
     assert timeline_sheet["A1"].value == "Project start"
-    assert timeline_sheet["A6"].value == "User login & auth"
+    assert timeline_sheet["B1"].value == "2026-06-09"
+    assert timeline_sheet["A3"].value == "Total working days"
 
 
 def test_excel_nrc_total_on_nrc_detail_sheet(report_context, estimate):
@@ -49,23 +50,15 @@ def test_excel_nrc_total_on_nrc_detail_sheet(report_context, estimate):
     assert nrc_sheet.cell(row=last_row, column=3).value == 700000
 
 
-def test_excel_role_breakdown_has_cost_values(report_context, estimate):
-    content = generate_excel(report_context, estimate)
-    wb = _load_workbook_from_bytes(content)
-
-    role_sheet = wb[SHEET_NAMES["en"]["role"]]
-    assert role_sheet["E2"].value == 240000
-    assert role_sheet["E2"].number_format == '"¥"#,##0'
-
-
 def test_excel_executive_contains_project_name(report_context, estimate):
     content = generate_excel(report_context, estimate)
     wb = _load_workbook_from_bytes(content)
 
     executive_sheet = wb[SHEET_NAMES["en"]["executive"]]
     assert executive_sheet["B1"].value == "Portal Redesign"
-    assert executive_sheet["B2"].value == "ACME Corp"
-    assert executive_sheet["B4"].value == 1
+    assert executive_sheet["B2"].value == "Web Application"
+    assert executive_sheet["B3"].value == "ACME Corp"
+    assert executive_sheet["B5"].value == 1
 
 
 def test_excel_ja_locale_sheet_names(estimate):

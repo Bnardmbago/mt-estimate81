@@ -2,7 +2,7 @@ import math
 from datetime import date
 
 from app.calculation.development_approach import coerce_development_approach, get_approach_factors
-from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline
+from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline_two_pass
 from app.calculation.line_items import (
     build_nrc_line_items,
     build_rc_line_items,
@@ -33,6 +33,30 @@ def role_personnel_count(
     duration_days = estimated_duration_days if estimated_duration_days > 0 else total_days
     capacity = max(duration_days * HOURS_PER_EFFORT_DAY, HOURS_PER_EFFORT_DAY)
     return max(1, math.ceil(hours / capacity))
+
+
+def filter_active_role_breakdown(
+    role_breakdown: list[dict],
+    *,
+    estimated_duration_days: float,
+    total_days: float,
+) -> list[dict]:
+    active: list[dict] = []
+    for row in role_breakdown:
+        hours = float(row.get("hours") or 0)
+        if hours <= 0:
+            continue
+        personnel_count = row.get("personnel_count")
+        if personnel_count is None:
+            personnel_count = role_personnel_count(
+                hours,
+                estimated_duration_days=estimated_duration_days,
+                total_days=total_days,
+            )
+        if int(personnel_count) <= 0:
+            continue
+        active.append(row)
+    return active
 
 
 class CalculationError(Exception):
@@ -109,7 +133,7 @@ def calculate_estimate(
             )
             for item in feature_items
         ]
-        gantt = build_gantt_timeline(
+        gantt = build_gantt_timeline_two_pass(
             [
                 GanttFeatureItem(
                     id=item.id,

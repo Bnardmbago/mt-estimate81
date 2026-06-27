@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { resolveAuthenticatedHome } from "@/lib/contact";
 
 export default async function HomePage({
   params,
@@ -11,7 +12,7 @@ export default async function HomePage({
   const token = cookieStore.get("access_token");
 
   if (token) {
-    redirect(`/${locale}/estimates`);
+    redirect(await resolveAuthenticatedHome(locale, token.value));
   }
 
   redirect(`/${locale}/welcome`);

@@ -228,6 +228,11 @@ async def test_system_health(
     assert data["stuck_extractions"] == 0
     assert data["storage_usage_bytes"] == 5
     assert data["app_version"] == "0.1.0"
+    assert "smtp_configured" in data
+    assert "turnstile_configured" in data
+    assert data["contact_export_limit"] == 3
+    assert data["contact_magic_link_ttl_minutes"] == 15
+    assert "system_rate_card_configured" in data
 
 
 @pytest.mark.asyncio

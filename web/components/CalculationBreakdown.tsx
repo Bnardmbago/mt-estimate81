@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useDisplayLabels } from "@/lib/displayI18n";
+import { filterActiveRoleBreakdown } from "@/lib/calculation";
 import { roleDevelopersCount } from "@/lib/datetime";
 
 type LineItemAmount = {
@@ -78,6 +79,12 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
     ["traditional", "ai_assisted", "hybrid", "low_code"].includes(approachKey)
       ? tRateCards(`developmentApproachOptions.${approachKey}.label`)
       : null;
+
+  const activeRoleBreakdown = filterActiveRoleBreakdown(
+    result.role_breakdown,
+    result.estimated_duration_days,
+    result.total_effort_days,
+  );
 
   return (
     <section
@@ -177,7 +184,7 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {result.role_breakdown.map((row) => (
+              {activeRoleBreakdown.map((row) => (
                 <tr key={row.role}>
                   <td className="px-3 py-2">{translateRole(row.role)}</td>
                   <td className="px-3 py-2 text-right">
@@ -295,21 +302,28 @@ export default function CalculationBreakdown({ result, embedded = false }: Calcu
         </div>
       </div>
 
-      <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4">
-        <p className="text-sm text-indigo-700">{t("totalDevelopmentCost")}</p>
-        <p className="text-2xl font-bold text-indigo-900">
-          {formatJpy(result.nrc.total_jpy)}
-        </p>
-        <p className="text-xs text-indigo-600">{t("totalDevelopmentCostFormula")}</p>
-      </div>
+      {!embedded && (
+        <>
+          <div
+            id="total-development-cost"
+            className="scroll-mt-20 rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4"
+          >
+            <p className="text-sm text-indigo-700">{t("totalDevelopmentCost")}</p>
+            <p className="text-2xl font-bold text-indigo-900">
+              {formatJpy(result.nrc.total_jpy)}
+            </p>
+            <p className="text-xs text-indigo-600">{t("totalDevelopmentCostFormula")}</p>
+          </div>
 
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <p className="text-sm text-gray-600">{t("firstYearTotal")}</p>
-        <p className="text-xl font-semibold text-gray-900">
-          {formatJpy(result.first_year_total_jpy)}
-        </p>
-        <p className="text-xs text-gray-500">{t("firstYearFormula")}</p>
-      </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-sm text-gray-600">{t("firstYearTotal")}</p>
+            <p className="text-xl font-semibold text-gray-900">
+              {formatJpy(result.first_year_total_jpy)}
+            </p>
+            <p className="text-xs text-gray-500">{t("firstYearFormula")}</p>
+          </div>
+        </>
+      )}
     </section>
   );
 }

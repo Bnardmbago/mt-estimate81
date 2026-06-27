@@ -13,13 +13,16 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def verify_password(plain: str, hashed: str) -> bool:
+def verify_password(plain: str, hashed: str | None) -> bool:
+    if not hashed:
+        return False
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(data: dict, *, expiry_hours: int | None = None) -> str:
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiry_hours)
+    hours = expiry_hours if expiry_hours is not None else settings.jwt_expiry_hours
+    expire = datetime.now(timezone.utc) + timedelta(hours=hours)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.jwt_secret, algorithm=ALGORITHM)
 

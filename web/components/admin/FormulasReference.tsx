@@ -21,6 +21,7 @@ type FormulaSectionKey =
   | "discount"
   | "gantt"
   | "rateCard"
+  | "contactAccess"
   | "variance";
 
 const SECTION_ORDER: FormulaSectionKey[] = [
@@ -30,6 +31,7 @@ const SECTION_ORDER: FormulaSectionKey[] = [
   "discount",
   "gantt",
   "rateCard",
+  "contactAccess",
   "variance",
 ];
 

@@ -14,6 +14,11 @@ type SystemHealth = {
   stuck_extractions: number;
   storage_usage_bytes: number;
   app_version: string;
+  smtp_configured: boolean;
+  turnstile_configured: boolean;
+  contact_export_limit: number;
+  contact_magic_link_ttl_minutes: number;
+  system_rate_card_configured: boolean;
 };
 
 function formatBytes(bytes: number): string {
@@ -123,6 +128,32 @@ export default function SystemHealthPanel() {
           <div>
             <dt className="font-medium text-gray-500">{t("anthropicCredentials")}</dt>
             <dd>{health.anthropic_api_key_configured ? t("configured") : t("notConfigured")}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section className="rounded-lg border border-gray-200 p-4">
+        <h3 className="mb-2 text-sm font-medium text-gray-500">{t("contactAccess")}</h3>
+        <dl className="grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-gray-500">{t("smtp")}</dt>
+            <dd>{health.smtp_configured ? t("configured") : t("notConfigured")}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("turnstile")}</dt>
+            <dd>{health.turnstile_configured ? t("configured") : t("notConfigured")}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("systemRateCard")}</dt>
+            <dd>{health.system_rate_card_configured ? t("configured") : t("notConfigured")}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("contactExportLimit")}</dt>
+            <dd>{health.contact_export_limit}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-gray-500">{t("contactMagicLinkTtl")}</dt>
+            <dd>{t("minutes", { count: health.contact_magic_link_ttl_minutes })}</dd>
           </div>
         </dl>
       </section>

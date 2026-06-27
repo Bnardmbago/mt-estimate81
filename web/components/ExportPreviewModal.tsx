@@ -261,6 +261,18 @@ export default function ExportPreviewModal({
               </a>
             </div>
           )}
+
+          {(format === "docx" || format === "docx_quotation") && (
+            <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
+              <p>{t("previewDocxHint")}</p>
+              <a
+                href={`/api/exports/${exportId}/download`}
+                className="mt-3 inline-block font-medium text-indigo-600 hover:text-indigo-800"
+              >
+                {t("download")}
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
