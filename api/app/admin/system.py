@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.ai_config import get_ai_config
 from app.admin.smtp_config import get_smtp_config, smtp_runtime_config
+from app.auth.web_base_url import resolve_web_base_url
 from app.config import settings
 from app.dependencies import get_db, require_admin
 from app.email.smtp import smtp_configured
@@ -34,6 +35,7 @@ class SystemHealthResponse(BaseModel):
     turnstile_configured: bool
     contact_export_limit: int
     contact_magic_link_ttl_minutes: int
+    web_base_url: str
     system_rate_card_configured: bool
 
 
@@ -89,5 +91,6 @@ async def system_health(
         turnstile_configured=bool(settings.turnstile_secret_key.strip()),
         contact_export_limit=settings.contact_export_limit,
         contact_magic_link_ttl_minutes=settings.contact_magic_link_ttl_minutes,
+        web_base_url=resolve_web_base_url(),
         system_rate_card_configured=system_rate_card is not None,
     )

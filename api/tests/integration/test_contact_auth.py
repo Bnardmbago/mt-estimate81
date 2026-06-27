@@ -79,6 +79,34 @@ async def test_request_magic_link_creates_contact_user(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_magic_link_email_uses_forwarded_host(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("WEB_BASE_URL", raising=False)
+
+    with patch("app.auth.contact.send_email", new=AsyncMock()) as mock_send:
+        response = await client.post(
+            "/auth/contact/request-link",
+            headers={
+                "X-Forwarded-Host": "34.153.193.172",
+                "X-Forwarded-Proto": "http",
+            },
+            json={
+                "email": "forwarded-host@example.com",
+                "display_name": "Forwarded Host",
+                "company_name": "ACME",
+                "locale": "en",
+                "captcha_token": "dev-bypass",
+            },
+        )
+
+    assert response.status_code == 204
+    body_text = mock_send.await_args.kwargs["body_text"]
+    assert "http://34.153.193.172/en/contact/verify?token=" in body_text
+
+
+@pytest.mark.asyncio
 async def test_verify_magic_link_endpoint(client: AsyncClient, db_session: AsyncSession):
     user = User(
         id=uuid.uuid4(),

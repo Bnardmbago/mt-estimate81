@@ -106,6 +106,7 @@ async def contact_request_link(
         locale=body.locale,
         request_ip=client_ip,
         captcha_token=body.captcha_token,
+        request=request,
     )
 
 

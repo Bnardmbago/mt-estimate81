@@ -5,13 +5,14 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.smtp_config import get_smtp_config, smtp_runtime_config
 from app.auth.disposable_domains import is_disposable_email
 from app.auth.service import create_access_token
+from app.auth.web_base_url import resolve_web_base_url
 from app.config import settings
 from app.email.smtp import send_email, smtp_configured
 from app.estimates.form_fields import snapshot_fields
@@ -109,6 +110,7 @@ async def request_magic_link(
     locale: str,
     request_ip: str | None,
     captcha_token: str,
+    request: Request | None = None,
 ) -> None:
     normalized_email = email.strip().lower()
     display = display_name.strip()
@@ -181,8 +183,9 @@ async def request_magic_link(
     )
     await db.commit()
 
+    web_base_url = resolve_web_base_url(request)
     verify_url = (
-        f"{settings.web_base_url.rstrip('/')}/{user.preferred_locale}/contact/verify"
+        f"{web_base_url}/{user.preferred_locale}/contact/verify"
         f"?token={raw_token}"
     )
     subject = (

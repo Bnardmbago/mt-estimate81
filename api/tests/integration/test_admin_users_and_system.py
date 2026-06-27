@@ -287,6 +287,7 @@ async def test_system_health(
     assert "turnstile_configured" in data
     assert data["contact_export_limit"] == 3
     assert data["contact_magic_link_ttl_minutes"] == 15
+    assert "web_base_url" in data
     assert "system_rate_card_configured" in data
 
 
