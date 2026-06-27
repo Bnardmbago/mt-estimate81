@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.admin.user_deletion import delete_user_and_dependencies
 from app.auth.service import hash_password
 from app.dependencies import get_current_user, get_db, require_admin
 from app.models.user import ACCOUNT_TYPE_CONTACT, ACCOUNT_TYPE_FULL, User
@@ -185,8 +186,7 @@ async def delete_user(
                 detail={"error": "At least one active admin is required", "code": "LAST_ADMIN"},
             )
 
-    await db.delete(user)
-    await db.commit()
+    await delete_user_and_dependencies(db, user)
 
 
 @router.put("/{user_id}/reset-password", response_model=UserResponse)

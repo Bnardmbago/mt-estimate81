@@ -11,8 +11,9 @@ from app.admin.ai_settings import get_hermes_client as get_ai_settings_hermes_cl
 from app.admin.system import get_hermes_client
 from app.auth.service import create_access_token, hash_password, verify_password
 from app.main import app
+from app.models.contact_magic_link import ContactMagicLink
 from app.models.estimate import Estimate, EstimateStatus
-from app.models.user import User
+from app.models.user import ACCOUNT_TYPE_CONTACT, User
 
 
 @pytest.fixture
@@ -166,6 +167,60 @@ async def test_delete_user(client: AsyncClient, admin_headers: dict[str, str]):
 
     get = await client.get("/admin/users", headers=admin_headers)
     assert all(user["id"] != user_id for user in get.json())
+
+
+@pytest.mark.asyncio
+async def test_delete_contact_user_with_magic_link_and_estimate(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+    db_session: AsyncSession,
+):
+    contact = User(
+        id=uuid.uuid4(),
+        email="contact-delete@example.com",
+        password_hash=None,
+        display_name="Contact Delete",
+        account_type=ACCOUNT_TYPE_CONTACT,
+        preferred_locale="en",
+    )
+    db_session.add(contact)
+    await db_session.flush()
+
+    db_session.add(
+        ContactMagicLink(
+            user_id=contact.id,
+            token_hash="abc123",
+            expires_at=datetime.utcnow() + timedelta(minutes=15),
+        )
+    )
+    db_session.add(
+        Estimate(
+            project_name="Contact Estimate",
+            client_name="Contact Delete",
+            status=EstimateStatus.DRAFT.value,
+            locale="en",
+            created_by=contact.id,
+            form_data={},
+            form_schema_snapshot=[],
+        )
+    )
+    await db_session.commit()
+
+    delete = await client.delete(f"/admin/users/{contact.id}", headers=admin_headers)
+    assert delete.status_code == 204
+
+    users = await client.get("/admin/users", headers=admin_headers)
+    assert all(user["id"] != str(contact.id) for user in users.json())
+
+    magic_links = await db_session.execute(
+        select(ContactMagicLink).where(ContactMagicLink.user_id == contact.id)
+    )
+    assert list(magic_links.scalars().all()) == []
+
+    estimates = await db_session.execute(
+        select(Estimate).where(Estimate.created_by == contact.id)
+    )
+    assert list(estimates.scalars().all()) == []
 
 
 @pytest.mark.asyncio
