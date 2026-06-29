@@ -8,7 +8,8 @@ const CODE_TO_I18N_KEY: Record<string, string> = {
   RATE_LIMIT_EMAIL: "errorRateLimit",
   RATE_LIMIT_IP: "errorRateLimit",
   USE_FULL_LOGIN: "errorFullAccount",
-  NAME_OR_COMPANY_REQUIRED: "errorNameOrCompany",
+  NAME_OR_COMPANY_REQUIRED: "errorNameRequired",
+  DISPLAY_NAME_REQUIRED: "errorNameRequired",
   API_UNREACHABLE: "errorNetwork",
   API_BAD_RESPONSE: "errorNetwork",
 };

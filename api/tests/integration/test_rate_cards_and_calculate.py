@@ -945,6 +945,43 @@ async def test_calculate_applies_admin_discount_rate(
 
 
 @pytest.mark.asyncio
+async def test_calculate_stores_internal_pricing_for_admin_only(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+    auth_headers: dict[str, str],
+    review_estimate: str,
+):
+    await client.patch(
+        "/admin/discount-settings",
+        headers=admin_headers,
+        json={"estimate_discount_rate": 0.30, "estimate_markup_rate": 0.30},
+    )
+
+    calc = await client.post(
+        f"/estimates/{review_estimate}/calculate",
+        headers=auth_headers,
+    )
+    assert calc.status_code == 200
+    user_result = calc.json()["calculation_result"]
+    assert "internal_pricing" not in user_result
+    visible_nrc = user_result["nrc"]["total_jpy"]
+
+    admin_get = await client.get(f"/estimates/{review_estimate}", headers=admin_headers)
+    assert admin_get.status_code == 200
+    admin_result = admin_get.json()["calculation_result"]
+    assert admin_result["nrc"]["total_jpy"] == visible_nrc
+    internal = admin_result["internal_pricing"]
+    assert internal["markup_rate_applied"] == 0.30
+    assert internal["nrc_total_jpy"] == sum(
+        item["cost_jpy"] for item in internal["nrc_line_items"]
+    )
+    assert abs(internal["nrc_total_jpy"] - int(round(visible_nrc * 1.3))) <= 1
+
+    user_get = await client.get(f"/estimates/{review_estimate}", headers=auth_headers)
+    assert "internal_pricing" not in (user_get.json().get("calculation_result") or {})
+
+
+@pytest.mark.asyncio
 async def test_apply_regional_standard_updates_role_rates(
     client: AsyncClient,
     auth_headers: dict[str, str],
@@ -967,6 +1004,6 @@ async def test_apply_regional_standard_updates_role_rates(
     payload = response.json()
     assert payload["roles_updated"] >= 1
     roles = {role["name"]: role for role in payload["settings"]["roles"]}
-    assert roles["PM"]["hourly_rate"] > 0
-    assert roles["developer"]["hourly_rate"] > 0
-    assert roles["PM"]["hourly_rate"] != settings["roles"][0]["hourly_rate"]
+    assert payload["settings"]["region"] == "japan"
+    assert roles["PM"]["hourly_rate"] == 12000
+    assert roles["developer"]["hourly_rate"] == 8000

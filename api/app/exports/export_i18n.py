@@ -58,8 +58,10 @@ RC_CATEGORY_LABELS_JA: dict[str, str] = {
 }
 
 LINE_ITEM_LABELS_JA: dict[str, str] = {
-    "Maintenance support": "保守サポート",
+    "Maintenance and Support": "メンテナンスとサポート",
+    "Maintenance support": "メンテナンスとサポート",
     "hosting": "ホスティング",
+    "monitoring": "モニタリング",
     "Setup": "セットアップ",
     "Item": "項目",
 }
@@ -184,3 +186,37 @@ def localize_calculation_for_export(calculation: dict[str, Any], locale: str) ->
     if calculation.get("gantt"):
         localized["gantt"] = localize_gantt(calculation.get("gantt") or {}, locale)
     return localized
+
+
+def localize_rc_export_breakdown(breakdown: dict[str, Any], locale: str) -> dict[str, Any]:
+    if locale != "ja":
+        return breakdown
+
+    from app.calculation.rc_detailed import RC_CATEGORY_CONTENT
+
+    localized_items = []
+    labels = RC_CATEGORY_CONTENT.get("ja", {})
+    for row in breakdown.get("line_items") or []:
+        category_key = row.get("category_key")
+        if category_key and category_key in labels:
+            meta = labels[category_key]
+            localized_items.append(
+                {
+                    **row,
+                    "category": meta["category"],
+                    "service_description": row.get("service_description") or meta["service_description"],
+                    "item": meta["category"],
+                }
+            )
+            continue
+        localized_items.append(
+            {
+                **row,
+                "category": localize_rc_category(str(row.get("category") or ""), locale),
+                "item": localize_line_item_name(str(row.get("item") or ""), locale),
+            }
+        )
+    return {
+        **breakdown,
+        "line_items": localized_items,
+    }

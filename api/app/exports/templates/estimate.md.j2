@@ -14,7 +14,7 @@
 ## {{ ctx.labels.executive_cost_summary }}
 | | |
 |---|---|
-| {{ ctx.labels.total_development_cost }} | {{ format_currency(ctx.executive_summary.nrc_total_jpy) }} |
+{% include '_pricing_summary.md.j2' %}
 | {{ ctx.labels.maintenance_cost_monthly_annual }} | {{ ctx.executive_display.maintenance_cost_display }} |
 | {{ ctx.labels.development_period }} | {{ ctx.executive_display.development_period_display }} |
 
@@ -92,11 +92,13 @@
 | {{ ctx.labels.nrc_total }} | | {{ format_currency(ctx.executive_summary.nrc_total_jpy) }} |
 
 ## {{ ctx.labels.rc_detailed }}
-| {{ ctx.labels.category }} | {{ ctx.labels.item }} | {{ ctx.labels.monthly }} | {{ ctx.labels.annual }} |
+| {{ ctx.labels.category }} | {{ ctx.labels.service_description }} | {{ ctx.labels.monthly }} | {{ ctx.labels.annual }} |
 |---|---|---:|---:|
-{%- for row in ctx.calculation.rc_line_items %}
-| {{ row.category }} | {{ row.item }} | {{ format_currency(row.monthly_jpy) }} | {{ format_currency(row.annual_jpy) }} |
+{%- for row in ctx.rc_breakdown.line_items %}
+| {{ row.category }} | {{ row.service_description or row.item }} | {{ format_currency(row.monthly_jpy) }} | {{ format_currency(row.annual_jpy) }} |
 {%- endfor %}
+| {{ ctx.labels.monthly_total }} | | {{ format_currency(ctx.rc_breakdown.monthly_total_jpy) }} | |
+| {{ ctx.labels.annual_total }} | | | {{ format_currency(ctx.rc_breakdown.annual_total_jpy) }} |
 
 ## {{ ctx.labels.estimate_exclusions }}
 {%- if ctx.extracted.estimate_exclusions %}

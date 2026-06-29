@@ -44,11 +44,17 @@ async def rate_card_settings_to_jpy(
         amount_jpy = await fx_service.convert_amount(item.amount, source_currency, "JPY")
         setup_cost_items.append(SetupCostItem(name=item.name, amount=amount_jpy))
 
+    default_maintenance_jpy = await fx_service.convert_amount(
+        settings.default_maintenance_monthly_jpy,
+        source_currency,
+        "JPY",
+    )
     jpy_settings = settings.model_copy(
         update={
             "roles": roles,
             "monthly_rc_items": monthly_rc_items,
             "setup_cost_items": setup_cost_items,
+            "default_maintenance_monthly_jpy": default_maintenance_jpy,
             "currency": "JPY",
         }
     )

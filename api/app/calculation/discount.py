@@ -19,6 +19,7 @@ def apply_estimate_discount(
 
     multiplier = 1.0 - discount_rate
     data = result.model_dump()
+    nrc_original_total_jpy = int(data["nrc"]["total_jpy"])
 
     role_breakdown = deepcopy(data["role_breakdown"])
     for row in role_breakdown:
@@ -69,5 +70,8 @@ def apply_estimate_discount(
     }
     data["nrc_line_items"] = nrc_line_items
     data["first_year_total_jpy"] = nrc_total + annual_rc
+    data["nrc_original_total_jpy"] = nrc_original_total_jpy
+    data["discount_rate_applied"] = discount_rate
+    data["discount_amount_jpy"] = nrc_original_total_jpy - nrc_total
 
     return CalculationResult(**data)

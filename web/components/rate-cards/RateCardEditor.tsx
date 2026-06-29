@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
@@ -13,6 +13,7 @@ import {
   type RateCardAiSection,
   type RateCardAiSuggestResponse,
 } from "@/lib/rateCardAi";
+import type { EstimateDetail } from "@/lib/estimate-types";
 
 const HOURS_PER_DAY = 8;
 
@@ -65,6 +66,7 @@ type RateCardSettings = {
   overhead_rate: number;
   monthly_rc_items: LineItem[];
   setup_cost_items: LineItem[];
+  default_maintenance_monthly_jpy: number;
   productivity: { hours_per_feature_default: number };
   tax_rate: number;
   region: Region;
@@ -187,7 +189,7 @@ function normalizeSettings(raw: RateCardSettings): RateCardSettings {
 
   return {
     ...raw,
-    region: REGION_OPTIONS.includes(raw.region as Region) ? raw.region : "philippines",
+    region: REGION_OPTIONS.includes(raw.region as Region) ? raw.region : "japan",
     currency: CURRENCY_OPTIONS.includes(raw.currency as Currency) ? raw.currency : "JPY",
     development_approach: DEVELOPMENT_APPROACH_OPTIONS.includes(
       raw.development_approach as DevelopmentApproach,
@@ -197,6 +199,7 @@ function normalizeSettings(raw: RateCardSettings): RateCardSettings {
     roles: (raw.roles ?? []).map(normalizeRole),
     setup_cost_items: setupCostItems.map(normalizeLineItem),
     monthly_rc_items: (raw.monthly_rc_items ?? []).map(normalizeLineItem),
+    default_maintenance_monthly_jpy: Number(raw.default_maintenance_monthly_jpy) || 0,
   };
 }
 
@@ -206,6 +209,8 @@ export default function RateCardEditor({
 }: RateCardEditorProps) {
   const t = useTranslations("rateCards");
   const locale = useLocale();
+  const searchParams = useSearchParams();
+  const linkedEstimateId = searchParams.get("estimateId");
   const { formatJpy, formatMoney, translateRole, translateSetupItem } = useDisplayLabels();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -227,6 +232,7 @@ export default function RateCardEditor({
   const [cards, setCards] = useState<RateCardSummary[]>([]);
   const [cardName, setCardName] = useState("");
   const [versionId, setVersionId] = useState("");
+  const [versionNumber, setVersionNumber] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [estimateCount, setEstimateCount] = useState(0);
   const [usageEstimates, setUsageEstimates] = useState<RateCardEstimateUsage[]>([]);
@@ -236,6 +242,7 @@ export default function RateCardEditor({
   const [aiModalSection, setAiModalSection] = useState<RateCardAiSection | null>(null);
   const [fxLastUpdated, setFxLastUpdated] = useState<string | null>(null);
   const [applyingRegional, setApplyingRegional] = useState(false);
+  const [linkedEstimate, setLinkedEstimate] = useState<EstimateDetail | null>(null);
 
   const loadUsage = useCallback(async (cardId: string) => {
     setLoadingUsage(true);
@@ -256,6 +263,7 @@ export default function RateCardEditor({
     setRateCardId(data.id);
     setCardName(data.name);
     setVersionId(data.version_id);
+    setVersionNumber(data.version_number);
     setIsLocked(data.is_locked);
     setEstimateCount(data.estimate_count);
     setSettings(normalized);
@@ -311,6 +319,37 @@ export default function RateCardEditor({
 
     void load();
   }, [applyActiveCard, initialCardId, loadCards, loadUsage, t]);
+
+  useEffect(() => {
+    if (!linkedEstimateId || !rateCardId) {
+      setLinkedEstimate(null);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadLinkedEstimate() {
+      try {
+        const estimate = await apiJson<EstimateDetail>(`/estimates/${linkedEstimateId}`);
+        if (cancelled) {
+          return;
+        }
+        if (estimate.rate_card_id !== rateCardId) {
+          setLinkedEstimate(null);
+          return;
+        }
+        setLinkedEstimate(estimate);
+      } catch {
+        if (!cancelled) {
+          setLinkedEstimate(null);
+        }
+      }
+    }
+
+    void loadLinkedEstimate();
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedEstimateId, rateCardId]);
 
   useEffect(() => {
     void apiJson<{ rates: Record<string, string | number | null> }>("/rate-cards/fx-rates")
@@ -742,6 +781,7 @@ export default function RateCardEditor({
     () => settings?.monthly_rc_items.reduce((sum, item) => sum + item.amount, 0) ?? 0,
     [settings],
   );
+  const monthlyRcTotal = monthlyRcSubtotal;
   function handleApplyAiSuggestion(response: RateCardAiSuggestResponse) {
     if (!settings) {
       return;
@@ -919,6 +959,18 @@ export default function RateCardEditor({
         <p className="text-sm text-red-600" role="alert">
           {error}
         </p>
+      )}
+
+      {linkedEstimate && (
+        <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <p>{t("linkedEstimateBanner", { projectName: linkedEstimate.project_name })}</p>
+          {linkedEstimate.rate_card_version_id &&
+            linkedEstimate.rate_card_version_id !== versionId && (
+            <p className="text-blue-800">
+              {t("frozenVersionBanner", { latestVersion: versionNumber })}
+            </p>
+          )}
+        </div>
       )}
 
       <section className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -1581,12 +1633,21 @@ export default function RateCardEditor({
               ))}
               <tr className="bg-gray-50 font-semibold">
                 <td className="px-3 py-2">{t("monthlyRcSubtotal")}</td>
-                <td className="px-3 py-2">{formatMoney(monthlyRcSubtotal, settings.currency)}</td>
+                <td className="px-3 py-2">
+                  {formatMoney(monthlyRcSubtotal, settings.currency)}
+                </td>
+                <td />
+              </tr>
+              <tr className="bg-gray-50 font-semibold">
+                <td className="px-3 py-2">{t("monthlyRcTotal")}</td>
+                <td className="px-3 py-2">{formatMoney(monthlyRcTotal, settings.currency)}</td>
                 <td />
               </tr>
               <tr className="bg-indigo-50 font-semibold text-indigo-900">
-                <td className="px-3 py-2">{t("annualRcSubtotal")}</td>
-                <td className="px-3 py-2">{formatMoney(monthlyRcSubtotal * 12, settings.currency)}</td>
+                <td className="px-3 py-2">{t("annualRcTotal")}</td>
+                <td className="px-3 py-2">
+                  {formatMoney(monthlyRcTotal * 12, settings.currency)}
+                </td>
                 <td />
               </tr>
             </tbody>

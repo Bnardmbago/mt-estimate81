@@ -77,6 +77,30 @@ def resolve_rate_card_role(role_rates: dict[str, int], hints: tuple[str, ...]) -
     return None
 
 
+def resolve_support_role_hourly_rate(
+    role_rates: dict[str, int],
+    support_role_hint: str | None = None,
+) -> tuple[str | None, int]:
+    """Resolve maintenance support role to an exact rate-card role name and hourly rate."""
+    hint = _normalize_key(str(support_role_hint or "developer"))
+    normalized_map = {_normalize_key(name): name for name in role_rates}
+
+    if hint in normalized_map:
+        role_name = normalized_map[hint]
+        return role_name, role_rates[role_name]
+
+    resolved = resolve_rate_card_role(role_rates, (hint,))
+    if resolved is not None:
+        return resolved, role_rates[resolved]
+
+    for fallback in ("developer", "dev", "engineer", "pm", "project manager"):
+        resolved = resolve_rate_card_role(role_rates, (fallback,))
+        if resolved is not None:
+            return resolved, role_rates[resolved]
+
+    return None, 0
+
+
 def resolve_feature_item_role(
     role: str,
     role_rates: dict[str, int],
@@ -108,6 +132,14 @@ def resolve_feature_item_role(
     resolved = resolve_rate_card_role(role_rates, (normalized_role,))
     if resolved:
         return resolved
+
+    from app.rate_cards.regional_profiles import role_canonical_keys
+
+    feature_keys = role_canonical_keys(role)
+    if feature_keys:
+        for rate_card_role in role_rates:
+            if feature_keys & role_canonical_keys(rate_card_role):
+                return rate_card_role
 
     phase_hints = PHASE_ROLE_RESOLUTION_HINTS.get(_phase_key(phase))
     if phase_hints and _looks_like_role_alias(role):

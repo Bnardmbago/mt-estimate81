@@ -162,6 +162,23 @@ def test_maintenance_rc():
     assert result.first_year_total_jpy == result.nrc["total_jpy"] + result.rc["annual_total_jpy"]
 
 
+def test_maintenance_floor_uses_rate_card_default():
+    items = [FeatureItemInput(name="Auth", hours=10, phase="development", role="developer")]
+    maintenance = {"monthly_support_hours": 10, "support_role": "developer"}
+    rate_card = SAMPLE_RATE_CARD.model_copy(update={"default_maintenance_monthly_jpy": 200_000})
+    result = calculate_estimate(items, rate_card, maintenance, rate_card_version_id="v1")
+    assert result.rc["maintenance_jpy"] == 200_000
+    assert result.rc["monthly_total_jpy"] == 50_000 + 200_000
+
+
+def test_maintenance_floor_uses_hours_when_higher():
+    items = [FeatureItemInput(name="Auth", hours=10, phase="development", role="developer")]
+    maintenance = {"monthly_support_hours": 40, "support_role": "developer"}
+    rate_card = SAMPLE_RATE_CARD.model_copy(update={"default_maintenance_monthly_jpy": 100_000})
+    result = calculate_estimate(items, rate_card, maintenance, rate_card_version_id="v1")
+    assert result.rc["maintenance_jpy"] == 40 * 6000
+
+
 def test_calculate_includes_gantt_when_start_date_provided():
     from datetime import date
 
@@ -231,6 +248,26 @@ def test_discount_scales_nrc_items_and_preserves_rc():
 
     for row in discounted.role_breakdown:
         assert row["cost_jpy"] == int(round(row["hours"] * row["rate_jpy"]))
+
+    assert discounted.nrc_original_total_jpy == baseline.nrc["total_jpy"]
+    assert discounted.discount_rate_applied == 0.30
+    assert discounted.discount_amount_jpy == baseline.nrc["total_jpy"] - discounted.nrc["total_jpy"]
+
+
+def test_discount_zero_rate_has_no_metadata():
+    items = [
+        FeatureItemInput(name="Auth", hours=40, phase="development", role="developer"),
+    ]
+    result = calculate_estimate(
+        items,
+        SAMPLE_RATE_CARD,
+        {},
+        rate_card_version_id="v1",
+        discount_rate=0.0,
+    )
+    assert result.nrc_original_total_jpy is None
+    assert result.discount_rate_applied is None
+    assert result.discount_amount_jpy is None
 
 
 def test_ai_assisted_development_approach_reduces_effort_and_cost():

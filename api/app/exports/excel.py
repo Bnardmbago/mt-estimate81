@@ -150,6 +150,29 @@ def _write_bullet_list(ws, items: list[str], *, start_row: int) -> int:
     return row_idx
 
 
+def _build_executive_pricing_rows(ctx: dict[str, Any]) -> list[tuple[str, Any]]:
+    labels = ctx["labels"]
+    pricing = ctx.get("pricing_summary") or {}
+    if pricing.get("has_discount"):
+        return [
+            (
+                labels["development_cost_original"],
+                format_currency(pricing["nrc_original_total_jpy"]),
+            ),
+            (labels["limited_time_discount"], pricing["discount_display"]),
+            (
+                labels["special_price"],
+                f"{format_currency(pricing['nrc_discounted_total_jpy'])} {labels['excluding_tax']}",
+            ),
+        ]
+    return [
+        (
+            labels["total_development_cost"],
+            format_currency(ctx["executive_display"]["development_cost_jpy"]),
+        ),
+    ]
+
+
 def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
     labels = ctx["labels"]
     project = ctx["project_summary"]
@@ -172,10 +195,7 @@ def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
     _write_section_title(ws, row_idx, 1, labels["executive_cost_summary"])
     row_idx += 1
     summary_rows = [
-        (
-            labels["total_development_cost"],
-            format_currency(executive_display["development_cost_jpy"]),
-        ),
+        *_build_executive_pricing_rows(ctx),
         (
             labels["maintenance_cost_monthly_annual"],
             executive_display["maintenance_cost_display"],
@@ -189,6 +209,14 @@ def _build_executive_sheet(ws, ctx: dict[str, Any]) -> None:
         label_cell = ws.cell(row=row_idx, column=1, value=label)
         _apply_label_cell(label_cell)
         ws.cell(row=row_idx, column=2, value=value)
+        row_idx += 1
+
+    pricing = ctx.get("pricing_summary") or {}
+    if pricing.get("has_discount") and pricing.get("campaign_terms"):
+        row_idx += 1
+        _write_section_title(ws, row_idx, 1, pricing.get("campaign_terms_title", labels["campaign_terms_title"]))
+        row_idx += 1
+        ws.cell(row=row_idx, column=1, value=pricing["campaign_terms"])
         row_idx += 1
 
     _write_section_title(ws, row_idx, 1, labels["questionnaire"])
@@ -273,22 +301,45 @@ def _build_nrc_sheet(ws, ctx: dict[str, Any]) -> None:
 
 def _build_rc_sheet(ws, ctx: dict[str, Any]) -> None:
     labels = ctx["labels"]
-    calculation = ctx["calculation"]
-    line_items = calculation.get("rc_line_items") or []
-    _write_table(
-        ws,
-        [labels["category"], labels["item"], labels["monthly"], labels["annual"]],
-        [
+    rc_breakdown = ctx.get("rc_breakdown") or {}
+    line_items = rc_breakdown.get("line_items") or []
+    rows = []
+    for row in line_items:
+        item_label = row.get("service_description") or (
+            labels["maintenance"] if row.get("is_maintenance") else row["item"]
+        )
+        rows.append(
             [
                 row["category"],
-                row["item"],
+                item_label,
                 row["monthly_jpy"],
                 row["annual_jpy"],
             ]
-            for row in line_items
-        ],
+        )
+    row_idx = _write_table(
+        ws,
+        [labels["category"], labels["service_description"], labels["monthly"], labels["annual"]],
+        rows,
         column_formats={3: CURRENCY_FORMAT, 4: CURRENCY_FORMAT},
     )
+    row_idx += 1
+    monthly_total_label = ws.cell(row=row_idx, column=1, value=labels["monthly_total"])
+    monthly_total_cell = ws.cell(
+        row=row_idx,
+        column=3,
+        value=rc_breakdown.get("monthly_total_jpy", 0),
+    )
+    monthly_total_cell.number_format = CURRENCY_FORMAT
+    _apply_total_row([monthly_total_label, monthly_total_cell])
+    row_idx += 1
+    annual_total_label = ws.cell(row=row_idx, column=1, value=labels["annual_total"])
+    annual_total_cell = ws.cell(
+        row=row_idx,
+        column=4,
+        value=rc_breakdown.get("annual_total_jpy", 0),
+    )
+    annual_total_cell.number_format = CURRENCY_FORMAT
+    _apply_total_row([annual_total_label, annual_total_cell])
 
 
 def _build_assumptions_sheet(ws, ctx: dict[str, Any]) -> None:

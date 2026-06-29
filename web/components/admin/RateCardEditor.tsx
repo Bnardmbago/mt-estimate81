@@ -26,6 +26,7 @@ type RateCardSettings = {
   contingency_rate: number;
   overhead_rate: number;
   monthly_rc_items: MonthlyRcItem[];
+  default_maintenance_monthly_jpy: number;
   setup_costs: {
     infrastructure_jpy: number;
     tooling_jpy: number;
@@ -62,7 +63,10 @@ export default function RateCardEditor() {
         const data = await apiJson<ActiveRateCard>("/admin/rate-cards/active");
         setCardName(data.name);
         setVersionNumber(data.version_number);
-        setSettings(data.settings);
+        setSettings({
+          ...data.settings,
+          default_maintenance_monthly_jpy: data.settings.default_maintenance_monthly_jpy ?? 0,
+        });
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : t("loadError"));
       } finally {
@@ -166,6 +170,11 @@ export default function RateCardEditor() {
   }
 
   const phaseSum = settings.phases.reduce((sum, phase) => sum + phase.percentage, 0);
+  const monthlyRcSubtotal = settings.monthly_rc_items.reduce(
+    (sum, item) => sum + item.amount_jpy,
+    0,
+  );
+  const monthlyRcTotal = monthlyRcSubtotal;
 
   return (
     <div className="space-y-8">
@@ -387,9 +396,22 @@ export default function RateCardEditor() {
                   </td>
                 </tr>
               ))}
+              <tr className="bg-gray-50 font-semibold">
+                <td className="px-3 py-2">{t("monthlyRcSubtotal")}</td>
+                <td className="px-3 py-2">¥{monthlyRcSubtotal.toLocaleString()}</td>
+              </tr>
+              <tr className="bg-gray-50 font-semibold">
+                <td className="px-3 py-2">{t("monthlyRcTotal")}</td>
+                <td className="px-3 py-2">¥{monthlyRcTotal.toLocaleString()}</td>
+              </tr>
+              <tr className="bg-indigo-50 font-semibold text-indigo-900">
+                <td className="px-3 py-2">{t("annualRcTotal")}</td>
+                <td className="px-3 py-2">¥{(monthlyRcTotal * 12).toLocaleString()}</td>
+              </tr>
             </tbody>
           </table>
         </div>
+        <p className="mt-2 text-xs text-gray-500">{t("monthlyRcHint")}</p>
       </section>
     </div>
   );

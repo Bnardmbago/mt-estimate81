@@ -473,6 +473,7 @@ async def test_get_discount_settings_defaults(client: AsyncClient, admin_headers
     assert response.status_code == 200
     data = response.json()
     assert data["estimate_discount_rate"] == 0.30
+    assert data["estimate_markup_rate"] == 0.30
 
 
 @pytest.mark.asyncio
@@ -480,13 +481,16 @@ async def test_update_discount_settings(client: AsyncClient, admin_headers: dict
     response = await client.patch(
         "/admin/discount-settings",
         headers=admin_headers,
-        json={"estimate_discount_rate": 0.30},
+        json={"estimate_discount_rate": 0.30, "estimate_markup_rate": 0.25},
     )
     assert response.status_code == 200
-    assert response.json()["estimate_discount_rate"] == 0.30
+    data = response.json()
+    assert data["estimate_discount_rate"] == 0.30
+    assert data["estimate_markup_rate"] == 0.25
 
     get_response = await client.get("/admin/discount-settings", headers=admin_headers)
     assert get_response.json()["estimate_discount_rate"] == 0.30
+    assert get_response.json()["estimate_markup_rate"] == 0.25
 
 
 @pytest.mark.asyncio

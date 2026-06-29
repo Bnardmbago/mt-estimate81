@@ -1,0 +1,11 @@
+{% if ctx.pricing_summary.has_discount %}
+| {{ ctx.labels.development_cost_original }} | {{ format_currency(ctx.pricing_summary.nrc_original_total_jpy) }} |
+| {{ ctx.labels.limited_time_discount }} | {{ ctx.pricing_summary.discount_display }} |
+| {{ ctx.labels.special_price }} | {{ format_currency(ctx.pricing_summary.nrc_discounted_total_jpy) }} {{ ctx.labels.excluding_tax }} |
+
+**{{ ctx.pricing_summary.campaign_terms_title }}**
+
+{{ ctx.pricing_summary.campaign_terms }}
+{% else %}
+| {{ ctx.labels.total_development_cost }} | {{ format_currency(ctx.executive_summary.nrc_total_jpy) }} |
+{% endif %}

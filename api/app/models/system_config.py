@@ -21,4 +21,5 @@ class SystemConfig(Base):
     smtp_from: Mapped[str | None] = mapped_column(String(255), nullable=True)
     smtp_use_tls: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     estimate_discount_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    estimate_markup_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

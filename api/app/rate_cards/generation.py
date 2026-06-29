@@ -24,6 +24,9 @@ from app.models.user import User
 from app.rate_cards.complexity import ProjectComplexityProfile, score_project_complexity
 from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 from app.rate_cards.normalize import normalize_settings_dict
+from app.rate_cards.maintenance import apply_default_maintenance_to_settings
+from app.rate_cards.rc_items import ensure_standard_monthly_rc_items
+from app.rate_cards.regional_profiles import patch_roles_to_regional_standard
 from app.rate_cards.service import create_rate_card_with_settings, get_latest_version_for_card
 
 HOURS_PER_DAY = 8
@@ -185,11 +188,13 @@ def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dic
                 for item in suggestion.setup_cost_items
                 if item.name.strip()
             ],
-            "monthly_rc_items": [
-                {"name": item.name.strip(), "amount": int(item.amount_jpy)}
-                for item in suggestion.monthly_rc_items
-                if item.name.strip()
-            ],
+            "monthly_rc_items": ensure_standard_monthly_rc_items(
+                [
+                    {"name": item.name.strip(), "amount": int(item.amount_jpy)}
+                    for item in suggestion.monthly_rc_items
+                    if item.name.strip()
+                ]
+            ),
         }
     )
 
@@ -233,6 +238,12 @@ def _merge_with_defaults(suggestion: GeneratedRateCardSuggestion) -> tuple[dict[
     if not settings_dict.get("monthly_rc_items"):
         settings_dict["monthly_rc_items"] = DEFAULT_RATE_CARD_SETTINGS["monthly_rc_items"]
         default_fields.append("monthly_rc_items")
+    else:
+        settings_dict["monthly_rc_items"] = ensure_standard_monthly_rc_items(
+            settings_dict["monthly_rc_items"]
+        )
+
+    settings_dict, _ = patch_roles_to_regional_standard(settings_dict)
 
     return normalize_settings_dict(settings_dict), sorted(set(default_fields))
 
@@ -262,6 +273,7 @@ async def _apply_generated_settings_to_estimate_card(
     generated: dict[str, Any],
     *,
     audit_action: str = "rate_card_regenerated",
+    maintenance_assumptions: dict[str, Any] | None = None,
 ) -> None:
     if not estimate.rate_card_id:
         return
@@ -271,7 +283,10 @@ async def _apply_generated_settings_to_estimate_card(
         return
 
     version = await get_latest_version_for_card(db, rate_card.id)
-    version.settings = generated["settings"]
+    version.settings = apply_default_maintenance_to_settings(
+        generated["settings"],
+        maintenance_assumptions,
+    )
     await log_change(
         db,
         estimate_id=estimate.id,
@@ -366,6 +381,7 @@ async def regenerate_rate_card_after_extraction(
     user_id: uuid.UUID,
     *,
     complexity_profile: ProjectComplexityProfile | dict[str, Any],
+    maintenance_assumptions: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     result = await db.execute(
         select(Estimate)
@@ -401,6 +417,7 @@ async def regenerate_rate_card_after_extraction(
         user_id,
         generated,
         audit_action="rate_card_auto_tuned",
+        maintenance_assumptions=maintenance_assumptions,
     )
     return generated
 

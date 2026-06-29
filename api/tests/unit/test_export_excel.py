@@ -67,3 +67,18 @@ def test_excel_ja_locale_sheet_names(estimate):
     wb = _load_workbook_from_bytes(content)
 
     assert wb.sheetnames == list(SHEET_NAMES["ja"].values())
+
+
+def test_excel_rc_sheet_includes_monthly_and_annual_totals(report_context, estimate):
+    content = generate_excel(report_context, estimate)
+    wb = _load_workbook_from_bytes(content)
+
+    rc_sheet = wb[SHEET_NAMES["en"]["rc"]]
+    values = [
+        (rc_sheet.cell(row=row, column=1).value, rc_sheet.cell(row=row, column=3).value, rc_sheet.cell(row=row, column=4).value)
+        for row in range(1, rc_sheet.max_row + 1)
+    ]
+    assert ("Monthly RC Total", 170000, None) in values
+    assert ("Annual RC Total", None, 2040000) in values
+    assert ("Cloud Infrastructure", 50000, 600000) in values
+    assert ("Maintenance and Support", 120000, 1440000) in values

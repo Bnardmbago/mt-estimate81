@@ -5,7 +5,10 @@ import pytest
 
 from app.exports.report_context import build_report_context
 from app.i18n.localized_content import store_localized_dict
-from tests.unit.export_fixtures import sample_estimate_with_calculation
+from tests.unit.export_fixtures import (
+    sample_estimate_with_calculation,
+    sample_estimate_with_discount,
+)
 
 
 def test_report_context_executive_totals_match_calculation():
@@ -272,3 +275,62 @@ def test_report_context_resolves_i18n_extracted_data():
     assert ctx_ja["feature_items"][0]["phase"] == "実装"
     assert ctx_ja["feature_items"][0]["role"] == "開発者"
     assert ctx_ja["calculation"]["nrc_line_items"][0]["category"] == "開発"
+
+
+def test_report_context_includes_pricing_summary_when_discount_present():
+    estimate = sample_estimate_with_discount()
+    ctx = build_report_context(
+        estimate,
+        "en",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="Standard",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+    )
+
+    pricing = ctx["pricing_summary"]
+    assert pricing["has_discount"] is True
+    assert pricing["nrc_original_total_jpy"] == 1000000
+    assert pricing["nrc_discounted_total_jpy"] == 700000
+    assert pricing["discount_amount_jpy"] == 300000
+    assert ctx["executive_summary"]["has_discount"] is True
+
+
+def test_report_context_pricing_summary_absent_without_discount_metadata():
+    ctx = build_report_context(
+        sample_estimate_with_calculation(),
+        "en",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="Standard",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+    )
+    assert ctx["pricing_summary"]["has_discount"] is False
+
+
+def test_report_context_rc_breakdown_matches_calculation_rc():
+    estimate = sample_estimate_with_calculation()
+    ctx = build_report_context(
+        estimate,
+        "en",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="Standard",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+    )
+
+    rc = estimate.calculation_result["rc"]
+    rc_breakdown = ctx["rc_breakdown"]
+    assert rc_breakdown["monthly_total_jpy"] == rc["monthly_total_jpy"]
+    assert rc_breakdown["annual_total_jpy"] == rc["annual_total_jpy"]
+    assert len(rc_breakdown["line_items"]) == 5
+    cloud = next(row for row in rc_breakdown["line_items"] if row["category_key"] == "cloud_infrastructure")
+    maintenance = next(
+        row for row in rc_breakdown["line_items"] if row["category_key"] == "maintenance_support"
+    )
+    assert cloud["monthly_jpy"] == 50000
+    assert cloud["service_description"] == "Server & database usage"
+    assert maintenance["is_maintenance"] is True

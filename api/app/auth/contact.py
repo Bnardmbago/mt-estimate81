@@ -116,17 +116,14 @@ async def request_magic_link(
     display = display_name.strip()
     company = _normalize_company_name(company_name)
 
-    if not display and not company:
+    if not display:
         raise HTTPException(
             status_code=400,
             detail={
-                "error": "Provide your name or company name",
-                "code": "NAME_OR_COMPANY_REQUIRED",
+                "error": "Provide your name",
+                "code": "DISPLAY_NAME_REQUIRED",
             },
         )
-
-    if not display and company:
-        display = company
 
     if is_disposable_email(normalized_email):
         raise HTTPException(
@@ -147,7 +144,7 @@ async def request_magic_link(
         raise HTTPException(
             status_code=409,
             detail={
-                "error": "This email is registered as a full account. Please sign in with password.",
+                "error": "Already have an account? Click \"Sign In\"",
                 "code": "USE_FULL_LOGIN",
             },
         )

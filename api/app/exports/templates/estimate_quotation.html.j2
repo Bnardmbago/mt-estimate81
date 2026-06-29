@@ -290,6 +290,7 @@
     {% if show_watermark %}
     {% include '_watermark.css.j2' %}
     {% endif %}
+    {% include '_pricing_summary.css.j2' %}
   </style>
 </head>
 <body>
@@ -345,6 +346,8 @@
   </div>
 
   <hr class="header-divider">
+
+  {% include '_pricing_summary.html.j2' %}
 
   <div class="total-band">
     <div class="total-band-label">［{{ ctx.labels.total_amount_label }}］</div>

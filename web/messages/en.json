@@ -317,6 +317,8 @@
     "nrcTotal": "NRC total",
     "rcTitle": "Recurring Cost (RC)",
     "rcFormula": "Monthly RC = monthly items + maintenance; Annual RC = monthly × 12",
+    "rcCategory": "Category",
+    "rcServiceDescription": "Service Description",
     "maintenance": "Maintenance",
     "maintenanceFormula": "Maintenance = monthly support hours × support role hourly rate",
     "monthlyTotal": "Monthly total",
@@ -324,7 +326,17 @@
     "totalDevelopmentCost": "Total Development Cost (deployment and Delivery acceptance)",
     "totalDevelopmentCostFormula": "NRC total through deployment and delivery acceptance",
     "firstYearTotal": "First year total",
-    "firstYearFormula": "First year = NRC + annual RC"
+    "firstYearFormula": "First year = NRC + annual RC",
+    "pricing": {
+      "developmentCost": "Development Cost",
+      "limitedTimeDiscount": "Limited-Time Discount",
+      "discountOff": "{percent}% OFF (-{amount})",
+      "specialPrice": "Special Price",
+      "excludingTax": "(excluding tax)",
+      "campaignTermsTitle": "Campaign Terms",
+      "campaignTermsBody": "If you place your order within one month from the date this quotation is issued ({issueDate}), the special discounted price of {specialPrice} will apply.\nAfter one month, the standard development price will apply.",
+      "issueDateFallback": "the quotation issue date"
+    }
   },
   "gantt": {
     "title": "Project Timeline (Gantt)",
@@ -459,9 +471,13 @@
       "setupCosts": "Setup costs (NRC)",
       "setupCostsHint": "These one-time setup items are included in NRC when calculating estimates.",
       "setupTotal": "Setup costs total",
-      "monthlyRcHint": "Monthly RC subtotal excludes maintenance support hours from individual estimates.",
-      "monthlyRcSubtotal": "Monthly RC subtotal",
-      "annualRcSubtotal": "Annual RC subtotal (×12)",
+      "monthlyRcHint": "These line items define monthly recurring costs. At calculate time, the Maintenance and Support amount may be raised if support hours × role rate exceeds the entered amount.",
+      "monthlyRcSubtotal": "Line items subtotal",
+      "monthlyRcTotal": "Monthly total",
+      "annualRcTotal": "Annual total",
+      "defaultMaintenance": "Maintenance",
+      "linkedEstimateBanner": "This rate card is linked to estimate \"{projectName}\".",
+      "frozenVersionBanner": "This estimate was calculated with an older version of this rate card (you are viewing version {latestVersion}). Recalculate to apply the latest rates.",
       "addItem": "Add item",
       "removeItem": "Remove",
       "cardName": "Rate card name",
@@ -600,7 +616,7 @@
     "tabs": {
       "users": "Users",
       "formTemplates": "Form templates",
-      "discountSettings": "Estimate discount",
+      "discountSettings": "Discount and Mark-Up",
       "aiSettings": "AI settings",
       "smtpSettings": "SMTP settings",
       "formulas": "Formulas",
@@ -733,25 +749,34 @@
       "statusIssue": "Issue detected"
     },
     "discountSettings": {
-      "loading": "Loading discount settings…",
-      "loadError": "Failed to load discount settings",
-      "description": "Internal discount applied to calculated estimate costs. End users and clients never see this rate or any discount breakdown.",
+      "loading": "Loading discount and mark-up settings…",
+      "loadError": "Failed to load discount and mark-up settings",
+      "description": "Configure internal discount (client-visible on NRC) and mark-up (internal-only). Rates apply when an estimate is calculated.",
+      "discountSectionTitle": "Discount",
       "rateLabel": "Discount rate",
-      "rateHint": "Applied to each calculated cost item during estimate calculation. Example: 30% discount on ¥1,000 yields ¥700.",
-      "applicationTitle": "How it is applied in calculation",
+      "rateHint": "Applied to each calculated NRC item during estimate calculation. Example: 30% discount on ¥1,000 yields ¥700.",
       "applicationIntro": "At the end of each estimate calculation, the engine multiplies NRC components by (1 − discount rate). Recurring costs are not discounted.",
       "applicationPoints": [
         "NRC labor, setup, contingency, and overhead are multiplied by the discount multiplier.",
         "Role rates in the breakdown are recalculated from the discounted labor costs.",
         "Monthly and annual RC totals are unchanged.",
         "First-year total is recalculated as discounted NRC total + annual RC.",
-        "End users and exports never show the discount rate or a discount breakdown."
+        "Clients see original NRC, discount amount, and special price in the calculation summary and exports."
+      ],
+      "markupSectionTitle": "Mark-Up",
+      "markupRateLabel": "Mark-up rate",
+      "markupRateHint": "Applied per line item after discount. Example: 30% mark-up on ¥1,000 yields ¥1,300 (internal only).",
+      "markupApplicationPoints": [
+        "Each visible NRC and RC line item is multiplied by (1 + mark-up rate).",
+        "Internal totals are stored on the calculation result for admin review only.",
+        "Mark-up is not shown in the calculation UI, exports, or client-facing pricing.",
+        "Visible estimate totals remain unchanged; only internal_pricing reflects mark-up."
       ],
       "invalidRate": "Enter a whole-number percentage between 0 and 100.",
       "save": "Save settings",
       "saving": "Saving…",
-      "saved": "Discount settings saved",
-      "saveError": "Failed to save discount settings"
+      "saved": "Discount and mark-up settings saved",
+      "saveError": "Failed to save discount and mark-up settings"
     },
     "smtpSettings": {
       "loading": "Loading SMTP settings…",
@@ -779,6 +804,38 @@
       "testSuccess": "Connection successful",
       "testFailed": "Connection failed: {message}",
       "testError": "Connection test failed"
+    },
+    "rateCards": {
+      "loading": "Loading rate card…",
+      "loadError": "Failed to load rate card",
+      "saveError": "Failed to save rate card",
+      "version": "Version {number}",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "save": "Save",
+      "phaseSumWarning": "Phase percentages must sum to 100% (currently {percent}%)",
+      "roles": "Roles",
+      "roleName": "Role",
+      "hourlyRate": "Hourly rate (JPY)",
+      "dailyRate": "Daily rate (JPY)",
+      "phases": "Phases",
+      "phaseName": "Phase",
+      "percentage": "Percentage (%)",
+      "contingency": "Contingency (%)",
+      "overhead": "Overhead (%)",
+      "tax": "Tax (%)",
+      "setupCosts": "Setup costs (NRC)",
+      "infrastructure": "Infrastructure",
+      "tooling": "Tooling",
+      "thirdParty": "Third party",
+      "monthlyRcItems": "Monthly RC items",
+      "itemName": "Item",
+      "amount": "Amount (JPY)",
+      "defaultMaintenance": "Maintenance",
+      "monthlyRcSubtotal": "Line items subtotal",
+      "monthlyRcTotal": "Monthly total",
+      "annualRcTotal": "Annual total",
+      "monthlyRcHint": "These line items define monthly recurring costs. At calculate time, the Maintenance and Support amount may be raised if support hours × role rate exceeds the entered amount."
     },
     "system": {
       "loading": "Loading system health…",
@@ -924,8 +981,8 @@
         ]
       },
       "discount": {
-        "title": "Admin estimate discount",
-        "description": "Internal discount configured under Admin → Estimate discount. Hidden from end users and exports.",
+        "title": "Admin discount and mark-up",
+        "description": "Configured under Admin → Discount and Mark-Up. Discount affects client-visible NRC; mark-up is internal-only.",
         "rows": [
           {
             "metric": "Discount multiplier",
@@ -935,17 +992,27 @@
           {
             "metric": "NRC labor, setup, contingency, overhead",
             "formula": "amount_jpy × multiplier",
-            "notes": "Hourly rates in breakdown stay at rate card values; only cost_jpy is discounted"
+            "notes": "Client-visible amounts after discount"
           },
           {
             "metric": "RC monthly and annual",
-            "formula": "unchanged",
+            "formula": "unchanged by discount",
             "notes": "Discount does not affect recurring costs"
           },
           {
-            "metric": "First year total (after discount)",
+            "metric": "Mark-up multiplier",
+            "formula": "1 + estimate_markup_rate",
+            "notes": "Applied per line item to post-discount visible amounts"
+          },
+          {
+            "metric": "Internal pricing snapshot",
+            "formula": "line_amount_jpy × (1 + estimate_markup_rate)",
+            "notes": "Stored as internal_pricing on calculation_result; admin API only"
+          },
+          {
+            "metric": "First year total (visible)",
             "formula": "discounted NRC total + annual RC",
-            "notes": "Recalculated after NRC discount is applied"
+            "notes": "Unchanged by mark-up"
           }
         ]
       },
@@ -1365,25 +1432,26 @@
   },
   "contact": {
     "title": "Contact Estimate Access",
-    "description": "Enter your details to receive a magic link and create one estimate.",
-    "email": "Email",
-    "displayName": "Your name (required if no company)",
-    "companyName": "Company name (required if no name)",
-    "submit": "Send Link",
-    "submitting": "Sending…",
-    "error": "Could not send the magic link. Please try again.",
+    "description": "Enter your details below to create an account and start your AI-powered estimate.",
+    "email": "Email Address (Required)",
+    "displayName": "Name (Required)",
+    "companyName": "Company Name",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "error": "Could not submit your request. Please try again.",
     "errorNetwork": "Could not reach the server. Check your connection and API URL, then try again.",
-    "errorNameOrCompany": "Enter your name or company name.",
+    "errorNameRequired": "Enter your name.",
+    "errorNameOrCompany": "Enter your name.",
     "errorEmailNotConfigured": "Email is not configured on the server. Ask an administrator to set up SMTP.",
     "errorEmailSendFailed": "Failed to send the magic link email. Please try again later.",
     "errorCaptchaFailed": "CAPTCHA verification failed. Please try again.",
     "errorCaptchaNotConfigured": "CAPTCHA is not configured on the server.",
     "errorRateLimit": "Too many requests. Please wait and try again.",
-    "errorFullAccount": "This email belongs to a full account. Please sign in with password.",
+    "errorFullAccount": "Already have an account? Click \"Sign In\"",
     "checkEmailTitle": "Check your email",
     "checkEmailBody": "We sent an access link to {email}. It expires in a few minutes.",
-    "fullAccountHint": "Already have a full account?",
-    "fullAccountLink": "Sign in",
+    "fullAccountHint": "Already have an account? Click",
+    "fullAccountLink": "Sign In",
     "verifying": "Verifying your link…",
     "verifyError": "This link is invalid or has expired.",
     "verifyMissingToken": "Missing verification token."
@@ -1394,7 +1462,7 @@
     "loginLink": "New here? Explore the welcome guide",
     "heroCta": "Get your estimate",
     "getEstimateTitle": "Request estimate access",
-    "getEstimateDescription": "Enter your details to receive a magic link and create one estimate.",
+    "getEstimateDescription": "Enter your details below to create an account and start your AI-powered estimate.",
     "footerCta": "Ready to get started?",
     "footerCtaButton": "Sign in to your account",
     "helpLink": "Signed in? Visit Help for FAQs and guides.",

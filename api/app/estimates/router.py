@@ -52,7 +52,7 @@ async def create_estimate(
     user: User = Depends(get_current_user),
 ):
     estimate = await service.create_estimate(db, user, body)
-    return await service.estimate_to_detail(db, estimate)
+    return await service.estimate_to_detail(db, estimate, user=user)
 
 
 @router.get("", response_model=list[EstimateSummary])
@@ -71,7 +71,7 @@ async def get_estimate(
     display_locale: str | None = Depends(get_display_locale),
 ):
     estimate = await service.get_estimate_for_user(db, estimate_id, user)
-    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
 
 
 @router.patch("/{estimate_id}", response_model=EstimateDetail)
@@ -90,7 +90,7 @@ async def update_estimate(
         body,
         content_locale=content_locale,
     )
-    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
 
 
 @router.delete("/{estimate_id}", status_code=204)
@@ -157,7 +157,7 @@ async def tune_estimate_rate_card_from_extraction(
     display_locale: str | None = Depends(get_display_locale),
 ):
     estimate = await service.tune_rate_card_from_extraction(db, user, estimate_id)
-    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
 
 
 @router.post("/{estimate_id}/rate-card", response_model=EstimateDetail)
@@ -168,7 +168,7 @@ async def create_estimate_rate_card(
     user: User = Depends(require_full_account),
 ):
     estimate = await service.create_rate_card_for_estimate(db, user, estimate_id, body)
-    return await service.estimate_to_detail(db, estimate)
+    return await service.estimate_to_detail(db, estimate, user=user)
 
 
 @router.get("/{estimate_id}/status", response_model=EstimateStatusResponse)
@@ -196,7 +196,7 @@ async def update_feature_items(
         body,
         content_locale=content_locale,
     )
-    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
 
 
 @router.patch("/{estimate_id}/extracted-data", response_model=EstimateDetail)
@@ -215,7 +215,7 @@ async def update_extracted_data(
         body,
         content_locale=content_locale,
     )
-    return await service.estimate_to_detail(db, estimate, display_locale=display_locale)
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
 
 
 @router.get("/{estimate_id}/gantt", response_model=GanttTimelineResponse)
@@ -252,7 +252,7 @@ async def calculate_estimate_endpoint(
         recalculate_with_current_rates=recalculate_with_current_rates,
         project_start_date=project_start_date,
     )
-    return await service.estimate_to_detail(db, estimate)
+    return await service.estimate_to_detail(db, estimate, user=user)
 
 
 @router.get("/{estimate_id}/audit", response_model=list[AuditLogEntry])

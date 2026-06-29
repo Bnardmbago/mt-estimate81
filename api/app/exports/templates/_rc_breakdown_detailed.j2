@@ -1,0 +1,18 @@
+{% for row in ctx.rc_breakdown.line_items %}
+  <tr>
+    <td>{{ row.category }}</td>
+    <td>{{ row.service_description or row.item }}</td>
+    <td class="num">{{ format_currency(row.monthly_jpy) }}</td>
+    <td class="num">{{ format_currency(row.annual_jpy) }}</td>
+  </tr>
+{% endfor %}
+<tr class="total-row">
+  <th colspan="2">{{ ctx.labels.monthly_total }}</th>
+  <td class="num">{{ format_currency(ctx.rc_breakdown.monthly_total_jpy) }}</td>
+  <td></td>
+</tr>
+<tr class="total-row">
+  <th colspan="2">{{ ctx.labels.annual_total }}</th>
+  <td></td>
+  <td class="num">{{ format_currency(ctx.rc_breakdown.annual_total_jpy) }}</td>
+</tr>

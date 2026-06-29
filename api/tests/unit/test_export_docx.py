@@ -3,7 +3,11 @@ from io import BytesIO
 from docx import Document
 
 from app.exports.docx import generate_quotation_docx, generate_report_docx
-from tests.unit.export_fixtures import sample_quotation_context, sample_report_context
+from tests.unit.export_fixtures import (
+    sample_estimate_with_discount,
+    sample_quotation_context,
+    sample_report_context,
+)
 
 
 def _cell_text(cell) -> str:
@@ -98,3 +102,38 @@ def test_quotation_docx_ja_locale():
     assert "見積書" in text
     assert "御中" in text
     assert "式" in text
+
+
+def test_report_docx_includes_discount_pricing_when_present():
+    content = generate_report_docx(
+        sample_report_context(estimate=sample_estimate_with_discount())
+    )
+    text = _docx_text(content)
+    assert "Development Cost" in text
+    assert "Limited-Time Discount" in text
+    assert "Special Price" in text
+    assert "Campaign Terms" in text
+    assert "¥1,000,000" in text
+    assert "30% OFF" in text
+
+
+def test_report_docx_rc_breakdown_includes_monthly_and_annual_totals():
+    content = generate_report_docx(sample_report_context())
+    text = _docx_text(content)
+    assert "Monthly RC Total" in text
+    assert "Annual RC Total" in text
+    assert "¥170,000" in text
+    assert "¥2,040,000" in text
+    assert "Cloud Infrastructure" in text
+    assert "Server & database usage" in text
+    assert "Maintenance and Support" in text
+
+
+def test_quotation_docx_includes_discount_pricing_when_present():
+    content = generate_quotation_docx(
+        sample_quotation_context(estimate=sample_estimate_with_discount(), locale="en")
+    )
+    text = _docx_text(content)
+    assert "Development Cost" in text
+    assert "Limited-Time Discount" in text
+    assert "Special Price" in text

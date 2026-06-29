@@ -317,6 +317,8 @@
     "nrcTotal": "NRC合計",
     "rcTitle": "経常コスト（RC）",
     "rcFormula": "月額RC = 月額項目 + 保守費用、年額RC = 月額 × 12",
+    "rcCategory": "カテゴリ",
+    "rcServiceDescription": "サービス内容",
     "maintenance": "保守費用",
     "maintenanceFormula": "保守費用 = 月間サポート時間 × サポートロール時間単価",
     "monthlyTotal": "月額合計",
@@ -324,7 +326,17 @@
     "totalDevelopmentCost": "開発費用合計（デプロイ・引渡し検収まで）",
     "totalDevelopmentCostFormula": "デプロイ・引渡し検収までのNRC合計",
     "firstYearTotal": "初年度合計",
-    "firstYearFormula": "初年度 = NRC + 年額RC"
+    "firstYearFormula": "初年度 = NRC + 年額RC",
+    "pricing": {
+      "developmentCost": "開発費用",
+      "limitedTimeDiscount": "期間限定割引",
+      "discountOff": "{percent}% OFF（-{amount}）",
+      "specialPrice": "特別価格",
+      "excludingTax": "（税抜）",
+      "campaignTermsTitle": "キャンペーン条件",
+      "campaignTermsBody": "本見積書の発行日（{issueDate}）から1か月以内にご発注いただいた場合、特別割引価格 {specialPrice} が適用されます。\n1か月を過ぎた場合は、通常の開発費用が適用されます。",
+      "issueDateFallback": "見積書発行日"
+    }
   },
   "gantt": {
     "title": "プロジェクトタイムライン（ガント）",
@@ -459,9 +471,13 @@
       "setupCosts": "セットアップ費用（NRC）",
       "setupCostsHint": "これらの初期費用は見積計算時にNRCに含まれます。",
       "setupTotal": "セットアップ費用合計",
-      "monthlyRcHint": "月額RC小計には、個別見積の保守サポート時間は含まれません。",
-      "monthlyRcSubtotal": "月額RC小計",
-      "annualRcSubtotal": "年額RC小計（×12）",
+      "monthlyRcHint": "これらの項目が月次の経常コストを定義します。見積計算時、サポート時間×ロール単価が入力額を上回る場合、メンテナンスとサポートの金額が引き上げられることがあります。",
+      "monthlyRcSubtotal": "項目小計",
+      "monthlyRcTotal": "月額合計",
+      "annualRcTotal": "年額合計",
+      "defaultMaintenance": "保守費用",
+      "linkedEstimateBanner": "このレートカードは見積「{projectName}」に紐づいています。",
+      "frozenVersionBanner": "この見積はこのレートカードの旧バージョンで計算されています（表示中はバージョン {latestVersion}）。最新レートを反映するには再計算してください。",
       "addItem": "項目を追加",
       "removeItem": "削除",
       "cardName": "レートカード名",
@@ -600,7 +616,7 @@
     "tabs": {
       "users": "ユーザー",
       "formTemplates": "フォームテンプレート",
-      "discountSettings": "見積割引",
+      "discountSettings": "割引とマークアップ",
       "aiSettings": "AI設定",
       "smtpSettings": "SMTP設定",
       "formulas": "計算式",
@@ -733,25 +749,34 @@
       "statusIssue": "問題あり"
     },
     "discountSettings": {
-      "loading": "割引設定を読み込み中…",
-      "loadError": "割引設定の読み込みに失敗しました",
-      "description": "見積計算時に適用する内部割引率です。エンドユーザーおよびクライアントにはこの割引率や内訳は表示されません。",
+      "loading": "割引・マークアップ設定を読み込み中…",
+      "loadError": "割引・マークアップ設定の読み込みに失敗しました",
+      "description": "内部割引（クライアント向けNRC表示）とマークアップ（内部のみ）を設定します。見積計算時に適用されます。",
+      "discountSectionTitle": "割引",
       "rateLabel": "割引率",
-      "rateHint": "各計算コスト項目に適用されます。例: ¥1,000 に 30% 割引を適用すると ¥700 になります。",
-      "applicationTitle": "計算への適用方法",
+      "rateHint": "各NRC項目に適用されます。例: ¥1,000 に 30% 割引を適用すると ¥700 になります。",
       "applicationIntro": "見積計算の最後に、NRC各項目に (1 − 割引率) の乗数を適用します。経常費用（RC）には割引を適用しません。",
       "applicationPoints": [
         "NRCの人件費、セットアップ、予備費、間接費に割引乗数を乗じます。",
         "内訳のロール単価は、割引後の人件費コストから再計算されます。",
         "月次・年次のRC合計は変更されません。",
         "初年度合計は、割引後NRC合計 + 年次RC として再計算されます。",
-        "エンドユーザーとエクスポートには、割引率や割引内訳は表示されません。"
+        "クライアントには、計算サマリーとエクスポートで元のNRC・割引額・特別価格が表示されます。"
+      ],
+      "markupSectionTitle": "マークアップ",
+      "markupRateLabel": "マークアップ率",
+      "markupRateHint": "割引後の各明細に適用されます。例: ¥1,000 に 30% マークアップを適用すると ¥1,300（内部のみ）。",
+      "markupApplicationPoints": [
+        "表示されているNRC・RCの各明細に (1 + マークアップ率) を乗じます。",
+        "内部合計は calculation_result の internal_pricing として管理者のみ参照できます。",
+        "マークアップは計算UI・エクスポート・クライアント向け価格には表示されません。",
+        "表示される見積合計は変わりません。マークアップは internal_pricing のみに反映されます。"
       ],
       "invalidRate": "0〜100 の整数で入力してください。",
       "save": "設定を保存",
       "saving": "保存中…",
-      "saved": "割引設定を保存しました",
-      "saveError": "割引設定の保存に失敗しました"
+      "saved": "割引・マークアップ設定を保存しました",
+      "saveError": "割引・マークアップ設定の保存に失敗しました"
     },
     "smtpSettings": {
       "loading": "SMTP設定を読み込み中…",
@@ -779,6 +804,38 @@
       "testSuccess": "接続に成功しました",
       "testFailed": "接続に失敗しました: {message}",
       "testError": "接続テストに失敗しました"
+    },
+    "rateCards": {
+      "loading": "レートカードを読み込み中…",
+      "loadError": "レートカードの読み込みに失敗しました",
+      "saveError": "レートカードの保存に失敗しました",
+      "version": "バージョン {number}",
+      "saved": "保存しました",
+      "saving": "保存中…",
+      "save": "保存",
+      "phaseSumWarning": "フェーズの割合は合計100%である必要があります（現在 {percent}%）",
+      "roles": "ロール",
+      "roleName": "ロール",
+      "hourlyRate": "時給（円）",
+      "dailyRate": "日給（円）",
+      "phases": "フェーズ",
+      "phaseName": "フェーズ",
+      "percentage": "割合（%）",
+      "contingency": "予備費（%）",
+      "overhead": "間接費（%）",
+      "tax": "税（%）",
+      "setupCosts": "セットアップ費用（NRC）",
+      "infrastructure": "インフラ",
+      "tooling": "ツール",
+      "thirdParty": "サードパーティ",
+      "monthlyRcItems": "月額RC項目",
+      "itemName": "項目",
+      "amount": "金額（円）",
+      "defaultMaintenance": "保守費用",
+      "monthlyRcSubtotal": "項目小計",
+      "monthlyRcTotal": "月額合計",
+      "annualRcTotal": "年額合計",
+      "monthlyRcHint": "これらの項目が月次の経常コストを定義します。見積計算時、サポート時間×ロール単価が入力額を上回る場合、メンテナンスとサポートの金額が引き上げられることがあります。"
     },
     "system": {
       "loading": "システム状態を読み込み中…",
@@ -924,8 +981,8 @@
         ]
       },
       "discount": {
-        "title": "管理者見積割引",
-        "description": "管理画面の「見積割引」で設定する内部割引。エンドユーザーとエクスポートには表示されません。",
+        "title": "管理者割引とマークアップ",
+        "description": "管理画面の「割引とマークアップ」で設定。割引はクライアント向けNRCに影響、マークアップは内部のみ。",
         "rows": [
           {
             "metric": "割引乗数",
@@ -935,17 +992,27 @@
           {
             "metric": "NRC人件費・セットアップ・予備費・間接費",
             "formula": "amount_jpy × 乗数",
-            "notes": "内訳の時間単価はレートカード値のまま。割引されるのは cost_jpy のみ"
+            "notes": "割引後のクライアント表示金額"
           },
           {
             "metric": "RC月次・年次",
-            "formula": "変更なし",
+            "formula": "割引の対象外",
             "notes": "経常費用には割引を適用しない"
           },
           {
-            "metric": "初年度合計（割引後）",
+            "metric": "マークアップ乗数",
+            "formula": "1 + estimate_markup_rate",
+            "notes": "割引後の表示明細ごとに適用"
+          },
+          {
+            "metric": "内部価格スナップショット",
+            "formula": "line_amount_jpy × (1 + estimate_markup_rate)",
+            "notes": "calculation_result の internal_pricing として保存（管理者APIのみ）"
+          },
+          {
+            "metric": "初年度合計（表示）",
             "formula": "割引後NRC合計 + 年次RC",
-            "notes": "NRC割引適用後に再計算"
+            "notes": "マークアップの影響を受けない"
           }
         ]
       },
@@ -1365,24 +1432,25 @@
   },
   "contact": {
     "title": "お問い合わせ見積アクセス",
-    "description": "情報を入力してマジックリンクを受け取り、見積を1件作成できます。",
-    "email": "メールアドレス",
-    "displayName": "お名前（会社名がない場合は必須）",
-    "companyName": "会社名（お名前がない場合は必須）",
-    "submit": "マジックリンクを送信",
+    "description": "以下の情報を入力してアカウントを作成後、AI見積もりを作成できます。",
+    "email": "メールアドレス（必須）",
+    "displayName": "名前（必須）",
+    "companyName": "会社名",
+    "submit": "送信",
     "submitting": "送信中…",
-    "error": "マジックリンクを送信できませんでした。もう一度お試しください。",
+    "error": "送信できませんでした。もう一度お試しください。",
     "errorNetwork": "サーバーに接続できませんでした。接続とAPI URLを確認してから再度お試しください。",
-    "errorNameOrCompany": "お名前または会社名を入力してください。",
+    "errorNameRequired": "名前を入力してください。",
+    "errorNameOrCompany": "名前を入力してください。",
     "errorEmailNotConfigured": "サーバーでメールが設定されていません。管理者にSMTPの設定を依頼してください。",
     "errorEmailSendFailed": "マジックリンクのメール送信に失敗しました。しばらくしてから再度お試しください。",
     "errorCaptchaFailed": "CAPTCHAの確認に失敗しました。もう一度お試しください。",
     "errorCaptchaNotConfigured": "サーバーでCAPTCHAが設定されていません。",
     "errorRateLimit": "リクエストが多すぎます。しばらく待ってから再度お試しください。",
-    "errorFullAccount": "このメールはフルアカウント用です。パスワードでサインインしてください。",
+    "errorFullAccount": "アカウントをお持ちですか？「サインイン」をクリック",
     "checkEmailTitle": "メールを確認してください",
     "checkEmailBody": "{email} にアクセスリンクを送信しました。数分で期限切れになります。",
-    "fullAccountHint": "フルアカウントをお持ちですか？",
+    "fullAccountHint": "アカウントをお持ちですか？",
     "fullAccountLink": "サインイン",
     "verifying": "リンクを確認しています…",
     "verifyError": "リンクが無効か期限切れです。",
@@ -1394,7 +1462,7 @@
     "loginLink": "初めての方はこちら：ウェルカムガイド",
     "heroCta": "見積を始める",
     "getEstimateTitle": "見積アクセスを申請",
-    "getEstimateDescription": "情報を入力してマジックリンクを受け取り、見積を1件作成できます。",
+    "getEstimateDescription": "以下の情報を入力してアカウントを作成後、AI見積もりを作成できます。",
     "footerCta": "始める準備はできましたか？",
     "footerCtaButton": "アカウントにサインイン",
     "helpLink": "サインイン済みの方はヘルプでFAQとガイドをご覧ください。",

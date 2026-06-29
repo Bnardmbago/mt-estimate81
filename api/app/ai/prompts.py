@@ -212,7 +212,9 @@ def build_rate_card_section_system_prompt(
     return (
         common
         + f"Target section: {section_label} (recurring monthly RC costs).\n"
-        "Suggest only NEW line items not already listed.\n"
+        "The rate card uses five standard categories: Cloud infrastructure, System monitoring, "
+        "Maintenance and Support, Security, and Backup.\n"
+        "Suggest amounts for missing categories only; use standard names when adding items.\n"
         "Each item needs name and amount_jpy in JPY."
     )
 
@@ -296,9 +298,14 @@ def build_rate_card_system_prompt(
         "- setup_cost_items: one-time NRC setup costs in JPY (e.g. infrastructure, tooling, licenses, "
         "environment setup, third-party integration fees). Provide 2–6 line items derived from the "
         "project form and documents when possible.\n"
-        "- monthly_rc_items: recurring monthly RC costs in JPY (e.g. hosting, monitoring, support, "
-        "SaaS subscriptions, maintenance). Provide 1–5 line items derived from the project form and "
-        "documents when possible.\n"
+        "- monthly_rc_items: recurring monthly RC costs in JPY. Always include exactly these five "
+        "standard line items (amounts in JPY, use 0 when unknown):\n"
+        "  1. Cloud infrastructure — hosting, servers, databases, SaaS platform fees\n"
+        "  2. System monitoring — 24/7 monitoring and incident response\n"
+        "  3. Maintenance and Support — minor fixes and inquiry support after go-live\n"
+        "  4. Security — security updates and vulnerability management\n"
+        "  5. Backup — data backup and restoration\n"
+        "Derive amounts from the project form, maintenance_support field, and documents when possible.\n"
         "- generation_notes: brief rationale for key assumptions\n"
         "- used_default_assumptions: list field names where you had insufficient info and used "
         "reasonable industry defaults (empty list if confident)\n\n"

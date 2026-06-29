@@ -36,11 +36,16 @@
     <h2>{{ ctx.labels.executive_cost_summary }}</h2>
     <table class="qa-table">
       <tbody>
-        <tr><th>{{ ctx.labels.total_development_cost }}</th><td class="num">{{ format_currency(ctx.executive_summary.nrc_total_jpy) }}</td></tr>
+        {% include '_pricing_summary_rows.j2' %}
         <tr><th>{{ ctx.labels.maintenance_cost_monthly_annual }}</th><td class="num">{{ ctx.executive_display.maintenance_cost_display }}</td></tr>
         <tr><th>{{ ctx.labels.development_period }}</th><td class="num">{{ ctx.executive_display.development_period_display }}</td></tr>
       </tbody>
     </table>
+    {% if ctx.pricing_summary.has_discount %}
+    <p class="muted" style="white-space: pre-wrap; margin-top: 8pt;">*{{ ctx.pricing_summary.campaign_terms_title }}
+
+{{ ctx.pricing_summary.campaign_terms }}</p>
+    {% endif %}
   </div>
 
   <div class="section-card section">
@@ -184,30 +189,13 @@
       <thead>
         <tr>
           <th>{{ ctx.labels.category }}</th>
-          <th>{{ ctx.labels.item }}</th>
+          <th>{{ ctx.labels.service_description }}</th>
           <th class="num">{{ ctx.labels.monthly }}</th>
           <th class="num">{{ ctx.labels.annual }}</th>
         </tr>
       </thead>
       <tbody>
-        {% for row in ctx.calculation.rc_line_items %}
-          <tr>
-            <td>{{ row.category }}</td>
-            <td>{{ row.item }}</td>
-            <td class="num">{{ format_currency(row.monthly_jpy) }}</td>
-            <td class="num">{{ format_currency(row.annual_jpy) }}</td>
-          </tr>
-        {% endfor %}
-        <tr class="total-row">
-          <th colspan="2">{{ ctx.labels.rc_monthly_formula }}</th>
-          <td class="num">{{ format_currency(ctx.executive_summary.monthly_rc_jpy) }}</td>
-          <td></td>
-        </tr>
-        <tr class="total-row">
-          <th colspan="2">{{ ctx.labels.rc_annual_formula }}</th>
-          <td></td>
-          <td class="num">{{ format_currency(ctx.executive_summary.annual_rc_jpy) }}</td>
-        </tr>
+        {% include '_rc_breakdown_detailed.j2' %}
       </tbody>
     </table>
   </div>

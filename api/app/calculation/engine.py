@@ -10,7 +10,7 @@ from app.calculation.line_items import (
     serialize_jpy_line_item,
 )
 from app.calculation.discount import apply_estimate_discount
-from app.calculation.role_allocation import allocate_role_hours_from_phases, resolve_feature_item_role
+from app.calculation.role_allocation import allocate_role_hours_from_phases, resolve_support_role_hourly_rate, resolve_feature_item_role
 from app.calculation.schemas import (
     CalculationResult,
     FeatureItemInput,
@@ -173,8 +173,12 @@ def calculate_estimate(
     setup_jpy = setup_items_total(rate_card.setup_cost_items)
     nrc_total = labor_jpy + setup_jpy + contingency_jpy + overhead_jpy
 
-    support_role = maintenance.get("support_role", "developer")
-    maintenance_jpy = int(maintenance.get("monthly_support_hours", 0) * role_rates.get(support_role, 0))
+    support_role_hint = maintenance.get("support_role", "developer")
+    _, support_hourly_rate = resolve_support_role_hourly_rate(role_rates, support_role_hint)
+    hours_based_maintenance = int(
+        maintenance.get("monthly_support_hours", 0) * support_hourly_rate
+    )
+    maintenance_jpy = max(hours_based_maintenance, rate_card.default_maintenance_monthly_jpy)
     monthly_rc_items = [serialize_jpy_line_item(item) for item in rate_card.monthly_rc_items]
     monthly_rc = sum(item.amount for item in rate_card.monthly_rc_items) + maintenance_jpy
 

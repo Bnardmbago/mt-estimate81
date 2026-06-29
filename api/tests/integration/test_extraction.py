@@ -165,6 +165,15 @@ async def test_extract_auto_creates_rate_card(
     assert len(settings["monthly_rc_items"]) >= 1
     setup_names = {item["name"] for item in settings["setup_cost_items"]}
     assert "Infrastructure setup" in setup_names
+    assert settings["default_maintenance_monthly_jpy"] >= 0
+    maintenance = payload["maintenance_assumptions"]
+    support_role = maintenance.get("support_role", "developer")
+    role_rates = {
+        role["name"]: role.get("hourly_rate_jpy") or role.get("hourly_rate", 0)
+        for role in settings["roles"]
+    }
+    expected_floor = int(maintenance.get("monthly_support_hours", 0) * role_rates.get(support_role, 0))
+    assert settings["default_maintenance_monthly_jpy"] == expected_floor
 
 
 @pytest.mark.asyncio

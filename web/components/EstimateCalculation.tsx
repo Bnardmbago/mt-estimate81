@@ -115,7 +115,7 @@ export default function EstimateCalculation({
               </p>
               {estimate.rate_card_id && (
                 <Link
-                  href={`/${locale}/rate-cards/${estimate.rate_card_id}`}
+                  href={`/${locale}/rate-cards/${estimate.rate_card_id}?estimateId=${estimate.id}`}
                   className="mt-2 inline-block rounded border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
                 >
                   {t("viewRateCard")}
@@ -144,7 +144,12 @@ export default function EstimateCalculation({
         </p>
       )}
 
-      {result && <CalculationBreakdown result={result} />}
+      {result && (
+        <CalculationBreakdown
+          result={result}
+          quotationIssueDate={estimate.updated_at}
+        />
+      )}
     </section>
   );
 }

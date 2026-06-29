@@ -61,6 +61,29 @@ def _add_subheading(document: Document, text: str) -> None:
     document.add_heading(text, level=3)
 
 
+def _executive_pricing_rows(report_context: dict[str, Any]) -> list[tuple[str, str]]:
+    labels = report_context["labels"]
+    pricing = report_context.get("pricing_summary") or {}
+    if pricing.get("has_discount"):
+        return [
+            (
+                labels["development_cost_original"],
+                format_currency(pricing["nrc_original_total_jpy"]),
+            ),
+            (labels["limited_time_discount"], pricing["discount_display"]),
+            (
+                labels["special_price"],
+                f"{format_currency(pricing['nrc_discounted_total_jpy'])} {labels['excluding_tax']}",
+            ),
+        ]
+    return [
+        (
+            labels["total_development_cost"],
+            format_currency(report_context["executive_display"]["development_cost_jpy"]),
+        ),
+    ]
+
+
 def generate_report_docx(report_context: dict[str, Any]) -> bytes:
     labels = report_context["labels"]
     project = report_context["project_summary"]
@@ -92,10 +115,7 @@ def generate_report_docx(report_context: dict[str, Any]) -> bytes:
     _add_key_value_table(
         document,
         [
-            (
-                labels["total_development_cost"],
-                format_currency(executive_display["development_cost_jpy"]),
-            ),
+            *_executive_pricing_rows(report_context),
             (
                 labels["maintenance_cost_monthly_annual"],
                 executive_display["maintenance_cost_display"],
@@ -106,6 +126,10 @@ def generate_report_docx(report_context: dict[str, Any]) -> bytes:
             ),
         ],
     )
+    pricing = report_context.get("pricing_summary") or {}
+    if pricing.get("has_discount") and pricing.get("campaign_terms"):
+        document.add_paragraph(f"*{pricing.get('campaign_terms_title', labels['campaign_terms_title'])}")
+        document.add_paragraph(pricing["campaign_terms"])
 
     _add_heading(document, labels["questionnaire"], level=2)
     questionnaire_sections = report_context.get("questionnaire_sections") or []
@@ -196,18 +220,40 @@ def generate_report_docx(report_context: dict[str, Any]) -> bytes:
     _add_data_table(document, [labels["category"], labels["item"], labels["cost"]], nrc_rows)
 
     _add_heading(document, labels["rc_detailed"], level=2)
-    _add_data_table(
-        document,
-        [labels["category"], labels["item"], labels["monthly"], labels["annual"]],
-        [
+    rc_breakdown = report_context.get("rc_breakdown") or {}
+    rc_rows = []
+    for row in rc_breakdown.get("line_items") or []:
+        item_label = row.get("service_description") or (
+            labels["maintenance"] if row.get("is_maintenance") else row["item"]
+        )
+        rc_rows.append(
             [
                 row["category"],
-                row["item"],
+                item_label,
                 format_currency(row["monthly_jpy"]),
                 format_currency(row["annual_jpy"]),
             ]
-            for row in calculation["rc_line_items"]
-        ],
+        )
+    rc_rows.append(
+        [
+            labels["monthly_total"],
+            "",
+            format_currency(rc_breakdown.get("monthly_total_jpy", 0)),
+            "",
+        ]
+    )
+    rc_rows.append(
+        [
+            labels["annual_total"],
+            "",
+            "",
+            format_currency(rc_breakdown.get("annual_total_jpy", 0)),
+        ]
+    )
+    _add_data_table(
+        document,
+        [labels["category"], labels["service_description"], labels["monthly"], labels["annual"]],
+        rc_rows,
     )
 
     _add_heading(document, labels["estimate_exclusions"], level=2)
@@ -282,6 +328,32 @@ def generate_quotation_docx(quotation_context: dict[str, Any]) -> bytes:
     right.add_paragraph(company["contact_block"])
 
     document.add_paragraph()
+
+    pricing = quotation_context.get("pricing_summary") or {}
+    if pricing.get("has_discount"):
+        pricing_labels = pricing.get("labels") or {}
+        _add_key_value_table(
+            document,
+            [
+                (
+                    pricing_labels.get("development_cost", "Development Cost"),
+                    format_currency(pricing["nrc_original_total_jpy"]),
+                ),
+                (
+                    pricing_labels.get("limited_time_discount", "Limited-Time Discount"),
+                    pricing["discount_display"],
+                ),
+                (
+                    pricing_labels.get("special_price", "Special Price"),
+                    f"{format_currency(pricing['nrc_discounted_total_jpy'])} {pricing_labels.get('excluding_tax', '')}",
+                ),
+            ],
+        )
+
+        campaign_terms = pricing.get("campaign_terms")
+        if campaign_terms:
+            document.add_paragraph(f"*{pricing.get('campaign_terms_title', 'Campaign Terms')}")
+            document.add_paragraph(campaign_terms)
 
     total_label = f"［{labels['total_amount_label']}］" if locale == "ja" else f"[{labels['total_amount_label']}]"
     total_paragraph = document.add_paragraph()

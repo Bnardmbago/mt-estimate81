@@ -7,13 +7,15 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.admin.discount_config import get_estimate_discount_rate
+from app.admin.discount_config import get_estimate_discount_rate, get_estimate_markup_rate
 from app.audit.service import log_change
 from app.calculation.calendar import default_project_start_date
 from app.calculation.currency import rate_card_settings_to_jpy
 from app.calculation.engine import CalculationError, calculate_estimate
+from app.calculation.markup import compute_internal_pricing
+from app.calculation.rc_detailed import build_detailed_rc_breakdown, get_markup_rate_from_calculation
 from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline, build_gantt_timeline_two_pass
-from app.calculation.line_items import normalize_calculation_result
+from app.calculation.line_items import normalize_calculation_result, sanitize_calculation_result_for_user
 from app.calculation.schemas import FeatureItemInput as CalcFeatureItemInput
 from app.calculation.schemas import GanttFeatureItemInput, RateCardSettings
 from app.estimates.access import can_access_estimate, require_estimate_access
@@ -39,6 +41,7 @@ from app.models.form_template import FormTemplate
 from app.models.estimate import Estimate, EstimateStatus, FeatureItem
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.rate_cards.normalize import normalize_settings_dict
 from app.rate_cards.system import attach_system_rate_card
 from app.rate_cards.service import (
     create_rate_card_with_settings,
@@ -57,6 +60,25 @@ from app.schemas.estimate import (
     FeatureItemResponse,
     FeatureItemsUpdate,
 )
+
+
+def _enrich_calculation_for_display(
+    calculation: dict[str, Any] | None,
+    locale: str,
+) -> dict[str, Any] | None:
+    if not calculation:
+        return calculation
+    if calculation.get("rc_detailed_breakdown"):
+        return calculation
+    markup_rate = get_markup_rate_from_calculation(calculation)
+    return {
+        **calculation,
+        "rc_detailed_breakdown": build_detailed_rc_breakdown(
+            calculation,
+            locale=locale,
+            markup_rate=markup_rate,
+        ),
+    }
 
 
 async def create_estimate(
@@ -158,6 +180,7 @@ async def estimate_to_detail(
     db: AsyncSession,
     estimate: Estimate,
     display_locale: str | None = None,
+    user: User | None = None,
 ) -> EstimateDetail:
     rate_card_name = None
     if estimate.rate_card_id:
@@ -230,7 +253,13 @@ async def estimate_to_detail(
             "rate_card_auto_tune_enabled": get_rate_card_auto_tune_enabled(estimate),
             "form_template_name": template_name,
             "form_schema_snapshot": schema_snapshot,
-            "calculation_result": normalize_calculation_result(estimate.calculation_result),
+            "calculation_result": sanitize_calculation_result_for_user(
+                _enrich_calculation_for_display(
+                    normalize_calculation_result(estimate.calculation_result),
+                    resolved_locale,
+                ),
+                include_internal_pricing=bool(user and user.is_admin),
+            ),
         }
     )
 
@@ -567,7 +596,9 @@ async def get_gantt_timeline(
         )
 
     version = await _resolve_rate_card_version_for_gantt(db, estimate, user)
-    rate_settings = RateCardSettings.model_validate(version.settings)
+    rate_settings = RateCardSettings.model_validate(
+        normalize_settings_dict(dict(version.settings or {}))
+    )
     resolved_start = _resolve_project_start_date(estimate, start_date)
 
     gantt_items = _gantt_items_from_estimate(estimate, display_locale=display_locale)
@@ -668,7 +699,9 @@ async def run_calculation(
         )
         for item in estimate.feature_items
     ]
-    rate_settings = RateCardSettings.model_validate(version.settings)
+    rate_settings = RateCardSettings.model_validate(
+        normalize_settings_dict(dict(version.settings or {}))
+    )
     source_currency = rate_settings.currency
     source_region = rate_settings.region
     jpy_settings, fx_snapshot = await rate_card_settings_to_jpy(rate_settings, get_fx_service())
@@ -696,6 +729,7 @@ async def run_calculation(
     ]
 
     discount_rate = await get_estimate_discount_rate(db)
+    markup_rate = await get_estimate_markup_rate(db)
 
     try:
         result = calculate_estimate(
@@ -711,7 +745,15 @@ async def run_calculation(
     except CalculationError:
         raise
 
+    internal_pricing = compute_internal_pricing(result, markup_rate)
     result_payload = result.model_dump()
+    if internal_pricing is not None:
+        result_payload["internal_pricing"] = internal_pricing
+    result_payload["rc_detailed_breakdown"] = build_detailed_rc_breakdown(
+        result_payload,
+        locale=normalize_locale(estimate.locale, estimate.locale),
+        markup_rate=markup_rate,
+    )
     result_payload["fx_snapshot"] = fx_snapshot
     result_payload["source_currency"] = source_currency
     result_payload["source_region"] = source_region
@@ -829,6 +871,7 @@ async def tune_rate_card_from_extraction(
         estimate_id,
         user.id,
         complexity_profile=profile,
+        maintenance_assumptions=dict(estimate.maintenance_assumptions or {}),
     )
     result = await db.execute(select(Estimate).where(Estimate.id == estimate_id))
     estimate = result.scalar_one()

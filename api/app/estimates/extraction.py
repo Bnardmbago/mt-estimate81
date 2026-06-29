@@ -453,6 +453,7 @@ async def run_extraction(
                     estimate_id,
                     user_id,
                     complexity_profile=complexity_profile,
+                    maintenance_assumptions=maintenance_assumptions,
                 )
                 rate_card_auto_tuned = True
                 maintenance_assumptions = mark_rate_card_auto_tune_enabled(
@@ -533,6 +534,11 @@ def _friendly_extraction_error(message: str) -> str:
         )
     if "invalid api key" in lowered or "authentication" in lowered or "401" in message:
         return "Invalid API key. Check Admin → AI settings."
+    if "credit balance" in lowered or "purchase credits" in lowered:
+        return (
+            "Anthropic API credits are exhausted. Add credits at console.anthropic.com "
+            "or switch to OpenAI in Admin → AI settings."
+        )
     if "invalid schema" in lowered or "response_format" in lowered:
         return "AI configuration error. Contact your administrator."
     if "timeout" in lowered:

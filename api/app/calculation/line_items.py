@@ -1,5 +1,9 @@
 from typing import Any
 
+from app.calculation.rc_detailed import (
+    build_detailed_rc_breakdown,
+    get_markup_rate_from_calculation,
+)
 from app.calculation.schemas import MonthlyRcItem, SetupCostItem
 from app.rate_cards.normalize import line_item_amount
 
@@ -111,13 +115,94 @@ def build_rc_line_items(
         line_items.append(
             {
                 "category": "Maintenance",
-                "item": "Maintenance support",
+                "item": "Maintenance and Support",
                 "monthly_jpy": maintenance_jpy,
                 "annual_jpy": maintenance_jpy * 12,
             }
         )
 
     return line_items
+
+
+def _is_maintenance_support_row(row: dict[str, Any]) -> bool:
+    if row.get("is_maintenance"):
+        return True
+    category = str(row.get("category") or "")
+    item = str(row.get("item") or "").lower().replace("_", " ")
+    return category == "Maintenance" and item in {
+        "maintenance support",
+        "maintenance and support",
+        "maintenance",
+    }
+
+
+def _maintenance_export_row(maintenance_jpy: int) -> dict[str, Any]:
+    return {
+        "category": "Maintenance",
+        "item": "Maintenance and Support",
+        "monthly_jpy": maintenance_jpy,
+        "annual_jpy": maintenance_jpy * 12,
+        "is_maintenance": True,
+    }
+
+
+def _line_items_from_rc_monthly(rc: dict[str, Any]) -> list[dict[str, Any]]:
+    line_items: list[dict[str, Any]] = []
+    for item in rc.get("monthly_items") or []:
+        monthly_jpy = line_item_amount(item)
+        name = str(item.get("name", "Item"))
+        line_items.append(
+            {
+                "category": _rc_category(name),
+                "item": name,
+                "monthly_jpy": monthly_jpy,
+                "annual_jpy": monthly_jpy * 12,
+                "is_maintenance": False,
+            }
+        )
+    return line_items
+
+
+def _line_items_from_rc_line_items(rc_line_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    line_items: list[dict[str, Any]] = []
+    for row in rc_line_items:
+        monthly_jpy = int(row.get("monthly_jpy") or 0)
+        line_items.append(
+            {
+                "category": str(row.get("category") or "Other"),
+                "item": str(row.get("item") or "Item"),
+                "monthly_jpy": monthly_jpy,
+                "annual_jpy": int(row.get("annual_jpy") or monthly_jpy * 12),
+                "is_maintenance": _is_maintenance_support_row(row),
+            }
+        )
+    return line_items
+
+
+def _ensure_maintenance_row(
+    line_items: list[dict[str, Any]],
+    maintenance_jpy: int,
+) -> list[dict[str, Any]]:
+    if any(row.get("is_maintenance") for row in line_items):
+        return line_items
+    return [*line_items, _maintenance_export_row(maintenance_jpy)]
+
+
+def _line_items_monthly_total(line_items: list[dict[str, Any]]) -> int:
+    return sum(int(row.get("monthly_jpy") or 0) for row in line_items)
+
+
+def build_rc_export_breakdown(
+    calculation: dict[str, Any],
+    *,
+    locale: str = "en",
+) -> dict[str, Any]:
+    markup_rate = get_markup_rate_from_calculation(calculation)
+    return build_detailed_rc_breakdown(
+        calculation,
+        locale=locale,
+        markup_rate=markup_rate,
+    )
 
 
 def enrich_phase_breakdown(phase_breakdown: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -166,3 +251,19 @@ def normalize_calculation_result(calculation: dict[str, Any] | None) -> dict[str
     ]
     normalized["rc"] = rc
     return normalized
+
+
+def sanitize_calculation_result_for_user(
+    calculation: dict[str, Any] | None,
+    *,
+    include_internal_pricing: bool,
+) -> dict[str, Any] | None:
+    if not calculation:
+        return calculation
+
+    if include_internal_pricing:
+        return calculation
+
+    sanitized = dict(calculation)
+    sanitized.pop("internal_pricing", None)
+    return sanitized

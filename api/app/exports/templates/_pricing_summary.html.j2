@@ -1,0 +1,20 @@
+{% if ctx.pricing_summary.has_discount %}
+<div class="pricing-summary">
+  <div class="pricing-summary-row">
+    <span class="pricing-summary-label">{{ ctx.labels.development_cost_original }}:</span>
+    <span class="pricing-summary-value num">{{ format_currency(ctx.pricing_summary.nrc_original_total_jpy) }}</span>
+  </div>
+  <div class="pricing-summary-row">
+    <span class="pricing-summary-label">{{ ctx.labels.limited_time_discount }}:</span>
+    <span class="pricing-summary-value num">{{ ctx.pricing_summary.discount_display }}</span>
+  </div>
+  <div class="pricing-summary-row">
+    <span class="pricing-summary-label">{{ ctx.labels.special_price }}:</span>
+    <span class="pricing-summary-value num pricing-summary-special">{{ format_currency(ctx.pricing_summary.nrc_discounted_total_jpy) }} {{ ctx.labels.excluding_tax }}</span>
+  </div>
+  <div class="pricing-campaign">
+    <div class="pricing-campaign-title">*{{ ctx.pricing_summary.campaign_terms_title }}</div>
+    {{ ctx.pricing_summary.campaign_terms }}
+  </div>
+</div>
+{% endif %}

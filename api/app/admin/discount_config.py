@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 DEFAULT_ESTIMATE_DISCOUNT_RATE = 0.30
+DEFAULT_ESTIMATE_MARKUP_RATE = 0.30
 
 
 async def _get_config_row(db: AsyncSession):
@@ -36,3 +37,22 @@ async def update_estimate_discount_rate(db: AsyncSession, rate: float) -> float:
     await db.commit()
     await db.refresh(row)
     return float(row.estimate_discount_rate)
+
+
+async def get_estimate_markup_rate(db: AsyncSession) -> float:
+    row = await _get_config_row(db)
+    if row.estimate_markup_rate is None:
+        return DEFAULT_ESTIMATE_MARKUP_RATE
+    return float(row.estimate_markup_rate)
+
+
+async def update_estimate_markup_rate(db: AsyncSession, rate: float) -> float:
+    if rate < 0.0 or rate > 1.0:
+        raise ValueError("estimate_markup_rate must be between 0.0 and 1.0")
+
+    row = await _get_config_row(db)
+    row.estimate_markup_rate = rate
+    row.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(row)
+    return float(row.estimate_markup_rate)

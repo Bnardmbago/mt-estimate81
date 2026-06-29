@@ -1,7 +1,11 @@
 from datetime import datetime
 
 from app.config import settings
-from tests.unit.export_fixtures import sample_estimate_with_calculation, sample_quotation_context
+from tests.unit.export_fixtures import (
+    sample_estimate_with_calculation,
+    sample_estimate_with_discount,
+    sample_quotation_context,
+)
 
 
 def test_quotation_line_items_match_nrc_line_items():
@@ -93,3 +97,11 @@ def test_quotation_bank_details_default_when_setting_empty(monkeypatch):
     ctx = sample_quotation_context(locale="ja")
     assert "株式会社Beyond AI" in ctx["bank_details"]
     assert "住信SBIネット銀行 法人第一支店（ 106） 普通口座 2112728" in ctx["bank_details"]
+
+
+def test_quotation_includes_campaign_terms_when_discount_present():
+    estimate = sample_estimate_with_discount()
+    ctx = sample_quotation_context(estimate=estimate, locale="en")
+    assert ctx["pricing_summary"]["has_discount"] is True
+    assert "special discounted price" in ctx["pricing_summary"]["campaign_terms"]
+    assert "¥700,000" in ctx["pricing_summary"]["campaign_terms"]

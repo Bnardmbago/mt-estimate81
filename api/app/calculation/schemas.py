@@ -53,6 +53,8 @@ class MonthlyRcItem(BaseModel):
     name: str
     amount: int = 0
     amount_jpy: int | None = None
+    category: str | None = None
+    service_description: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -92,6 +94,7 @@ class RateCardSettings(BaseModel):
     contingency_rate: float
     overhead_rate: float
     monthly_rc_items: list[MonthlyRcItem]
+    default_maintenance_monthly_jpy: int = Field(default=0, ge=0)
     setup_cost_items: list[SetupCostItem] = Field(default_factory=list)
     setup_costs: SetupCosts | None = None
     productivity: ProductivitySettings
@@ -127,3 +130,7 @@ class CalculationResult(BaseModel):
     first_year_total_jpy: int
     rate_card_version_id: str
     gantt: dict = Field(default_factory=dict)
+    nrc_original_total_jpy: int | None = None
+    discount_rate_applied: float | None = None
+    discount_amount_jpy: int | None = None
+    internal_pricing: dict | None = None

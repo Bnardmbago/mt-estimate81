@@ -11,7 +11,7 @@ from app.exports.markdown import (
     format_person_months,
     generate_markdown,
 )
-from tests.unit.export_fixtures import sample_report_context
+from tests.unit.export_fixtures import sample_estimate_with_discount, sample_report_context
 
 
 @pytest.fixture
@@ -154,3 +154,25 @@ def test_markdown_export_omits_internal_sections():
     assert "2026 Standard Rates" not in md
     assert "Rate Card Reference" not in md
     assert "Cost Drivers" not in md
+
+
+def test_markdown_export_includes_discount_pricing_when_present():
+    ctx = sample_report_context(estimate=sample_estimate_with_discount())
+    md = generate_markdown(ctx)
+    assert "Development Cost" in md
+    assert "Limited-Time Discount" in md
+    assert "Special Price" in md
+    assert "Campaign Terms" in md
+    assert "¥1,000,000" in md
+    assert "30% OFF" in md
+
+
+def test_markdown_export_rc_breakdown_includes_monthly_and_annual_totals(report_context):
+    md = generate_markdown(report_context)
+    assert "Monthly RC Total" in md
+    assert "Annual RC Total" in md
+    assert "| Monthly RC Total | | ¥170,000 | |" in md
+    assert "| Annual RC Total | | | ¥2,040,000 |" in md
+    assert "Cloud Infrastructure" in md
+    assert "Server & database usage" in md
+    assert "Maintenance and Support" in md

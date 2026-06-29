@@ -17,6 +17,7 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
   const [companyName, setCompanyName] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const turnstileKey = useRef(0);
@@ -38,13 +39,14 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setErrorCode(null);
 
     const trimmedEmail = email.trim();
     const trimmedName = displayName.trim();
     const trimmedCompany = companyName.trim();
 
-    if (!trimmedEmail || (!trimmedName && !trimmedCompany)) {
-      setError(t("errorNameOrCompany"));
+    if (!trimmedEmail || !trimmedName) {
+      setError(t("errorNameRequired"));
       return;
     }
 
@@ -65,6 +67,11 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
+        const record =
+          typeof payload === "object" && payload !== null
+            ? (payload as { code?: string })
+            : {};
+        setErrorCode(record.code ?? null);
         setError(contactErrorMessage(t, payload));
         resetCaptcha();
         return;
@@ -112,6 +119,8 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
         <input
           id="contact-name"
           type="text"
+          required
+          autoComplete="name"
           value={displayName}
           onChange={(event) => setDisplayName(event.target.value)}
           className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900"
@@ -137,7 +146,16 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
           onExpire={() => setCaptchaToken("")}
         />
       ) : null}
-      {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+      {errorCode === "USE_FULL_LOGIN" ? (
+        <p className="text-center text-sm text-red-600 dark:text-red-400">
+          {t("fullAccountHint")}{" "}
+          <a href={`/${locale}/login`} className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+            &quot;{t("fullAccountLink")}&quot;
+          </a>
+        </p>
+      ) : error ? (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      ) : null}
       <button
         type="submit"
         disabled={loading || !captchaReady}
@@ -148,7 +166,7 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
         {t("fullAccountHint")}{" "}
         <a href={`/${locale}/login`} className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
-          {t("fullAccountLink")}
+          &quot;{t("fullAccountLink")}&quot;
         </a>
       </p>
     </form>

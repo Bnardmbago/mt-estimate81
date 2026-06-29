@@ -90,7 +90,7 @@ def sample_estimate_with_calculation(*, estimate_id: uuid.UUID | None = None):
                 },
                 {
                     "category": "Maintenance",
-                    "item": "Maintenance support",
+                    "item": "Maintenance and Support",
                     "monthly_jpy": 120000,
                     "annual_jpy": 1440000,
                 },
@@ -126,6 +126,17 @@ def sample_estimate_with_calculation(*, estimate_id: uuid.UUID | None = None):
             },
         },
     )
+
+
+def sample_estimate_with_discount(*, estimate_id: uuid.UUID | None = None):
+    estimate = sample_estimate_with_calculation(estimate_id=estimate_id)
+    estimate.calculation_result = {
+        **estimate.calculation_result,
+        "nrc_original_total_jpy": 1000000,
+        "discount_rate_applied": 0.30,
+        "discount_amount_jpy": 300000,
+    }
+    return estimate
 
 
 def sample_estimate_with_localized_form(*, estimate_id: uuid.UUID | None = None):

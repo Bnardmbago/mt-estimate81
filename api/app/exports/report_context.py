@@ -7,6 +7,7 @@ from app.calculation.engine import (
     filter_active_role_breakdown,
     role_personnel_count,
 )
+from app.exports.pricing_summary import build_pricing_summary
 from app.exports.markdown import (
     LABELS,
     _build_feature_rows,
@@ -14,10 +15,12 @@ from app.exports.markdown import (
     format_date,
     format_person_days,
 )
+from app.calculation.line_items import build_rc_export_breakdown
 from app.exports.export_i18n import (
     localize_calculation_for_export,
     localize_feature_rows,
     localize_gantt,
+    localize_rc_export_breakdown,
 )
 from app.exports.gantt_svg import build_gantt_svg
 from app.exports.questionnaire import (
@@ -145,6 +148,10 @@ def build_report_context(
         "role_labor_subtotal_jpy": int(round(float(nrc.get("labor_jpy") or 0))),
     }
     calculation_payload = localize_calculation_for_export(calculation_payload, locale)
+    rc_breakdown = localize_rc_export_breakdown(
+        build_rc_export_breakdown(calculation_payload, locale=locale),
+        locale,
+    )
     feature_items = localize_feature_rows(_build_feature_rows(estimate), locale)
     gantt = localize_gantt(calculation.get("gantt") or {}, locale)
 
@@ -155,6 +162,12 @@ def build_report_context(
         calculation.get("estimated_duration_days") or calculation.get("total_effort_days") or 0
     )
     creator_display = (export_user_display_name or "").strip() or "—"
+    issue_date = format_date(generated_at, locale)
+    pricing_summary = build_pricing_summary(
+        calculation,
+        locale,
+        issue_date=issue_date,
+    )
     executive_display = {
         "development_cost_jpy": nrc_total_jpy,
         "maintenance_cost_display": (
@@ -178,10 +191,17 @@ def build_report_context(
         },
         "executive_summary": {
             "nrc_total_jpy": nrc_total_jpy,
+            "nrc_discounted_total_jpy": nrc_total_jpy,
+            "nrc_original_total_jpy": pricing_summary.get("nrc_original_total_jpy"),
+            "discount_rate_applied": pricing_summary.get("discount_rate_applied"),
+            "discount_amount_jpy": pricing_summary.get("discount_amount_jpy"),
+            "discount_percent_display": pricing_summary.get("discount_percent_display"),
+            "has_discount": pricing_summary.get("has_discount", False),
             "monthly_rc_jpy": monthly_rc_jpy,
             "annual_rc_jpy": annual_rc_jpy,
             "first_year_total_jpy": int(round(float(calculation.get("first_year_total_jpy") or 0))),
         },
+        "pricing_summary": pricing_summary,
         "executive_display": executive_display,
         "questionnaire_sections": questionnaire_sections,
         "form_fields": build_flat_form_fields(
@@ -200,6 +220,7 @@ def build_report_context(
             "recommended_team_size": calculation.get("recommended_team_size", 1),
         },
         "calculation": calculation_payload,
+        "rc_breakdown": rc_breakdown,
         "gantt": gantt,
         "gantt_chart_svg": build_gantt_svg(gantt),
     }

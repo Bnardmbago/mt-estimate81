@@ -45,6 +45,10 @@ def _migrate_line_item(item: dict[str, Any]) -> dict[str, Any]:
     if "amount" not in item_copy and item_copy.get("amount_jpy") is not None:
         item_copy["amount"] = int(item_copy["amount_jpy"])
     item_copy["amount"] = int(item_copy.get("amount", 0) or 0)
+    if item_copy.get("category") is not None:
+        item_copy["category"] = str(item_copy["category"]).strip() or None
+    if item_copy.get("service_description") is not None:
+        item_copy["service_description"] = str(item_copy["service_description"]).strip() or None
     return item_copy
 
 
@@ -90,6 +94,27 @@ def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
     settings["monthly_rc_items"] = [
         _migrate_line_item(item) for item in settings.get("monthly_rc_items", [])
     ]
+    for item in settings["monthly_rc_items"]:
+        if str(item.get("name", "")).strip().lower() == "maintenance support":
+            item["name"] = "Maintenance and Support"
+    if settings["monthly_rc_items"]:
+        from app.rate_cards.rc_items import ensure_standard_monthly_rc_items
+
+        settings["monthly_rc_items"] = ensure_standard_monthly_rc_items(
+            settings["monthly_rc_items"]
+        )
+    if "default_maintenance_monthly_jpy" not in settings:
+        settings["default_maintenance_monthly_jpy"] = 0
+    else:
+        settings["default_maintenance_monthly_jpy"] = int(
+            settings.get("default_maintenance_monthly_jpy") or 0
+        )
+
+    from app.rate_cards.regional_profiles import patch_jpy_specialist_role_floors
+    from app.rate_cards.standard_rates import ensure_standard_roles
+
+    settings, _ = patch_jpy_specialist_role_floors(settings)
+    settings = ensure_standard_roles(settings)
 
     return settings
 

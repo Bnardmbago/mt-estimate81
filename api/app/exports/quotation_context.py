@@ -213,6 +213,7 @@ def build_quotation_context(
     remarks = (
         settings.quotation_remarks_ja if locale == "ja" else settings.quotation_remarks_en
     )
+    pricing_summary = report.get("pricing_summary") or {}
 
     client_display = report["project_summary"]["client_name"]
     if locale == "ja" and labels["client_suffix"]:
@@ -257,5 +258,6 @@ def build_quotation_context(
         "grand_total_jpy": grand_total_jpy,
         "tax_rate": resolved_tax_rate,
         "tax_with_rate_label": _tax_with_rate_label(resolved_tax_rate, locale),
+        "pricing_summary": pricing_summary,
         "template_dir": str(TEMPLATE_DIR),
     }

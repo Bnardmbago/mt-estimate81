@@ -208,34 +208,24 @@ async def test_request_magic_link_name_only(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_request_magic_link_company_only(client: AsyncClient, db_session: AsyncSession):
-    with patch("app.auth.contact.send_email", new=AsyncMock()) as mock_send:
-        response = await client.post(
-            "/auth/contact/request-link",
-            json={
-                "email": "companyonly@example.com",
-                "display_name": "",
-                "company_name": "ACME Corp",
-                "locale": "en",
-                "captcha_token": "dev-bypass",
-            },
-        )
-
-    assert response.status_code == 204
-    mock_send.assert_awaited_once()
-
-    from sqlalchemy import select
-
-    result = await db_session.execute(
-        select(User).where(User.email == "companyonly@example.com")
+async def test_request_magic_link_company_only_rejected(client: AsyncClient):
+    response = await client.post(
+        "/auth/contact/request-link",
+        json={
+            "email": "companyonly@example.com",
+            "display_name": "",
+            "company_name": "ACME Corp",
+            "locale": "en",
+            "captcha_token": "dev-bypass",
+        },
     )
-    user = result.scalar_one()
-    assert user.display_name == "ACME Corp"
-    assert user.company_name == "ACME Corp"
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "DISPLAY_NAME_REQUIRED"
 
 
 @pytest.mark.asyncio
-async def test_request_magic_link_requires_name_or_company(client: AsyncClient):
+async def test_request_magic_link_requires_name(client: AsyncClient):
     response = await client.post(
         "/auth/contact/request-link",
         json={
@@ -248,4 +238,4 @@ async def test_request_magic_link_requires_name_or_company(client: AsyncClient):
     )
 
     assert response.status_code == 400
-    assert response.json()["code"] == "NAME_OR_COMPANY_REQUIRED"
+    assert response.json()["code"] == "DISPLAY_NAME_REQUIRED"

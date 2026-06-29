@@ -94,8 +94,24 @@ export type CalculationResult = {
     monthly_total_jpy: number;
     annual_total_jpy: number;
   };
+  rc_detailed_breakdown?: {
+    line_items: Array<{
+      category_key: string;
+      category: string;
+      service_description: string;
+      monthly_jpy: number;
+      annual_jpy: number;
+      is_maintenance?: boolean;
+    }>;
+    monthly_total_jpy: number;
+    annual_total_jpy: number;
+    markup_rate_applied?: number;
+  };
   first_year_total_jpy: number;
   rate_card_version_id: string;
+  nrc_original_total_jpy?: number | null;
+  discount_rate_applied?: number | null;
+  discount_amount_jpy?: number | null;
 };
 
 export type ExportRecord = {
