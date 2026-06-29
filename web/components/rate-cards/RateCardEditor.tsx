@@ -1314,7 +1314,7 @@ export default function RateCardEditor({
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium">{t("roles")}</h3>
           {renderSectionActions("roles", addRole)}
         </div>
@@ -1398,7 +1398,7 @@ export default function RateCardEditor({
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium">{t("phases")}</h3>
           {renderSectionActions("phases", addPhase)}
         </div>
@@ -1510,7 +1510,7 @@ export default function RateCardEditor({
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium">{t("setupCosts")}</h3>
           {renderSectionActions("setup_cost_items", () => addLineItem("setup_cost_items"))}
         </div>
@@ -1577,7 +1577,7 @@ export default function RateCardEditor({
       </section>
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium">{t("monthlyRcItems")}</h3>
           {renderSectionActions("monthly_rc_items", () => addLineItem("monthly_rc_items"))}
         </div>
