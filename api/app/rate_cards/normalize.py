@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from app.rate_cards.defaults import DEFAULT_CURRENCY, DEFAULT_REGION
 
 HOURS_PER_DAY = 8
+
+CostBreakdownMode = Literal["standard", "flexible"]
 
 LEGACY_SETUP_LABELS = {
     "infrastructure_jpy": "Infrastructure",
@@ -52,6 +54,10 @@ def _migrate_line_item(item: dict[str, Any]) -> dict[str, Any]:
     return item_copy
 
 
+def is_flexible_cost_breakdown(settings: dict[str, Any]) -> bool:
+    return settings.get("cost_breakdown_mode") == "flexible"
+
+
 def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
     settings = dict(raw)
     has_legacy_jpy = any(
@@ -68,7 +74,7 @@ def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
     )
 
     if not settings.get("development_approach"):
-        settings["development_approach"] = "traditional"
+        settings["development_approach"] = "ai_assisted"
 
     if "region" not in settings:
         settings["region"] = "japan" if has_legacy_jpy else DEFAULT_REGION
@@ -97,7 +103,7 @@ def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
     for item in settings["monthly_rc_items"]:
         if str(item.get("name", "")).strip().lower() == "maintenance support":
             item["name"] = "Maintenance and Support"
-    if settings["monthly_rc_items"]:
+    if settings["monthly_rc_items"] and not is_flexible_cost_breakdown(settings):
         from app.rate_cards.rc_items import ensure_standard_monthly_rc_items
 
         settings["monthly_rc_items"] = ensure_standard_monthly_rc_items(

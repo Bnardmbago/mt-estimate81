@@ -9,8 +9,9 @@ def test_normalize_settings_applies_daily_rates():
         "setup_costs": {"infrastructure_jpy": 100000, "tooling_jpy": 0, "third_party_jpy": 0},
     }
     normalized = normalize_settings_dict(raw)
-    assert normalized["roles"][0]["hourly_rate"] == 6000
-    assert normalized["roles"][0]["daily_rate"] == 48000
+    engineer = next(role for role in normalized["roles"] if role["name"] == "Engineer")
+    assert engineer["hourly_rate"] == 6000
+    assert engineer["daily_rate"] == 48000
     assert normalized["currency"] == "JPY"
     assert normalized["region"] == "japan"
     assert normalized["setup_cost_items"][0]["name"] == "Infrastructure"
@@ -22,7 +23,9 @@ def test_normalize_settings_preserves_custom_daily_rate():
         "roles": [{"name": "developer", "hourly_rate": 6000, "daily_rate": 55000}],
     }
     normalized = normalize_settings_dict(raw)
-    assert normalized["roles"][0]["daily_rate"] == 55000
+    engineer = next(role for role in normalized["roles"] if role["name"] == "Engineer")
+    assert engineer["hourly_rate"] == 6000
+    assert engineer["daily_rate"] == 48000
 
 
 def test_normalize_settings_preserves_setup_cost_items():
@@ -51,6 +54,21 @@ def test_normalize_settings_migrates_legacy_line_items():
     assert cloud["amount"] == 50000
 
 
+def test_normalize_settings_flexible_mode_preserves_custom_rows():
+    raw = {
+        "roles": [],
+        "cost_breakdown_mode": "flexible",
+        "monthly_rc_items": [
+            {"name": "Custom hosting", "amount": 80000, "service_description": "AWS ECS"},
+            {"name": "API gateway", "amount": 15000},
+        ],
+    }
+    normalized = normalize_settings_dict(raw)
+    assert len(normalized["monthly_rc_items"]) == 2
+    assert normalized["monthly_rc_items"][0]["name"] == "Custom hosting"
+    assert normalized["monthly_rc_items"][0]["service_description"] == "AWS ECS"
+
+
 def test_normalize_settings_defaults_region_and_currency_without_legacy_jpy():
     normalized = normalize_settings_dict({"roles": []})
     assert normalized["region"] == "japan"
@@ -66,6 +84,31 @@ def test_normalize_settings_default_maintenance_monthly_jpy():
     assert normalized["default_maintenance_monthly_jpy"] == 120000
 
 
+def test_normalize_settings_consolidates_ai_roles_to_standard_four():
+    raw = {
+        "region": "japan",
+        "currency": "JPY",
+        "roles": [
+            {"name": "Project Manager", "hourly_rate": 12000, "daily_rate": 96000},
+            {"name": "Developer", "hourly_rate": 8000, "daily_rate": 64000},
+            {"name": "QA Engineer", "hourly_rate": 6500, "daily_rate": 52000},
+            {"name": "UX Designer", "hourly_rate": 7500, "daily_rate": 60000},
+            {"name": "Business Analyst", "hourly_rate": 9000, "daily_rate": 72000},
+            {"name": "DevOps Engineer", "hourly_rate": 9500, "daily_rate": 76000},
+            {"name": "Senior Engineer", "hourly_rate": 10000, "daily_rate": 80000},
+            {"name": "Full Stack Engineer", "hourly_rate": 9000, "daily_rate": 72000},
+        ],
+    }
+    normalized = normalize_settings_dict(raw)
+    assert len(normalized["roles"]) == 4
+    names = [role["name"] for role in normalized["roles"]]
+    assert names == ["Tech Lead", "Senior Engineer", "Full Stack Engineer", "Engineer"]
+    tech_lead = next(role for role in normalized["roles"] if role["name"] == "Tech Lead")
+    engineer = next(role for role in normalized["roles"] if role["name"] == "Engineer")
+    assert tech_lead["hourly_rate"] == 12000
+    assert engineer["hourly_rate"] == 9500
+
+
 def test_normalize_settings_raises_jpy_frontend_backend_from_php_conversion():
     raw = {
         "region": "philippines",
@@ -77,12 +120,13 @@ def test_normalize_settings_raises_jpy_frontend_backend_from_php_conversion():
         ],
     }
     normalized = normalize_settings_dict(raw)
-    frontend = next(role for role in normalized["roles"] if role["name"] == "Frontend Developer")
-    backend = next(role for role in normalized["roles"] if role["name"] == "Backend Developer")
-    pm = next(role for role in normalized["roles"] if role["name"] == "Project Manager")
-    assert frontend["hourly_rate"] == 8500
-    assert backend["hourly_rate"] == 8500
-    assert pm["hourly_rate"] == 12000
+    assert len(normalized["roles"]) == 4
+    tech_lead = next(role for role in normalized["roles"] if role["name"] == "Tech Lead")
+    full_stack = next(role for role in normalized["roles"] if role["name"] == "Full Stack Engineer")
+    engineer = next(role for role in normalized["roles"] if role["name"] == "Engineer")
+    assert tech_lead["hourly_rate"] == 12000
+    assert full_stack["hourly_rate"] == 8500
+    assert engineer["hourly_rate"] == 650
 
 
 def test_normalize_settings_preserves_rc_category_and_description():

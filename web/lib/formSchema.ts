@@ -1,4 +1,4 @@
-import { FORM_FIELDS } from "@/lib/formFields";
+import { FORM_FIELDS, isUsableProjectName } from "@/lib/formFields";
 
 export type LocalizedText = {
   en: string;
@@ -46,10 +46,7 @@ const LEGACY_LABELS: Record<string, LocalizedText> = {
 };
 
 const OPTION_LABELS: Record<string, LocalizedText> = {
-  simple: { en: "Simple", ja: "シンプル" },
-  moderate: { en: "Moderate", ja: "中程度" },
-  complex: { en: "Complex", ja: "複雑" },
-  low: { en: "Low", ja: "低" },
+  low: { en: "Low / Simple", ja: "低 / シンプル" },
   medium: { en: "Medium", ja: "中" },
   high: { en: "High", ja: "高" },
   japan: { en: "Mainly in Japan", ja: "主に国内" },
@@ -128,6 +125,9 @@ export function isSchemaFieldRequired(
   field: FormFieldSchema,
   hasUploadedDocuments: boolean,
 ): boolean {
+  if (field.key === "project_name") {
+    return true;
+  }
   if (hasUploadedDocuments) {
     return false;
   }
@@ -151,7 +151,7 @@ export function validateFormValues(
     }
   }
 
-  if (!values.project_name?.trim()) {
+  if (!isUsableProjectName(values.project_name)) {
     errors.project_name = requiredMessage;
   }
 
@@ -161,7 +161,11 @@ export function validateFormValues(
 export function emptyFormValuesForSchema(schema: FormFieldSchema[]): FormFieldValues {
   const values: FormFieldValues = { project_name: "" };
   for (const field of schema) {
-    values[field.key] = "";
+    if (field.key === "data_complexity" || field.key === "ui_complexity") {
+      values[field.key] = "low";
+    } else {
+      values[field.key] = "";
+    }
   }
   return values;
 }

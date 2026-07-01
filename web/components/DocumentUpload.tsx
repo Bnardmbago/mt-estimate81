@@ -10,6 +10,7 @@ type DocumentUploadProps = {
   estimateId: string;
   initialDocuments: EstimateDocument[];
   onDocumentsChange?: (documents: EstimateDocument[]) => void;
+  variant?: "standalone" | "embedded";
 };
 
 const SUPPORTED_EXTENSIONS = ["pdf", "docx", "xlsx", "txt", "md"];
@@ -30,6 +31,7 @@ export default function DocumentUpload({
   estimateId,
   initialDocuments,
   onDocumentsChange,
+  variant = "standalone",
 }: DocumentUploadProps) {
   const router = useRouter();
   const t = useTranslations("documents");
@@ -178,22 +180,34 @@ export default function DocumentUpload({
     }
   }
 
-  return (
-    <section className="mt-8 border-t border-gray-200 pt-8">
-      <h2 className="mb-1 text-lg font-semibold">{t("title")}</h2>
-      <p className="mb-4 text-sm text-gray-500">{t("description")}</p>
+  const isEmbedded = variant === "embedded";
 
-      <div className="mb-4">
+  const dropzoneClassName = isEmbedded
+    ? isDragging
+      ? "border-indigo-500 bg-indigo-50"
+      : "border-indigo-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/50"
+    : isDragging
+      ? "border-blue-500 bg-blue-50"
+      : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50";
+
+  const content = (
+    <>
+      {!isEmbedded ? (
+        <>
+          <h2 className="mb-1 text-lg font-semibold">{t("title")}</h2>
+          <p className="mb-4 text-sm text-gray-500">{t("description")}</p>
+        </>
+      ) : null}
+
+      <div className={isEmbedded ? "mb-3" : "mb-4"}>
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`flex cursor-pointer flex-col justify-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors ${
-            isDragging
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50"
-          }`}
+          className={`flex cursor-pointer flex-col justify-center rounded-lg border-2 border-dashed px-6 text-center transition-colors ${
+            isEmbedded ? "py-6" : "py-10"
+          } ${dropzoneClassName}`}
         >
           <input
             ref={fileInputRef}
@@ -221,9 +235,9 @@ export default function DocumentUpload({
         </p>
       )}
 
-      {documents.length === 0 ? (
+      {documents.length === 0 && !isEmbedded ? (
         <p className="text-sm text-gray-500">{t("empty")}</p>
-      ) : (
+      ) : documents.length > 0 ? (
         <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
           {documents.map((document) => {
             const badgeClass =
@@ -277,7 +291,17 @@ export default function DocumentUpload({
             );
           })}
         </ul>
-      )}
+      ) : null}
+    </>
+  );
+
+  if (isEmbedded) {
+    return <div className="mt-3">{content}</div>;
+  }
+
+  return (
+    <section className="mt-8 border-t border-gray-200 pt-8">
+      {content}
     </section>
   );
 }

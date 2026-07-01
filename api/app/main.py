@@ -3,6 +3,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.admin.ai_settings import router as admin_ai_settings_router
@@ -23,6 +24,7 @@ from app.exceptions import (
     app_error_handler,
     calculation_error_handler,
     http_exception_handler,
+    validation_exception_handler,
 )
 from app.exports.router import router as exports_router
 from app.feedback.router import router as feedback_router
@@ -57,6 +59,7 @@ app = FastAPI(title="AI Estimate API", version="0.1.0", lifespan=lifespan)
 app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(CalculationError, calculation_error_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 app.include_router(auth_router)
 app.include_router(feedback_router)

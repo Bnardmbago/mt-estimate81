@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+import re
+from typing import Any, Literal
+
+from app.rate_cards.normalize import line_item_amount
+
+CostBreakdownMode = Literal["standard", "flexible"]
 
 RC_CATEGORY_KEYS = (
     "cloud_infrastructure",
@@ -151,12 +156,131 @@ def _apply_markup_to_buckets(
     return marked
 
 
+def _slugify_category_key(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", name.strip().lower())
+    return slug.strip("_") or "other"
+
+
+def _is_maintenance_item(item: dict[str, Any]) -> bool:
+    name = str(item.get("name") or "").lower()
+    category = str(item.get("category") or "").lower()
+    return (
+        "maintenance" in name
+        or "support" in name
+        or category == "maintenance_support"
+    )
+
+
+def _build_flexible_rc_breakdown(
+    calculation: dict[str, Any],
+    *,
+    locale: str,
+    markup_rate: float,
+) -> dict[str, Any]:
+    rc = calculation.get("rc") or {}
+    monthly_total_at_cost = int(round(float(rc.get("monthly_total_jpy") or 0)))
+    maintenance_jpy = int(rc.get("maintenance_jpy") or 0)
+
+    rows_at_cost: list[dict[str, Any]] = []
+    for item in rc.get("monthly_items") or []:
+        amount = line_item_amount(item)
+        name = str(item.get("name", "Item"))
+        category_key = str(item.get("category") or _slugify_category_key(name))
+        rows_at_cost.append(
+            {
+                "category_key": category_key,
+                "category": name,
+                "service_description": str(item.get("service_description") or ""),
+                "monthly_jpy_at_cost": amount,
+                "is_maintenance": _is_maintenance_item(item),
+            }
+        )
+
+    has_maintenance_row = any(row["is_maintenance"] for row in rows_at_cost)
+    if maintenance_jpy > 0 and not has_maintenance_row:
+        rows_at_cost.append(
+            {
+                "category_key": "maintenance_support",
+                "category": "Maintenance and Support",
+                "service_description": "Minor fixes & inquiry support",
+                "monthly_jpy_at_cost": maintenance_jpy,
+                "is_maintenance": True,
+            }
+        )
+
+    if not rows_at_cost:
+        return build_detailed_rc_breakdown(
+            calculation,
+            locale=locale,
+            markup_rate=markup_rate,
+            cost_breakdown_mode="standard",
+        )
+
+    subtotal_at_cost = sum(row["monthly_jpy_at_cost"] for row in rows_at_cost)
+    multiplier = 1.0 + markup_rate if markup_rate > 0 else 1.0
+    target_total = _scale_jpy(monthly_total_at_cost, multiplier)
+    line_items: list[dict[str, Any]] = []
+    for row in rows_at_cost:
+        if subtotal_at_cost > 0:
+            share = row["monthly_jpy_at_cost"] / subtotal_at_cost
+            monthly_jpy = int(round(target_total * share))
+            monthly_at_cost = int(round(row["monthly_jpy_at_cost"] * multiplier))
+        else:
+            monthly_jpy = 0
+            monthly_at_cost = 0
+        line_items.append(
+            {
+                "category_key": row["category_key"],
+                "category": row["category"],
+                "service_description": row["service_description"],
+                "item": row["category"],
+                "monthly_jpy": monthly_jpy,
+                "monthly_jpy_at_cost": monthly_at_cost,
+                "annual_jpy": monthly_jpy * 12,
+                "is_maintenance": row["is_maintenance"],
+            }
+        )
+
+    monthly_total_jpy = target_total
+    annual_total_jpy = monthly_total_jpy * 12
+    annual_total_at_cost = monthly_total_at_cost * 12
+    current_total = sum(row["monthly_jpy"] for row in line_items)
+    if current_total != monthly_total_jpy and line_items:
+        diff = monthly_total_jpy - current_total
+        adjust_index = next(
+            (index for index, row in enumerate(line_items) if row.get("is_maintenance")),
+            len(line_items) - 1,
+        )
+        line_items[adjust_index]["monthly_jpy"] = max(
+            0,
+            line_items[adjust_index]["monthly_jpy"] + diff,
+        )
+        line_items[adjust_index]["annual_jpy"] = line_items[adjust_index]["monthly_jpy"] * 12
+
+    return {
+        "line_items": line_items,
+        "monthly_total_jpy": monthly_total_jpy,
+        "annual_total_jpy": annual_total_jpy,
+        "monthly_total_at_cost_jpy": monthly_total_at_cost,
+        "annual_total_at_cost_jpy": annual_total_at_cost,
+        "markup_rate_applied": markup_rate,
+    }
+
+
 def build_detailed_rc_breakdown(
     calculation: dict[str, Any],
     *,
     locale: str = "en",
     markup_rate: float = 0.0,
+    cost_breakdown_mode: CostBreakdownMode = "standard",
 ) -> dict[str, Any]:
+    if cost_breakdown_mode == "flexible":
+        return _build_flexible_rc_breakdown(
+            calculation,
+            locale=locale,
+            markup_rate=markup_rate,
+        )
+
     content_locale = locale if locale in RC_CATEGORY_CONTENT else "en"
     rc = calculation.get("rc") or {}
     monthly_total_at_cost = int(round(float(rc.get("monthly_total_jpy") or 0)))

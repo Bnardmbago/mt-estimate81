@@ -40,20 +40,26 @@ export default function EstimateDetailContent({
         ref={formRef}
         estimate={estimate}
         hasUploadedDocuments={hasUploadedDocuments}
+        documentsSection={
+          !isDraft ? (
+            <DocumentUpload
+              estimateId={estimate.id}
+              initialDocuments={estimate.documents ?? []}
+              onDocumentsChange={handleDocumentsChange}
+            />
+          ) : undefined
+        }
       >
         {isDraft ? (
           <EstimateAiSpecPanel
             estimateId={estimate.id}
             estimate={estimate}
             formRef={formRef}
+            initialDocuments={estimate.documents ?? []}
+            onDocumentsChange={handleDocumentsChange}
           />
         ) : null}
       </EstimateForm>
-      <DocumentUpload
-        estimateId={estimate.id}
-        initialDocuments={estimate.documents ?? []}
-        onDocumentsChange={handleDocumentsChange}
-      />
       {isDraft && !isContactUser ? (
         <section className="mt-8 border-t border-gray-200 pt-8">
           <EstimateRateCardPanel

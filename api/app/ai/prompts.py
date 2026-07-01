@@ -277,7 +277,8 @@ def build_rate_card_system_prompt(
     if has_extraction_context:
         extraction_guidance = (
             "\nWhen complexity_profile is provided:\n"
-            "- Scale roles to project size (add architect, DevOps, security, or BA for high complexity)\n"
+            "- Use exactly four roles (Tech Lead, Senior Engineer, Full Stack Engineer, Engineer); "
+            "adjust hourly_rate_jpy by complexity rather than adding extra roles\n"
             "- Align phase percentages with phase_guidance while keeping sum = 1.0\n"
             "- Derive setup_cost_items and monthly_rc_items from nrc_rc_guidance, integrations, "
             "and non-functional requirements\n"
@@ -291,21 +292,17 @@ def build_rate_card_system_prompt(
         "Return valid JSON matching the required schema exactly.\n\n"
         "Recommend:\n"
         "- development_approach: one of traditional, ai_assisted, hybrid, low_code\n"
-        "- roles: project roles with hourly_rate_jpy in JPY (include PM, developer, QA at minimum)\n"
+        "- roles: exactly four roles — Tech Lead, Senior Engineer, Full Stack Engineer, and Engineer — "
+        "each with hourly_rate_jpy in JPY (map PM/QA/DevOps/BA work onto these four)\n"
         "- phases: requirement, design, development, testing, deployment with percentages summing to 1.0\n"
         "- contingency_rate, overhead_rate, tax_rate as decimals (e.g. 0.15 for 15%)\n"
         "- productivity.hours_per_feature_default: typical hours per feature for this project\n"
         "- setup_cost_items: one-time NRC setup costs in JPY (e.g. infrastructure, tooling, licenses, "
-        "environment setup, third-party integration fees). Provide 2–6 line items derived from the "
-        "project form and documents when possible.\n"
-        "- monthly_rc_items: recurring monthly RC costs in JPY. Always include exactly these five "
-        "standard line items (amounts in JPY, use 0 when unknown):\n"
-        "  1. Cloud infrastructure — hosting, servers, databases, SaaS platform fees\n"
-        "  2. System monitoring — 24/7 monitoring and incident response\n"
-        "  3. Maintenance and Support — minor fixes and inquiry support after go-live\n"
-        "  4. Security — security updates and vulnerability management\n"
-        "  5. Backup — data backup and restoration\n"
-        "Derive amounts from the project form, maintenance_support field, and documents when possible.\n"
+        "environment setup, third-party integration fees). Derive 2–8 flexible line items from "
+        "cost_breakdown_hints and project context when provided.\n"
+        "- monthly_rc_items: recurring monthly RC costs in JPY. Derive 2–8 flexible line items from "
+        "cost_breakdown_hints, maintenance_support, and project context. Include a name, amount_jpy, "
+        "and service_description for each row. Use 0 when amounts are unknown.\n"
         "- generation_notes: brief rationale for key assumptions\n"
         "- used_default_assumptions: list field names where you had insufficient info and used "
         "reasonable industry defaults (empty list if confident)\n\n"
@@ -367,6 +364,7 @@ def build_rate_card_user_prompt(
     feature_items: list[dict[str, Any]] | None = None,
     extracted_data: dict[str, Any] | None = None,
     complexity_profile: dict[str, Any] | None = None,
+    cost_breakdown_hints: dict[str, Any] | None = None,
 ) -> str:
     truncated_texts, truncation_note = _truncate_document_texts(document_texts)
 
@@ -405,6 +403,14 @@ def build_rate_card_user_prompt(
             [
                 "## Complexity Analysis",
                 json.dumps(complexity_profile, ensure_ascii=False, indent=2),
+            ]
+        )
+
+    if cost_breakdown_hints:
+        sections.extend(
+            [
+                "## Cost Breakdown Hints",
+                json.dumps(cost_breakdown_hints, ensure_ascii=False, indent=2),
             ]
         )
 

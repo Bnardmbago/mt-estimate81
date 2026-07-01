@@ -26,9 +26,10 @@ REGION_NATIVE_CURRENCY: dict[Region, Currency] = {
 }
 
 DEFAULT_STANDARD_ROLE_NAMES = (
-    ("PM", "pm"),
-    ("developer", "developer"),
-    ("QA", "qa"),
+    ("Tech Lead", "tech_lead"),
+    ("Senior Engineer", "senior_developer"),
+    ("Full Stack Engineer", "full_stack_developer"),
+    ("Engineer", "developer"),
 )
 
 
@@ -59,8 +60,10 @@ ROLE_KEY_ALIASES: dict[str, str] = {
     "tester": "qa",
     "ba": "business_analyst",
     "senior_software_engineer": "senior_developer",
-    "lead_developer": "tech_lead",
+    "senior_engineer": "senior_developer",
+    "tech_lead": "tech_lead",
     "technical_lead": "tech_lead",
+    "lead_developer": "tech_lead",
     "ui_designer": "designer",
     "ux_designer": "designer",
     "ui_ux_designer": "designer",
@@ -198,9 +201,22 @@ def patch_jpy_specialist_role_floors(settings: dict) -> tuple[dict, int]:
     return {**settings, "roles": patched_roles}, roles_updated
 
 
+def resolve_standard_rate_region(
+    region: str | None,
+    currency: str | None,
+) -> Region | None:
+    """Pick which regional rate table applies for silent normalization patches."""
+    currency = currency or DEFAULT_CURRENCY
+    if region in REGIONS and currency == REGION_NATIVE_CURRENCY.get(region):
+        return region  # type: ignore[return-value]
+    if region in REGIONS:
+        return None
+    return standard_rate_region_for_currency(region, currency)
+
+
 def patch_roles_to_regional_standard(settings: dict) -> tuple[dict, int]:
     """Overwrite matched role hourly rates with regional standards (no FX conversion)."""
-    rate_region = standard_rate_region_for_currency(
+    rate_region = resolve_standard_rate_region(
         settings.get("region"),
         settings.get("currency"),
     )
@@ -220,10 +236,7 @@ def patch_roles_to_regional_standard(settings: dict) -> tuple[dict, int]:
             roles_updated += 1
         patched_roles.append(role_copy)
 
-    updated = {**settings, "roles": patched_roles}
-    if settings.get("currency") == "JPY":
-        updated["region"] = "japan"
-    return updated, roles_updated
+    return {**settings, "roles": patched_roles}, roles_updated
 
 
 async def apply_regional_standard(
@@ -232,25 +245,24 @@ async def apply_regional_standard(
     target_currency: Currency,
     fx_service: FxService,
 ) -> tuple[RateCardSettings, int]:
-    rate_region = standard_rate_region_for_currency(region, target_currency)
-    if rate_region is None:
+    if region not in REGIONS:
         return settings, 0
 
-    native_currency = REGION_NATIVE_CURRENCY[rate_region]
+    source_currency = REGION_NATIVE_CURRENCY[region]
     updated_roles = []
     roles_updated = 0
 
     for role in settings.roles:
-        native_hourly = _lookup_regional_hourly(rate_region, role.name)
+        native_hourly = _lookup_regional_hourly(region, role.name)
         if native_hourly is None:
             updated_roles.append(role)
             continue
 
         hourly = native_hourly
-        if native_currency != target_currency:
+        if source_currency != target_currency:
             hourly = await fx_service.convert_amount(
                 native_hourly,
-                native_currency,
+                source_currency,
                 target_currency,
             )
 
@@ -264,11 +276,10 @@ async def apply_regional_standard(
             )
         )
 
-    stored_region: Region = rate_region if target_currency == "JPY" else region
     updated = settings.model_copy(
         update={
             "roles": updated_roles,
-            "region": stored_region,
+            "region": region,
             "currency": target_currency,
         }
     )

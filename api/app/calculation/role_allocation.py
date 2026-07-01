@@ -6,8 +6,15 @@ from app.calculation.schemas import FeatureItemInput, RateCardSettings
 
 # Phases that should drive role hours when feature items omit that role.
 PHASE_DEFAULT_ROLE_HINTS: dict[str, tuple[str, ...]] = {
-    "requirement": ("pm", "project manager", "project_manager"),
-    "testing": ("qa", "qa engineer", "tester"),
+    "requirement": (
+        "pm",
+        "project manager",
+        "project_manager",
+        "tech lead",
+        "tech_lead",
+        "technical lead",
+    ),
+    "testing": ("qa", "qa engineer", "tester", "engineer", "senior engineer"),
 }
 
 # Fallback hints when mapping AI/free-text roles onto rate-card role names.
@@ -46,6 +53,14 @@ def _role_matches_hint(role_name: str, hints: tuple[str, ...]) -> bool:
     return any(hint in normalized for hint in hints)
 
 
+QA_ROLE_RESOLUTION_HINTS: tuple[str, ...] = (
+    "qa",
+    "qa engineer",
+    "tester",
+    "quality assurance",
+    "test",
+)
+
 ROLE_ALIAS_TERMS: tuple[str, ...] = (
     "designer",
     "design",
@@ -71,6 +86,11 @@ def _looks_like_role_alias(role: str) -> bool:
 
 
 def resolve_rate_card_role(role_rates: dict[str, int], hints: tuple[str, ...]) -> str | None:
+    normalized_map = {_normalize_key(name): name for name in role_rates}
+    for hint in hints:
+        key = _normalize_key(hint)
+        if key in normalized_map:
+            return normalized_map[key]
     for role_name in role_rates:
         if _role_matches_hint(role_name, hints):
             return role_name
@@ -111,41 +131,90 @@ def resolve_feature_item_role(
     if not role.strip():
         return None
 
+    from app.rate_cards.regional_profiles import role_canonical_keys
+
     normalized_roles = {_normalize_key(name): name for name in role_rates}
 
     normalized_role = _normalize_key(role)
     if normalized_role in normalized_roles:
         return normalized_roles[normalized_role]
 
-    for token in [part.strip() for part in role.replace(",", "/").split("/") if part.strip()]:
-        token_key = _normalize_key(token)
-        if token_key in normalized_roles:
-            return normalized_roles[token_key]
-        resolved = resolve_rate_card_role(role_rates, (token_key,))
-        if resolved:
-            return resolved
-        for rate_card_role in role_rates:
-            rate_card_key = _normalize_key(rate_card_role)
-            if rate_card_key in token_key.split() or token_key == rate_card_key:
-                return rate_card_role
-
-    resolved = resolve_rate_card_role(role_rates, (normalized_role,))
-    if resolved:
-        return resolved
-
-    from app.rate_cards.regional_profiles import role_canonical_keys
-
     feature_keys = role_canonical_keys(role)
     if feature_keys:
         for rate_card_role in role_rates:
             if feature_keys & role_canonical_keys(rate_card_role):
                 return rate_card_role
+        if "tech_lead" in feature_keys:
+            for fallback_keys in (frozenset({"senior_developer"}), frozenset({"pm"})):
+                for rate_card_role in role_rates:
+                    if fallback_keys & role_canonical_keys(rate_card_role):
+                        return rate_card_role
+
+    for token in [part.strip() for part in role.replace(",", "/").split("/") if part.strip()]:
+        token_key = _normalize_key(token)
+        if token_key in normalized_roles:
+            return normalized_roles[token_key]
+        token_keys = role_canonical_keys(token)
+        if token_keys:
+            for rate_card_role in role_rates:
+                if token_keys & role_canonical_keys(rate_card_role):
+                    return rate_card_role
+        resolved = resolve_rate_card_role(role_rates, (token_key,))
+        if resolved:
+            return resolved
+
+    if normalized_role in {"pm", "project manager"} or normalized_role.startswith("project "):
+        resolved = resolve_rate_card_role(role_rates, PHASE_DEFAULT_ROLE_HINTS["requirement"])
+        if resolved:
+            return resolved
+
+    if normalized_role in {"qa", "tester", "test", "quality assurance"}:
+        resolved = resolve_rate_card_role(role_rates, QA_ROLE_RESOLUTION_HINTS)
+        if resolved:
+            return resolved
+        resolved = resolve_rate_card_role(role_rates, ("engineer", "developer"))
+        if resolved:
+            return resolved
 
     phase_hints = PHASE_ROLE_RESOLUTION_HINTS.get(_phase_key(phase))
     if phase_hints and _looks_like_role_alias(role):
-        return resolve_rate_card_role(role_rates, phase_hints)
+        resolved = resolve_rate_card_role(role_rates, phase_hints)
+        if resolved:
+            return resolved
 
-    return None
+    return _fallback_standard_role(role, role_rates)
+
+
+def _fallback_standard_role(role: str, role_rates: dict[str, int]) -> str | None:
+    """Map specialist AI labels onto the four standard rate-card roles."""
+    from app.rate_cards.regional_profiles import role_canonical_keys
+
+    keys = role_canonical_keys(role)
+    if not keys:
+        return None
+
+    if keys & frozenset({"pm", "project_manager", "tech_lead", "technical_lead"}):
+        return resolve_rate_card_role(role_rates, ("tech lead", "senior engineer"))
+
+    if keys & frozenset({"qa", "tester", "test", "quality_assurance"}):
+        return resolve_rate_card_role(role_rates, ("engineer", "full stack engineer"))
+
+    if keys & frozenset({"devops", "devops_engineer"}):
+        return resolve_rate_card_role(role_rates, ("engineer", "full stack engineer"))
+
+    if keys & frozenset({"designer", "ux_designer", "ui_designer"}):
+        return resolve_rate_card_role(role_rates, ("full stack engineer", "engineer"))
+
+    if keys & frozenset({"business_analyst", "architect", "analyst"}):
+        return resolve_rate_card_role(role_rates, ("senior engineer", "tech lead"))
+
+    if keys & frozenset({"senior_developer", "senior_engineer", "lead_developer"}):
+        return resolve_rate_card_role(role_rates, ("senior engineer", "tech lead"))
+
+    if keys & frozenset({"full_stack_developer", "frontend_developer", "backend_developer"}):
+        return resolve_rate_card_role(role_rates, ("full stack engineer", "engineer"))
+
+    return resolve_rate_card_role(role_rates, ("engineer", "senior engineer", "full stack engineer"))
 
 
 def _donor_role(role_hours: dict[str, float], *, exclude: str) -> str | None:

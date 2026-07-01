@@ -17,6 +17,13 @@ function lineItemAmountJpy(item: LineItemAmount): number {
   return item.amount ?? 0;
 }
 
+function rcRowKey(row: { category_key?: string; category: string }): string {
+  if (row.category_key) {
+    return row.category_key;
+  }
+  return row.category.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
 export type CalculationResult = {
   total_effort_hours: number;
   total_effort_days: number;
@@ -329,7 +336,7 @@ export default function CalculationBreakdown({
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {(result.rc_detailed_breakdown?.line_items ?? []).map((row) => (
-                <tr key={row.category_key}>
+                <tr key={rcRowKey(row)}>
                   <td className="px-3 py-2">{row.category}</td>
                   <td className="px-3 py-2">{row.service_description}</td>
                   <td className="px-3 py-2 text-right">{formatJpy(row.monthly_jpy)}</td>

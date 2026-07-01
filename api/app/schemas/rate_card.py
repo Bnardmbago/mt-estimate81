@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.ai.constants import MAX_AI_USER_PROMPT_CHARS
+
 from app.calculation.development_approach import DevelopmentApproach
 from app.calculation.schemas import RateCardSettings
 from app.rate_cards.defaults import Currency
@@ -102,7 +104,7 @@ RateCardAiSection = Literal["roles", "phases", "setup_cost_items", "monthly_rc_i
 class RateCardAiSuggestRequest(BaseModel):
     estimate_id: uuid.UUID | None = None
     section: RateCardAiSection
-    prompt: str = Field(min_length=1, max_length=2000)
+    prompt: str = Field(min_length=1, max_length=MAX_AI_USER_PROMPT_CHARS)
     locale: Literal["ja", "en"] | None = None
 
     @field_validator("prompt")

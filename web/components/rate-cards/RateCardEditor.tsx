@@ -195,7 +195,7 @@ function normalizeSettings(raw: RateCardSettings): RateCardSettings {
       raw.development_approach as DevelopmentApproach,
     )
       ? (raw.development_approach as DevelopmentApproach)
-      : "traditional",
+      : "ai_assisted",
     roles: (raw.roles ?? []).map(normalizeRole),
     setup_cost_items: setupCostItems.map(normalizeLineItem),
     monthly_rc_items: (raw.monthly_rc_items ?? []).map(normalizeLineItem),
@@ -222,7 +222,7 @@ export default function RateCardEditor({
   const [creatingCard, setCreatingCard] = useState(false);
   const [creatingCardName, setCreatingCardName] = useState("");
   const [creatingCardApproach, setCreatingCardApproach] =
-    useState<DevelopmentApproach>("traditional");
+    useState<DevelopmentApproach>("ai_assisted");
   const [creating, setCreating] = useState(false);
   const [switchingCard, setSwitchingCard] = useState(false);
   const [loadingUsage, setLoadingUsage] = useState(false);
@@ -386,7 +386,7 @@ export default function RateCardEditor({
 
   function openCreateCard() {
     setCreatingCardName(t("newCardDefaultName"));
-    setCreatingCardApproach("traditional");
+    setCreatingCardApproach("ai_assisted");
     setCreatingCard(true);
     setError(null);
   }
@@ -412,7 +412,7 @@ export default function RateCardEditor({
       applyActiveCard(data);
       setCreatingCard(false);
       setCreatingCardName("");
-      setCreatingCardApproach("traditional");
+      setCreatingCardApproach("ai_assisted");
       await loadCards();
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : t("createCardError"));
@@ -426,16 +426,20 @@ export default function RateCardEditor({
     setSaved(false);
   }
 
-  function updateRegion(region: Region) {
+  async function updateRegion(region: Region) {
     if (!settings) return;
-    setSettings({ ...settings, region });
+    const next = { ...settings, region };
+    setSettings(next);
     markDirty();
+    await applyRegionalRatesTo(next);
   }
 
-  function updateCurrency(currency: Currency) {
+  async function updateCurrency(currency: Currency) {
     if (!settings) return;
-    setSettings({ ...settings, currency });
+    const next = { ...settings, currency };
+    setSettings(next);
     markDirty();
+    await applyRegionalRatesTo(next);
   }
 
   function updateRole(index: number, field: "name" | "hourly_rate", value: string) {
@@ -613,27 +617,23 @@ export default function RateCardEditor({
     markDirty();
   }
 
-  function buildSettingsPayload(): RateCardSettings {
-    if (!settings) {
-      throw new Error("Missing settings");
-    }
-
+  function buildSettingsPayload(source: RateCardSettings = settings!): RateCardSettings {
     return {
-      ...settings,
-      roles: settings.roles
+      ...source,
+      roles: source.roles
         .filter((role) => role.name.trim())
         .map((role) => ({
           ...role,
           daily_rate: role.daily_rate ?? defaultDailyRate(role.hourly_rate),
         })),
-      phases: settings.phases.filter((phase) => phase.name.trim()),
-      setup_cost_items: settings.setup_cost_items.filter((item) => item.name.trim()),
-      monthly_rc_items: settings.monthly_rc_items.filter((item) => item.name.trim()),
+      phases: source.phases.filter((phase) => phase.name.trim()),
+      setup_cost_items: source.setup_cost_items.filter((item) => item.name.trim()),
+      monthly_rc_items: source.monthly_rc_items.filter((item) => item.name.trim()),
     };
   }
 
-  async function handleApplyRegionalRates() {
-    if (!settings || fieldsDisabled) return;
+  async function applyRegionalRatesTo(nextSettings: RateCardSettings): Promise<boolean> {
+    if (fieldsDisabled) return false;
 
     setApplyingRegional(true);
     setError(null);
@@ -644,15 +644,15 @@ export default function RateCardEditor({
         {
           method: "POST",
           body: JSON.stringify({
-            settings: buildSettingsPayload(),
-            region: settings.region,
-            currency: settings.currency,
+            settings: buildSettingsPayload(nextSettings),
+            region: nextSettings.region,
+            currency: nextSettings.currency,
           }),
         },
       );
       if (response.roles_updated === 0) {
         setError(t("applyRegionalRatesNoMatch"));
-        return;
+        return false;
       }
       const normalized = normalizeSettings(response.settings);
       setSettings(normalized);
@@ -664,13 +664,20 @@ export default function RateCardEditor({
         setError(null);
         setSaved(true);
       }
+      return true;
     } catch (applyError) {
       setError(
         applyError instanceof Error ? applyError.message : t("applyRegionalRatesError"),
       );
+      return false;
     } finally {
       setApplyingRegional(false);
     }
+  }
+
+  async function handleApplyRegionalRates() {
+    if (!settings) return;
+    await applyRegionalRatesTo(settings);
   }
 
   function openDuplicateModal() {
@@ -822,7 +829,7 @@ export default function RateCardEditor({
 
   function renderDevelopmentApproachField(options?: { createMode?: boolean; disabled?: boolean }) {
     const createMode = options?.createMode ?? false;
-    const approach = createMode ? creatingCardApproach : settings?.development_approach ?? "traditional";
+    const approach = createMode ? creatingCardApproach : settings?.development_approach ?? "ai_assisted";
     const disabled =
       options?.disabled ??
       (createMode
@@ -1277,7 +1284,7 @@ export default function RateCardEditor({
             <span className="mb-1 block font-medium text-gray-700">{t("regionLabel")}</span>
             <select
               value={settings.region}
-              onChange={(event) => updateRegion(event.target.value as Region)}
+              onChange={(event) => void updateRegion(event.target.value as Region)}
               disabled={fieldsDisabled}
               className={`${inputClassName} disabled:bg-gray-100 disabled:text-gray-600`}
             >
@@ -1290,7 +1297,7 @@ export default function RateCardEditor({
             <span className="mb-1 block font-medium text-gray-700">{t("currencyLabel")}</span>
             <select
               value={settings.currency}
-              onChange={(event) => updateCurrency(event.target.value as Currency)}
+              onChange={(event) => void updateCurrency(event.target.value as Currency)}
               disabled={fieldsDisabled}
               className={`${inputClassName} disabled:bg-gray-100 disabled:text-gray-600`}
             >

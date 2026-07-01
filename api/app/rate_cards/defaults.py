@@ -19,7 +19,7 @@ DEFAULT_RATE_CARD_SETTINGS = {
         {"name": "testing", "percentage": 0.25},
         {"name": "deployment", "percentage": 0.10},
     ],
-    "development_approach": "traditional",
+    "development_approach": "ai_assisted",
     "contingency_rate": 0.15,
     "overhead_rate": 0.10,
     "monthly_rc_items": [
@@ -62,6 +62,7 @@ DEFAULT_RATE_CARD_SETTINGS = {
     ],
     "productivity": {"hours_per_feature_default": 40},
     "tax_rate": 0.10,
+    "cost_breakdown_mode": "flexible",
 }
 
 DEFAULT_RATE_CARD_NAME = "2026 Standard Rates"

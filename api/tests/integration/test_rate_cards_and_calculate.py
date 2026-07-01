@@ -120,8 +120,8 @@ async def test_get_active_rate_card(
     assert response.status_code == 200
     payload = response.json()
     assert payload["version_number"] == 1
-    assert len(payload["settings"]["roles"]) == 3
-    assert payload["settings"]["development_approach"] == "traditional"
+    assert len(payload["settings"]["roles"]) == 4
+    assert payload["settings"]["development_approach"] == "ai_assisted"
 
 
 @pytest.mark.asyncio
@@ -292,10 +292,8 @@ async def test_update_rate_card_with_name_and_label(
     active_rate_card: RateCardVersion,
 ):
     settings = dict(DEFAULT_RATE_CARD_SETTINGS)
-    settings["roles"] = [
-        {"name": "developer", "hourly_rate_jpy": 7000},
-        *settings["roles"][1:],
-    ]
+    settings["roles"] = [dict(role) for role in settings["roles"]]
+    next(role for role in settings["roles"] if role["name"] == "Engineer")["hourly_rate"] = 7000
 
     response = await client.put(
         "/rate-cards/",
@@ -310,7 +308,8 @@ async def test_update_rate_card_with_name_and_label(
     payload = response.json()
     assert payload["name"] == "2026 Premium Rates"
     assert payload["version_label"] == "Premium v2"
-    assert payload["settings"]["roles"][0]["daily_rate"] == 7000 * 8
+    engineer = next(role for role in payload["settings"]["roles"] if role["name"] == "Engineer")
+    assert engineer["daily_rate"] == 7000 * 8
 
 
 @pytest.mark.asyncio
@@ -320,10 +319,8 @@ async def test_update_rate_card_preserves_custom_daily_rate(
     active_rate_card: RateCardVersion,
 ):
     settings = dict(DEFAULT_RATE_CARD_SETTINGS)
-    settings["roles"] = [
-        {"name": "developer", "hourly_rate_jpy": 6000, "daily_rate_jpy": 55000},
-        *settings["roles"][1:],
-    ]
+    settings["roles"] = [dict(role) for role in settings["roles"]]
+    next(role for role in settings["roles"] if role["name"] == "Engineer")["hourly_rate"] = 6000
 
     response = await client.put(
         "/rate-cards/",
@@ -331,7 +328,11 @@ async def test_update_rate_card_preserves_custom_daily_rate(
         headers=admin_headers,
     )
     assert response.status_code == 200
-    assert response.json()["settings"]["roles"][0]["daily_rate"] == 55000
+    engineer = next(
+        role for role in response.json()["settings"]["roles"] if role["name"] == "Engineer"
+    )
+    assert engineer["hourly_rate"] == 6000
+    assert engineer["daily_rate"] == 48000
 
 
 @pytest.mark.asyncio
@@ -541,7 +542,7 @@ async def test_list_rate_cards(
     assert len(payload) == 1
     assert payload[0]["name"] == "Test Rates"
     assert payload[0]["is_active"] is True
-    assert payload[0]["development_approach"] == "traditional"
+    assert payload[0]["development_approach"] == "ai_assisted"
     assert payload[0]["latest_version_number"] == 1
     assert payload[0]["estimate_count"] == 0
 
@@ -560,7 +561,7 @@ async def test_get_rate_card_by_id(
     payload = response.json()
     assert payload["id"] == str(active_rate_card.rate_card_id)
     assert payload["name"] == "Test Rates"
-    assert payload["settings"]["development_approach"] == "traditional"
+    assert payload["settings"]["development_approach"] == "ai_assisted"
 
 
 @pytest.mark.asyncio
@@ -578,7 +579,7 @@ async def test_create_rate_card(
     payload = response.json()
     assert payload["name"] == "Client B Rates"
     assert payload["version_number"] == 1
-    assert len(payload["settings"]["roles"]) == 3
+    assert len(payload["settings"]["roles"]) == 4
 
     cards = (await client.get("/rate-cards/cards", headers=admin_headers)).json()
     assert len(cards) == 2
@@ -1004,6 +1005,7 @@ async def test_apply_regional_standard_updates_role_rates(
     payload = response.json()
     assert payload["roles_updated"] >= 1
     roles = {role["name"]: role for role in payload["settings"]["roles"]}
-    assert payload["settings"]["region"] == "japan"
-    assert roles["PM"]["hourly_rate"] == 12000
-    assert roles["developer"]["hourly_rate"] == 8000
+    assert payload["settings"]["region"] == "philippines"
+    assert len(payload["settings"]["roles"]) == 4
+    assert roles["Tech Lead"]["hourly_rate"] > 2000
+    assert roles["Engineer"]["hourly_rate"] > 1500

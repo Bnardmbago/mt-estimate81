@@ -34,6 +34,7 @@ class GeneratedPhasePercentage(BaseModel):
 class GeneratedLineItem(BaseModel):
     name: str = Field(min_length=1)
     amount_jpy: int = Field(ge=0)
+    service_description: str | None = None
 
 
 class GeneratedProductivity(BaseModel):

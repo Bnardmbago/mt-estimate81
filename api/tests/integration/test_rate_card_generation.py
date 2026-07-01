@@ -149,5 +149,5 @@ async def test_generate_rate_card_falls_back_to_defaults_on_ai_failure(
     assert response.status_code == 200
     payload = response.json()
     assert payload["used_defaults"] is True
-    assert payload["settings"]["development_approach"] == "traditional"
+    assert payload["settings"]["development_approach"] == "ai_assisted"
     assert "roles" in payload["settings"]

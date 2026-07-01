@@ -4,6 +4,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.ai.constants import MAX_AI_USER_PROMPT_CHARS
 from app.schemas.feedback import ActualsResponse
 
 
@@ -153,16 +154,13 @@ class AuditLogEntry(BaseModel):
 
 
 class EstimateAiSuggestFormRequest(BaseModel):
-    prompt: str = Field(min_length=1, max_length=2000)
+    prompt: str = Field(default="", max_length=MAX_AI_USER_PROMPT_CHARS)
     locale: Literal["ja", "en"] | None = None
 
     @field_validator("prompt")
     @classmethod
-    def validate_prompt(cls, value: str) -> str:
-        trimmed = value.strip()
-        if not trimmed:
-            raise ValueError("Prompt is required")
-        return trimmed
+    def normalize_prompt(cls, value: str) -> str:
+        return value.strip()
 
 
 class EstimateAiSuggestFormResponse(BaseModel):

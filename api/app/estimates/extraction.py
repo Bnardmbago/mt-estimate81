@@ -37,7 +37,7 @@ from app.rate_cards.complexity import score_project_complexity
 from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
 from app.rate_cards.generation import (
     regenerate_rate_card_after_extraction,
-    should_auto_tune_rate_card,
+    should_tune_rate_card_on_extract,
 )
 
 logger = logging.getLogger(__name__)
@@ -445,7 +445,7 @@ async def run_extraction(
 
         rate_card_auto_tuned = False
         rate_card_tune_recommended = False
-        if await should_auto_tune_rate_card(db, estimate) and not had_prior_extraction:
+        if await should_tune_rate_card_on_extract(db, estimate) and not had_prior_extraction:
             await _log_extraction_phase(db, estimate_id, user_id, "rate_card_tune")
             try:
                 await regenerate_rate_card_after_extraction(
@@ -464,6 +464,20 @@ async def run_extraction(
                     maintenance_assumptions,
                     recommended=False,
                 )
+                result = await db.execute(
+                    select(Estimate).where(Estimate.id == estimate_id)
+                )
+                estimate = result.scalar_one()
+                if estimate.rate_card_id:
+                    from app.estimates.feature_roles import align_feature_items_to_rate_card
+
+                    await align_feature_items_to_rate_card(
+                        db,
+                        estimate_id,
+                        estimate.rate_card_id,
+                        user,
+                        locale=locale,
+                    )
             except Exception as exc:
                 await log_change(
                     db,

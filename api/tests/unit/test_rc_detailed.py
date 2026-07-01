@@ -47,3 +47,43 @@ def test_build_detailed_rc_breakdown_ja_labels():
     cloud = breakdown["line_items"][0]
     assert cloud["category"] == "クラウドインフラ"
     assert cloud["service_description"] == "サーバー・データベース利用"
+
+
+def test_build_detailed_rc_breakdown_flexible_mode_one_row_per_item():
+    calc = sample_estimate_with_calculation().calculation_result
+    calc = {
+        **calc,
+        "cost_breakdown_mode": "flexible",
+        "rc": {
+            **calc["rc"],
+            "monthly_items": [
+                {
+                    "name": "AWS hosting",
+                    "amount_jpy": 50000,
+                    "service_description": "ECS cluster",
+                },
+                {
+                    "name": "Monitoring SaaS",
+                    "amount_jpy": 20000,
+                    "service_description": "Datadog",
+                },
+            ],
+            "maintenance_jpy": 120000,
+            "monthly_total_jpy": 190000,
+            "annual_total_jpy": 2280000,
+        },
+    }
+    breakdown = build_detailed_rc_breakdown(
+        calc,
+        locale="en",
+        markup_rate=0.0,
+        cost_breakdown_mode="flexible",
+    )
+
+    assert len(breakdown["line_items"]) == 3
+    assert breakdown["line_items"][0]["category"] == "AWS hosting"
+    assert breakdown["line_items"][0]["service_description"] == "ECS cluster"
+    assert breakdown["line_items"][1]["category"] == "Monitoring SaaS"
+    maintenance = next(row for row in breakdown["line_items"] if row.get("is_maintenance"))
+    assert maintenance["monthly_jpy"] == 120000
+    assert breakdown["monthly_total_jpy"] == 190000

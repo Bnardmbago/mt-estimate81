@@ -8,14 +8,42 @@ Currency = Literal["JPY", "USD", "PHP"]
 HOURS_PER_DAY = 8
 
 DEFAULT_STANDARD_ROLE_NAMES: tuple[tuple[str, str], ...] = (
-    ("PM", "pm"),
-    ("developer", "developer"),
-    ("QA", "qa"),
+    ("Tech Lead", "tech_lead"),
+    ("Senior Engineer", "senior_developer"),
+    ("Full Stack Engineer", "full_stack_developer"),
+    ("Engineer", "developer"),
 )
 
+STANDARD_ROLE_COUNT = len(DEFAULT_STANDARD_ROLE_NAMES)
+
 STANDARD_ROLE_HINTS: dict[str, tuple[str, ...]] = {
+    "tech_lead": (
+        "tech lead",
+        "tech_lead",
+        "technical lead",
+        "pm",
+        "project manager",
+        "project_manager",
+    ),
+    "senior_developer": ("senior engineer", "senior_developer", "senior developer"),
+    "full_stack_developer": (
+        "full stack engineer",
+        "full_stack_developer",
+        "full stack developer",
+        "fullstack developer",
+    ),
+    "developer": (
+        "engineer",
+        "developer",
+        "dev",
+        "programmer",
+        "qa",
+        "qa engineer",
+        "tester",
+        "quality assurance",
+        "test",
+    ),
     "pm": ("pm", "project manager", "project_manager"),
-    "developer": ("developer", "dev", "engineer", "programmer"),
     "qa": ("qa", "qa engineer", "tester", "quality assurance", "test"),
 }
 
@@ -116,33 +144,40 @@ def patch_settings_standard_roles_for_region(
 
 
 def ensure_standard_roles(settings: dict) -> dict:
-    """Add PM, developer, and QA from regional defaults when the rate card omits them."""
-    from app.calculation.role_allocation import resolve_rate_card_role
+    """Normalize rate card roles to the standard four-role set for the region."""
+    from app.calculation.role_allocation import resolve_feature_item_role
     from app.rate_cards.defaults import DEFAULT_REGION
-    from app.rate_cards.regional_profiles import role_canonical_keys
 
     region = settings.get("region") or DEFAULT_REGION
     if region not in REGIONAL_STANDARD_RATES:
         region = DEFAULT_REGION
 
-    roles = [dict(role) for role in settings.get("roles") or []]
-    role_rates = {
-        str(role.get("name", "")): 1 for role in roles if str(role.get("name", "")).strip()
-    }
     defaults = default_roles_for_region(region)  # type: ignore[arg-type]
-    defaults_by_key = {
-        rate_key: defaults[index] for index, (_display, rate_key) in enumerate(DEFAULT_STANDARD_ROLE_NAMES)
-    }
+    standard_rates = {str(role["name"]): 1 for role in defaults}
+    best_hourly: dict[str, int] = {}
 
-    for _display, rate_key in DEFAULT_STANDARD_ROLE_NAMES:
-        hints = STANDARD_ROLE_HINTS.get(rate_key, (rate_key,))
-        if resolve_rate_card_role(role_rates, hints):
+    for role in settings.get("roles") or []:
+        name = str(role.get("name", "")).strip()
+        if not name:
             continue
-        target_keys = role_canonical_keys(rate_key)
-        if any(role_canonical_keys(name) & target_keys for name in role_rates):
+        hourly = int(role.get("hourly_rate") or role.get("hourly_rate_jpy") or 0)
+        mapped = resolve_feature_item_role(name, standard_rates)
+        if mapped is None or hourly <= 0:
             continue
-        default_role = dict(defaults_by_key[rate_key])
-        roles.append(default_role)
-        role_rates[str(default_role["name"])] = 1
+        prior = best_hourly.get(mapped)
+        if prior is None or hourly > prior:
+            best_hourly[mapped] = hourly
 
-    return {**settings, "roles": roles}
+    consolidated: list[dict[str, int | str]] = []
+    for default_role in defaults:
+        display = str(default_role["name"])
+        hourly = best_hourly.get(display, int(default_role["hourly_rate"]))
+        consolidated.append(
+            {
+                "name": display,
+                "hourly_rate": hourly,
+                "daily_rate": hourly * HOURS_PER_DAY,
+            }
+        )
+
+    return {**settings, "roles": consolidated}

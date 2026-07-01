@@ -18,7 +18,7 @@ def test_normalize_suggested_form_data_validates_select_values():
     }
     normalized = normalize_suggested_form_data(raw)
     assert normalized["nature_of_work"] == "New build"
-    assert normalized["data_complexity"] == "moderate"
+    assert normalized["data_complexity"] == "medium"
     assert normalized["ui_complexity"] == ""
     assert normalized["development_location"] == "japan"
     assert "unknown_field" not in normalized
@@ -95,13 +95,70 @@ async def test_suggest_estimate_form_happy_path(
     assert response.status_code == 200
     payload = response.json()
     assert payload["form_data"]["nature_of_work"] == "New web application development"
-    assert payload["form_data"]["data_complexity"] == "moderate"
+    assert payload["form_data"]["data_complexity"] == "medium"
     assert "desired_system" not in payload["form_data"]
     assert "hybrid" in payload["generation_notes"]
 
 
 @pytest.mark.asyncio
-async def test_suggest_estimate_form_rejects_empty_prompt(
+async def test_suggest_estimate_form_rejects_placeholder_project_name(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+):
+    estimate = await client.post(
+        "/estimates",
+        json={
+            "project_name": "New Estimate",
+            "client_name": "ACME",
+            "locale": "en",
+        },
+        headers=auth_headers,
+    )
+    estimate_id = estimate.json()["id"]
+
+    response = await client.post(
+        f"/estimates/{estimate_id}/ai/suggest-form",
+        json={"prompt": "Build a customer portal"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "PROJECT_NAME_REQUIRED"
+
+
+@pytest.mark.asyncio
+async def test_suggest_estimate_form_accepts_long_prompt(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    mock_form_ai_provider,
+):
+    estimate = await client.post(
+        "/estimates",
+        json={
+            "project_name": "Long Prompt Estimate",
+            "client_name": "ACME",
+            "locale": "en",
+        },
+        headers=auth_headers,
+    )
+    estimate_id = estimate.json()["id"]
+
+    long_prompt = "x" * 2500
+    with patch(
+        "app.estimates.ai_suggest_form.get_ai_provider",
+        return_value=mock_form_ai_provider,
+    ):
+        response = await client.post(
+            f"/estimates/{estimate_id}/ai/suggest-form",
+            json={"prompt": long_prompt},
+            headers=auth_headers,
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_suggest_estimate_form_rejects_empty_prompt_without_documents(
     client: AsyncClient,
     auth_headers: dict[str, str],
 ):
@@ -122,7 +179,8 @@ async def test_suggest_estimate_form_rejects_empty_prompt(
         headers=auth_headers,
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 400
+    assert response.json()["code"] == "PROMPT_OR_DOCUMENTS_REQUIRED"
 
 
 @pytest.mark.asyncio

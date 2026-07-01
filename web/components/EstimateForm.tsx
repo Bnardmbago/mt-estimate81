@@ -4,6 +4,8 @@ import { FormEvent, ReactNode, forwardRef, useCallback, useEffect, useImperative
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import AutoResizeTextarea from "@/components/AutoResizeTextarea";
+import CollapsibleFormSection from "@/components/CollapsibleFormSection";
 import { apiJson } from "@/lib/api";
 import type { EstimateDetail } from "@/lib/estimate";
 import { displayProjectName, localizedProjectName, resolveProjectNameForSave } from "@/lib/formFields";
@@ -25,6 +27,7 @@ type EstimateFormProps = {
   estimate: EstimateDetail;
   hasUploadedDocuments?: boolean;
   children?: ReactNode;
+  documentsSection?: ReactNode;
 };
 
 export type EstimateFormHandle = {
@@ -33,7 +36,21 @@ export type EstimateFormHandle = {
   saveProjectName: () => Promise<boolean>;
   getValues: () => FormFieldValues;
   applyValues: (partial: Partial<FormFieldValues>) => void;
+  startPostApplyGuidance: () => void;
 };
+
+const SECTION_ID_TECHNICAL_SPECIFICATION = "estimate-section-technical-specification";
+const SECTION_ID_CLIENT_QUESTIONNAIRE = "estimate-section-client-questionnaire";
+
+function sectionHasData(fields: FormFieldSchema[], values: FormFieldValues): boolean {
+  return fields.some((field) => (values[field.key] ?? "").trim().length > 0);
+}
+
+function scrollToSection(sectionId: string): void {
+  requestAnimationFrame(() => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
 
 const inputClassName =
   "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -59,7 +76,7 @@ function valuesEqual(
 }
 
 const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function EstimateForm(
-  { estimate, hasUploadedDocuments = false, children },
+  { estimate, hasUploadedDocuments = false, children, documentsSection },
   ref,
 ) {
   const router = useRouter();
@@ -90,6 +107,13 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [specExpanded, setSpecExpanded] = useState(() =>
+    sectionHasData(specificationFields, initialValues),
+  );
+  const [clientExpanded, setClientExpanded] = useState(() =>
+    sectionHasData(headerFields, initialValues),
+  );
+  const [guidanceStep, setGuidanceStep] = useState<"client" | null>(null);
 
   const isDirty = !valuesEqual(schema, values, savedValues);
 
@@ -99,7 +123,10 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     setErrors({});
     setSaveState("idle");
     setSaveError(null);
-  }, [initialValues]);
+    setSpecExpanded(sectionHasData(specificationFields, initialValues));
+    setClientExpanded(sectionHasData(headerFields, initialValues));
+    setGuidanceStep(null);
+  }, [initialValues, specificationFields, headerFields]);
 
   useEffect(() => {
     if (!isDirty && saveState === "saved") {
@@ -330,6 +357,30 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     [specKeys],
   );
 
+  const completeClientGuidanceStep = useCallback(() => {
+    setGuidanceStep(null);
+    setSpecExpanded(true);
+    scrollToSection(SECTION_ID_TECHNICAL_SPECIFICATION);
+  }, []);
+
+  const startPostApplyGuidance = useCallback(() => {
+    setGuidanceStep("client");
+    setClientExpanded(true);
+    setSpecExpanded(false);
+    scrollToSection(SECTION_ID_CLIENT_QUESTIONNAIRE);
+  }, []);
+
+  async function handleGuidanceSaveAndContinue() {
+    const saved = await saveIfNeeded();
+    if (saved) {
+      completeClientGuidanceStep();
+    }
+  }
+
+  function handleGuidanceSkip() {
+    completeClientGuidanceStep();
+  }
+
   useImperativeHandle(
     ref,
     () => ({
@@ -338,8 +389,9 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
       saveProjectName,
       getValues,
       applyValues,
+      startPostApplyGuidance,
     }),
-    [applyValues, getValues, saveBeforeAiSuggest, saveIfNeeded, saveProjectName],
+    [applyValues, getValues, saveBeforeAiSuggest, saveIfNeeded, saveProjectName, startPostApplyGuidance],
   );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -380,13 +432,12 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
         </label>
 
         {field.type === "textarea" && (
-          <textarea
+          <AutoResizeTextarea
             id={fieldId}
-            rows={4}
             value={values[field.key] ?? ""}
             onChange={(event) => updateField(field.key, event.target.value)}
             placeholder={getFieldPlaceholder(field, locale)}
-            className={`${inputClassName} resize-y min-h-[6rem] ${
+            className={`${inputClassName} resize-none overflow-hidden ${
               hasError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
             }`}
           />
@@ -500,6 +551,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
           <input
             id="field-project_name"
             type="text"
+            required
             value={values.project_name}
             onChange={(event) => updateField("project_name", event.target.value)}
             placeholder={tForm("project_namePlaceholder")}
@@ -514,23 +566,64 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
           )}
         </div>
 
-        {headerFields.length > 0 ? (
-          <section className="space-y-5">
-            <h2 className="text-base font-semibold text-gray-900">{tForm("headerQuestionnaire")}</h2>
-            {headerFields.map((field) => renderField(field))}
-          </section>
-        ) : null}
-
         {children}
 
         {specificationFields.length > 0 ? (
-          <section className="space-y-5">
-            <h2 className="text-base font-semibold text-gray-900">{tForm("specificationDetails")}</h2>
+          <CollapsibleFormSection
+            id={SECTION_ID_TECHNICAL_SPECIFICATION}
+            title={tForm("specificationDetails")}
+            description={tForm("specificationDetailsDescription")}
+            expanded={specExpanded}
+            onExpandedChange={setSpecExpanded}
+            sectionClassName="border-sky-200 bg-sky-50/40"
+            expandLabel={tForm("expandSection")}
+            collapseLabel={tForm("collapseSection")}
+          >
             {hasUploadedDocuments && (
               <p className="text-sm text-gray-600">{tForm("optionalWithDocuments")}</p>
             )}
             {specificationFields.map((field) => renderField(field))}
-          </section>
+          </CollapsibleFormSection>
+        ) : null}
+
+        {documentsSection}
+
+        {headerFields.length > 0 ? (
+          <CollapsibleFormSection
+            id={SECTION_ID_CLIENT_QUESTIONNAIRE}
+            title={tForm("headerQuestionnaire")}
+            description={tForm("headerQuestionnaireDescription")}
+            expanded={clientExpanded}
+            onExpandedChange={setClientExpanded}
+            sectionClassName="border-amber-200 bg-amber-50/30"
+            expandLabel={tForm("expandSection")}
+            collapseLabel={tForm("collapseSection")}
+          >
+            {guidanceStep === "client" ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-4">
+                <p className="text-sm text-amber-950">{tForm("clientQuestionnaireGuidance")}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleGuidanceSaveAndContinue()}
+                    disabled={saving}
+                    className="rounded bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                  >
+                    {saving ? tEstimates("saving") : tForm("saveAndContinue")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGuidanceSkip}
+                    disabled={saving}
+                    className="rounded border border-amber-400 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-50 disabled:opacity-50"
+                  >
+                    {tForm("skipForNow")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {headerFields.map((field) => renderField(field))}
+          </CollapsibleFormSection>
         ) : null}
       </form>
     </div>

@@ -28,4 +28,15 @@ def test_normalize_suggested_form_data_excludes_header_fields():
     normalized = normalize_suggested_form_data(raw)
     assert "desired_system" not in normalized
     assert normalized["nature_of_work"] == "New build"
-    assert normalized["data_complexity"] == "moderate"
+    assert normalized["data_complexity"] == "medium"
+
+
+def test_normalize_complexity_aliases():
+    raw = {
+        "nature_of_work": "New build",
+        "data_complexity": "simple",
+        "ui_complexity": "COMPLEX",
+    }
+    normalized = normalize_suggested_form_data(raw)
+    assert normalized["data_complexity"] == "low"
+    assert normalized["ui_complexity"] == "high"

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas import ExtractedRequirements, FeatureItemSuggestion, MaintenanceAssumptions
@@ -727,11 +728,12 @@ async def test_extraction_status_reports_background_failure(
 
 
 @pytest.mark.asyncio
-async def test_extract_skips_auto_tune_for_shared_rate_card(
+async def test_extract_forks_shared_rate_card_on_tune(
     client: AsyncClient,
     auth_headers: dict[str, str],
     mock_ai_provider,
     monkeypatch: pytest.MonkeyPatch,
+    db_session: AsyncSession,
 ):
     from app.ai.schemas import (
         GeneratedLineItem,
@@ -754,10 +756,15 @@ async def test_extract_skips_auto_tune_for_shared_rate_card(
 
         async def generate_rate_card(self, **kwargs):
             self.generate_calls += 1
-            developer_rate = 7000 if self.generate_calls == 1 else 9999
+            if self.generate_calls == 1:
+                setup_amount = 100000
+                monthly_amount = 50000
+            else:
+                setup_amount = 999999
+                monthly_amount = 99999
             return GeneratedRateCardSuggestion(
                 development_approach="traditional",
-                roles=[GeneratedRoleRate(name="developer", hourly_rate_jpy=developer_rate)],
+                roles=[GeneratedRoleRate(name="developer", hourly_rate_jpy=7000)],
                 phases=[
                     GeneratedPhasePercentage(name="requirement", percentage=0.10),
                     GeneratedPhasePercentage(name="design", percentage=0.15),
@@ -769,9 +776,9 @@ async def test_extract_skips_auto_tune_for_shared_rate_card(
                 overhead_rate=0.10,
                 tax_rate=0.10,
                 productivity=GeneratedProductivity(hours_per_feature_default=32),
-                setup_cost_items=[GeneratedLineItem(name="Tuned setup", amount_jpy=999999)],
-                monthly_rc_items=[GeneratedLineItem(name="Tuned hosting", amount_jpy=99999)],
-                generation_notes="Should not apply to shared card.",
+                setup_cost_items=[GeneratedLineItem(name="Tuned setup", amount_jpy=setup_amount)],
+                monthly_rc_items=[GeneratedLineItem(name="Tuned hosting", amount_jpy=monthly_amount)],
+                generation_notes="Tuned from extraction.",
                 used_default_assumptions=[],
             )
 
@@ -818,6 +825,18 @@ async def test_extract_skips_auto_tune_for_shared_rate_card(
     secondary_id = create_secondary.json()["id"]
     await assign_rate_card(client, secondary_id, shared_rate_card_id, auth_headers)
 
+    from app.estimates.rate_card_stale import mark_rate_card_auto_tune_enabled
+
+    result = await db_session.execute(
+        select(Estimate).where(Estimate.id == uuid.UUID(secondary_id))
+    )
+    secondary_estimate = result.scalar_one()
+    secondary_estimate.maintenance_assumptions = mark_rate_card_auto_tune_enabled(
+        secondary_estimate.maintenance_assumptions or {},
+        enabled=True,
+    )
+    await db_session.commit()
+
     with patch(
         "app.rate_cards.generation.get_ai_provider",
         new=AsyncMock(return_value=combined),
@@ -834,18 +853,23 @@ async def test_extract_skips_auto_tune_for_shared_rate_card(
     detail = await client.get(f"/estimates/{secondary_id}", headers=auth_headers)
     payload = detail.json()
     assert payload["status"] == "review"
-    assert payload["rate_card_auto_tuned"] is False
-    assert payload["rate_card_tune_recommended"] is True
-    assert payload["rate_card_auto_tune_enabled"] is False
+    assert payload["rate_card_auto_tuned"] is True
+    assert payload["rate_card_id"] != shared_rate_card_id
     assert payload["complexity_profile"]["level"] in ("low", "medium", "high")
 
     card = await client.get(
         f"/rate-cards/cards/{shared_rate_card_id}",
         headers=auth_headers,
     )
-    developer_rate = next(
-        role["hourly_rate"]
-        for role in card.json()["settings"]["roles"]
-        if role["name"] == "developer"
+    shared_settings = card.json()["settings"]
+    shared_setup_total = sum(item["amount"] for item in shared_settings["setup_cost_items"])
+    assert shared_setup_total == 100000
+
+    forked_card = await client.get(
+        f"/rate-cards/cards/{payload['rate_card_id']}",
+        headers=auth_headers,
     )
-    assert developer_rate == 7000
+    forked_settings = forked_card.json()["settings"]
+    forked_setup_total = sum(item["amount"] for item in forked_settings["setup_cost_items"])
+    assert forked_setup_total == 999999
+    assert forked_settings["cost_breakdown_mode"] == "flexible"

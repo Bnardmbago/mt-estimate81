@@ -36,6 +36,10 @@ function isAdminTab(value: string | null): value is AdminTab {
   return tabs.includes(value as AdminTab);
 }
 
+function tabButtonClass(isActive: boolean) {
+  return isActive ? "header-btn header-btn-active" : "header-btn";
+}
+
 export default function AdminPanel() {
   const t = useTranslations("admin");
   const router = useRouter();
@@ -62,25 +66,22 @@ export default function AdminPanel() {
 
   return (
     <>
-      <div className="mb-6 border-b border-gray-200">
-        <nav className="-mb-px flex flex-wrap gap-4" aria-label={t("title")}>
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              aria-current={activeTab === tab ? "page" : undefined}
-              className={`border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              }`}
-            >
-              {tabLabels[tab]}
-            </button>
-          ))}
-        </nav>
-      </div>
+      <nav
+        className="mb-6 flex flex-wrap gap-2"
+        aria-label={t("title")}
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            aria-current={activeTab === tab ? "page" : undefined}
+            className={tabButtonClass(activeTab === tab)}
+          >
+            {tabLabels[tab]}
+          </button>
+        ))}
+      </nav>
 
       {activeTab === "users" && <UserManager />}
       {activeTab === "formTemplates" && <FormTemplatesPanel />}

@@ -70,7 +70,7 @@ SELECT_OPTIONS: dict[str, tuple[str, ...]] = {
         "undecided",
     ),
     "admin_screen_needed": ("yes", "no", "undecided"),
-    "data_complexity": ("simple", "moderate", "complex"),
+    "data_complexity": ("low", "medium", "high"),
     "ui_complexity": ("low", "medium", "high"),
     "development_location": ("japan", "offshore", "hybrid"),
 }
@@ -169,10 +169,7 @@ OPTION_LABELS: dict[str, dict[str, str]] = {
     "undecided": {"en": "Undecided", "ja": "未定"},
     "yes": {"en": "Yes", "ja": "はい"},
     "no": {"en": "No", "ja": "いいえ"},
-    "simple": {"en": "Simple", "ja": "シンプル"},
-    "moderate": {"en": "Moderate", "ja": "中程度"},
-    "complex": {"en": "Complex", "ja": "複雑"},
-    "low": {"en": "Low", "ja": "低"},
+    "low": {"en": "Low / Simple", "ja": "低 / シンプル"},
     "medium": {"en": "Medium", "ja": "中"},
     "high": {"en": "High", "ja": "高"},
     "japan": {"en": "Mainly in Japan", "ja": "主に国内"},
@@ -209,8 +206,8 @@ FORM_FIELD_DESCRIPTIONS: dict[str, str] = {
     "non_functional_needs": "Performance, security, availability, load, and similar constraints",
     "users_and_load": "How many people will use it, busy periods, and expected growth",
     "integrations": "Other systems or data sources this must work with",
-    "data_complexity": "How complex the data is: simple, moderate, or complex",
-    "ui_complexity": "How rich the screens and workflows are: low, medium, or high",
+    "data_complexity": "How complex the data is: low (simple), medium, or high",
+    "ui_complexity": "How rich the screens and workflows are: low (simple), medium, or high",
     "technology_preferences": "Languages, platforms, or tools to use (optional)",
     "development_approach": "How work is run (e.g. agile, waterfall, mixed)",
     "rules_and_standards": "Laws, standards, or organizational rules the system must meet",
@@ -419,6 +416,17 @@ def field_metadata_for_prompt(schema: list[dict[str, Any]]) -> list[dict[str, An
     return rows
 
 
+COMPLEXITY_FIELD_KEYS = frozenset({"data_complexity", "ui_complexity"})
+COMPLEXITY_VALUE_ALIASES = {
+    "simple": "low",
+    "basic": "low",
+    "moderate": "medium",
+    "normal": "medium",
+    "complex": "high",
+    "advanced": "high",
+}
+
+
 def normalize_form_data(schema: list[dict[str, Any]], raw: dict[str, Any]) -> dict[str, str]:
     normalized: dict[str, str] = {}
     fields = snapshot_fields(schema)
@@ -436,6 +444,8 @@ def normalize_form_data(schema: list[dict[str, Any]], raw: dict[str, Any]) -> di
         text = str(value).strip()
         if key in select_map:
             lowered = text.casefold()
+            if key in COMPLEXITY_FIELD_KEYS:
+                lowered = COMPLEXITY_VALUE_ALIASES.get(lowered, lowered)
             matched = next(
                 (option for option in select_map[key] if option.casefold() == lowered),
                 None,

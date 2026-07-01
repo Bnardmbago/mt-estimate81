@@ -83,6 +83,7 @@ class OpenAIProvider:
         feature_items: list[dict[str, Any]] | None = None,
         extracted_data: dict[str, Any] | None = None,
         complexity_profile: dict[str, Any] | None = None,
+        cost_breakdown_hints: dict[str, Any] | None = None,
     ) -> GeneratedRateCardSuggestion:
         has_extraction_context = bool(feature_items or extracted_data or complexity_profile)
         response = await self._create_completion(
@@ -105,6 +106,7 @@ class OpenAIProvider:
                         feature_items=feature_items,
                         extracted_data=extracted_data,
                         complexity_profile=complexity_profile,
+                        cost_breakdown_hints=cost_breakdown_hints,
                     ),
                 },
             ],

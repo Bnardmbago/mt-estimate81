@@ -7,6 +7,7 @@ from app.rate_cards.defaults import DEFAULT_CURRENCY, DEFAULT_REGION
 
 Region = Literal["japan", "philippines", "usa"]
 Currency = Literal["JPY", "USD", "PHP"]
+CostBreakdownMode = Literal["standard", "flexible"]
 
 
 class FeatureItemInput(BaseModel):
@@ -101,6 +102,7 @@ class RateCardSettings(BaseModel):
     tax_rate: float
     region: Region = DEFAULT_REGION
     currency: Currency = DEFAULT_CURRENCY
+    cost_breakdown_mode: CostBreakdownMode = "standard"
 
     @model_validator(mode="after")
     def migrate_legacy_setup_costs(self) -> "RateCardSettings":

@@ -13,7 +13,7 @@ export const FORM_FIELDS = [
     key: "data_complexity",
     required: true,
     type: "select",
-    options: ["simple", "moderate", "complex"],
+    options: ["low", "medium", "high"],
   },
   {
     key: "ui_complexity",
@@ -59,6 +59,11 @@ export type FormFieldValues = Record<FormFieldKey, string>;
 
 export const DEFAULT_PROJECT_NAMES = new Set(["New Estimate", "新規見積"]);
 
+export function isUsableProjectName(name: string | null | undefined): boolean {
+  const trimmed = (name ?? "").trim();
+  return trimmed.length > 0 && !DEFAULT_PROJECT_NAMES.has(trimmed);
+}
+
 export function displayProjectName(projectName: string): string {
   return DEFAULT_PROJECT_NAMES.has(projectName) ? "" : projectName;
 }
@@ -75,25 +80,31 @@ export function defaultProjectNameForLocale(locale: string): string {
   return locale === "ja" ? "新規見積" : "New Estimate";
 }
 
-/** Use typed name, or keep the stored default placeholder name when the field is left blank. */
+/** Resolve the project name to persist or validate; placeholder defaults do not count as filled. */
 export function resolveProjectNameForSave(
   formProjectName: string,
   storedProjectName: string,
 ): string {
   const trimmed = formProjectName.trim();
-  if (trimmed) {
+  if (isUsableProjectName(trimmed)) {
     return trimmed;
   }
-  if (DEFAULT_PROJECT_NAMES.has(storedProjectName)) {
-    return storedProjectName;
+  if (!trimmed && isUsableProjectName(storedProjectName)) {
+    return storedProjectName.trim();
   }
   return "";
 }
 
+const DEFAULT_COMPLEXITY_VALUES: Partial<FormFieldValues> = {
+  data_complexity: "low",
+  ui_complexity: "low",
+};
+
 export function emptyFormValues(): FormFieldValues {
-  return Object.fromEntries(
-    FORM_FIELDS.map((field) => [field.key, ""]),
-  ) as FormFieldValues;
+  return {
+    ...Object.fromEntries(FORM_FIELDS.map((field) => [field.key, ""])),
+    ...DEFAULT_COMPLEXITY_VALUES,
+  } as FormFieldValues;
 }
 
 export function formValuesFromData(

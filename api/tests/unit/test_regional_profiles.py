@@ -40,15 +40,17 @@ def base_settings() -> RateCardSettings:
 
 
 @pytest.mark.asyncio
-async def test_apply_philippines_native_to_jpy_uses_japan_standards(base_settings):
+async def test_apply_philippines_native_to_jpy_converts_from_philippines_table(base_settings):
     fx = FakeFxService({("PHP", "JPY"): Decimal("2.5")})
     updated, roles_updated = await apply_regional_standard(base_settings, "philippines", "JPY", fx)
 
     pm = next(role for role in updated.roles if role.name == "PM")
     developer = next(role for role in updated.roles if role.name == "developer")
-    assert pm.hourly_rate == 12000
-    assert developer.hourly_rate == 8000
-    assert updated.region == "japan"
+    qa = next(role for role in updated.roles if role.name == "QA")
+    assert pm.hourly_rate == 2375
+    assert developer.hourly_rate == 1625
+    assert qa.hourly_rate == 1250
+    assert updated.region == "philippines"
     assert updated.currency == "JPY"
     assert roles_updated == 3
 
@@ -83,9 +85,9 @@ async def test_apply_matches_common_ai_role_names(base_settings):
     updated, roles_updated = await apply_regional_standard(settings, "philippines", "JPY", fx)
 
     assert roles_updated == 3
-    assert updated.roles[0].hourly_rate == 12000
-    assert updated.roles[1].hourly_rate == 8000
-    assert updated.roles[2].hourly_rate == 6500
+    assert updated.roles[0].hourly_rate == 2375
+    assert updated.roles[1].hourly_rate == 1625
+    assert updated.roles[2].hourly_rate == 1250
 
 
 @pytest.mark.asyncio
@@ -98,6 +100,18 @@ async def test_apply_usa_to_usd_keeps_native_amounts(base_settings):
     assert pm.hourly_rate == 120
     assert pm.daily_rate == 960
     assert updated.currency == "USD"
+
+
+def test_patch_roles_skips_when_region_currency_mismatch():
+    settings, count = patch_roles_to_regional_standard(
+        {
+            "region": "philippines",
+            "currency": "JPY",
+            "roles": [{"name": "Engineer", "hourly_rate": 5000, "daily_rate": 40000}],
+        }
+    )
+    assert count == 0
+    assert settings["roles"][0]["hourly_rate"] == 5000
 
 
 def test_patch_roles_to_regional_standard_japan_frontend_backend():
@@ -182,7 +196,7 @@ async def test_apply_matches_composite_ai_role_names():
     updated, roles_updated = await apply_regional_standard(settings, "philippines", "JPY", fx)
 
     assert roles_updated == 4
-    assert updated.roles[0].hourly_rate == 12000
-    assert updated.roles[1].hourly_rate == 10000
-    assert updated.roles[2].hourly_rate == 6500
-    assert updated.roles[3].hourly_rate == 9000
+    assert updated.roles[0].hourly_rate == 2375
+    assert updated.roles[1].hourly_rate == 2125
+    assert updated.roles[2].hourly_rate == 1250
+    assert updated.roles[3].hourly_rate == 1750

@@ -71,12 +71,14 @@ def _enrich_calculation_for_display(
     if calculation.get("rc_detailed_breakdown"):
         return calculation
     markup_rate = get_markup_rate_from_calculation(calculation)
+    cost_breakdown_mode = calculation.get("cost_breakdown_mode", "standard")
     return {
         **calculation,
         "rc_detailed_breakdown": build_detailed_rc_breakdown(
             calculation,
             locale=locale,
             markup_rate=markup_rate,
+            cost_breakdown_mode=cost_breakdown_mode,
         ),
     }
 
@@ -753,7 +755,9 @@ async def run_calculation(
         result_payload,
         locale=normalize_locale(estimate.locale, estimate.locale),
         markup_rate=markup_rate,
+        cost_breakdown_mode=rate_settings.cost_breakdown_mode,
     )
+    result_payload["cost_breakdown_mode"] = rate_settings.cost_breakdown_mode
     result_payload["fx_snapshot"] = fx_snapshot
     result_payload["source_currency"] = source_currency
     result_payload["source_region"] = source_region
@@ -804,7 +808,7 @@ async def tune_rate_card_from_extraction(
     from app.rate_cards.fingerprint import get_latest_rate_card_fingerprint
     from app.rate_cards.generation import (
         regenerate_rate_card_after_extraction,
-        should_auto_tune_rate_card,
+        should_tune_rate_card_on_extract,
     )
 
     estimate = await get_estimate_for_user(db, estimate_id, user)
@@ -837,12 +841,12 @@ async def tune_rate_card_from_extraction(
             },
         )
 
-    if not await should_auto_tune_rate_card(db, estimate):
+    if not await should_tune_rate_card_on_extract(db, estimate):
         raise HTTPException(
             status_code=400,
             detail={
-                "error": "Generate a project-specific rate card instead of tuning a shared template",
-                "code": "TUNE_REQUIRES_NEW_CARD",
+                "error": "Enable auto-tune on the estimate rate card before tuning",
+                "code": "AUTO_TUNE_DISABLED",
             },
         )
 

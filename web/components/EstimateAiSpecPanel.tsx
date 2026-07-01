@@ -1,20 +1,25 @@
 "use client";
 
-import { useMemo, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useState, type RefObject } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import DocumentUpload from "@/components/DocumentUpload";
 import type { EstimateFormHandle } from "@/components/EstimateForm";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, parseApiErrorPayload } from "@/lib/api";
+import { MAX_AI_USER_PROMPT_CHARS } from "@/lib/aiConstants";
+import { isUsableProjectName, resolveProjectNameForSave } from "@/lib/formFields";
 import {
   type FormFieldValues,
   resolveFormSchema,
 } from "@/lib/formSchema";
 import { formatFormDataPreview } from "@/lib/formPreview";
-import type { EstimateDetail } from "@/lib/estimate";
+import type { EstimateDetail, EstimateDocument } from "@/lib/estimate";
 
 type EstimateAiSpecPanelProps = {
   estimateId: string;
   estimate: EstimateDetail;
   formRef: RefObject<EstimateFormHandle | null>;
+  initialDocuments: EstimateDocument[];
+  onDocumentsChange?: (documents: EstimateDocument[]) => void;
 };
 
 type SuggestFormResponse = {
@@ -27,28 +32,23 @@ const textareaClassName =
 
 async function readApiError(response: Response, fallback: string): Promise<string> {
   const payload = await response.json().catch(() => ({}));
-  if (typeof payload === "object" && payload !== null) {
-    const record = payload as Record<string, unknown>;
-    if (typeof record.error === "string") {
-      return record.error;
-    }
-    if (typeof record.detail === "object" && record.detail !== null) {
-      const detail = record.detail as Record<string, unknown>;
-      if (typeof detail.error === "string") {
-        return detail.error;
-      }
-    }
-    if (typeof record.detail === "string") {
-      return record.detail;
+  const record = payload as Record<string, unknown>;
+  const { message, code } = parseApiErrorPayload(payload, fallback);
+  if (code === "AI_UNAVAILABLE") {
+    const details = record.details as { message?: string } | undefined;
+    if (details?.message?.trim()) {
+      return `${message}: ${details.message}`;
     }
   }
-  return fallback;
+  return message;
 }
 
 export default function EstimateAiSpecPanel({
   estimateId,
   estimate,
   formRef,
+  initialDocuments,
+  onDocumentsChange,
 }: EstimateAiSpecPanelProps) {
   const locale = useLocale();
   const t = useTranslations("aiSpec");
@@ -58,6 +58,7 @@ export default function EstimateAiSpecPanel({
     [estimate.form_schema_snapshot],
   );
 
+  const [documents, setDocuments] = useState<EstimateDocument[]>(initialDocuments);
   const [prompt, setPrompt] = useState("");
   const [previewText, setPreviewText] = useState("");
   const [lastSuggestion, setLastSuggestion] = useState<SuggestFormResponse | null>(null);
@@ -65,8 +66,42 @@ export default function EstimateAiSpecPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setDocuments(initialDocuments);
+  }, [initialDocuments]);
+
+  const handleDocumentsChange = useCallback(
+    (nextDocuments: EstimateDocument[]) => {
+      setDocuments(nextDocuments);
+      onDocumentsChange?.(nextDocuments);
+    },
+    [onDocumentsChange],
+  );
+
+  const hasProcessingDocuments = documents.some(
+    (doc) => doc.extraction_status === "pending" || doc.extraction_status === "processing",
+  );
+
+  const hasReadyDocuments = documents.some((doc) => doc.extraction_status === "done");
+
+  const canGenerate =
+    (prompt.trim().length > 0 || hasReadyDocuments) && !loading && !hasProcessingDocuments;
+
   async function handleGenerate() {
-    if (!prompt.trim()) {
+    const promptText = prompt.trim();
+    if (!promptText && !hasReadyDocuments) {
+      setError(t("promptOrDocumentsRequired"));
+      return;
+    }
+
+    const values = formRef.current?.getValues();
+    const projectName = resolveProjectNameForSave(
+      values?.project_name ?? "",
+      estimate.project_name,
+    );
+    if (!isUsableProjectName(projectName)) {
+      setError(t("projectNameRequired"));
+      void formRef.current?.saveProjectName();
       return;
     }
 
@@ -75,7 +110,9 @@ export default function EstimateAiSpecPanel({
 
     const projectSaved = await formRef.current?.saveBeforeAiSuggest();
     if (projectSaved === false) {
-      setError(t("saveFormBeforeGenerate"));
+      setError(
+        isUsableProjectName(projectName) ? t("saveFormBeforeGenerate") : t("projectNameRequired"),
+      );
       setLoading(false);
       return;
     }
@@ -86,7 +123,7 @@ export default function EstimateAiSpecPanel({
         {
           method: "POST",
           body: JSON.stringify({
-            prompt: prompt.trim(),
+            prompt: promptText,
             locale,
           }),
         },
@@ -114,11 +151,12 @@ export default function EstimateAiSpecPanel({
       return;
     }
     formRef.current?.applyValues(lastSuggestion.form_data as Partial<FormFieldValues>);
+    formRef.current?.startPostApplyGuidance();
   }
 
   return (
     <section className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-4">
-      <h2 className="text-base font-semibold text-gray-900">{t("title")}</h2>
+      <h2 className="text-lg font-semibold text-gray-900">{t("title")}</h2>
       <p className="mt-1 text-sm text-gray-600">{t("description")}</p>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -132,13 +170,23 @@ export default function EstimateAiSpecPanel({
             onChange={(event) => setPrompt(event.target.value)}
             placeholder={t("promptPlaceholder")}
             rows={6}
+            maxLength={MAX_AI_USER_PROMPT_CHARS}
             disabled={loading}
             className={textareaClassName}
           />
+          <DocumentUpload
+            estimateId={estimateId}
+            initialDocuments={initialDocuments}
+            onDocumentsChange={handleDocumentsChange}
+            variant="embedded"
+          />
+          {hasProcessingDocuments ? (
+            <p className="mt-2 text-xs text-indigo-800/80">{t("processingDocuments")}</p>
+          ) : null}
           <button
             type="button"
             onClick={() => void handleGenerate()}
-            disabled={loading || !prompt.trim()}
+            disabled={!canGenerate}
             className="mt-3 self-start rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {loading ? t("generating") : t("generate")}

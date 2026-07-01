@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ai.factory import get_ai_provider
-from app.ai.schemas import GeneratedRateCardSuggestion
+from app.ai.schemas import GeneratedLineItem, GeneratedRateCardSuggestion
 from app.audit.service import log_change
 from app.calculation.schemas import RateCardSettings
 from app.documents.service import run_extraction as run_document_extraction
@@ -22,10 +22,10 @@ from app.models.estimate import Estimate, EstimateDocument, EstimateStatus
 from app.models.rate_card import RateCard
 from app.models.user import User
 from app.rate_cards.complexity import ProjectComplexityProfile, score_project_complexity
+from app.rate_cards.cost_breakdown_hints import build_cost_breakdown_hints
 from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 from app.rate_cards.normalize import normalize_settings_dict
 from app.rate_cards.maintenance import apply_default_maintenance_to_settings
-from app.rate_cards.rc_items import ensure_standard_monthly_rc_items
 from app.rate_cards.regional_profiles import patch_roles_to_regional_standard
 from app.rate_cards.service import create_rate_card_with_settings, get_latest_version_for_card
 
@@ -106,6 +106,12 @@ def _build_rate_card_generation_context(
     if document_texts is None:
         document_texts = _collect_document_texts(list(estimate.documents))
 
+    cost_breakdown_hints = build_cost_breakdown_hints(
+        form_data,
+        extracted_data,
+        complexity_profile,
+    )
+
     return {
         "project_name": estimate.project_name,
         "client_name": estimate.client_name,
@@ -114,6 +120,7 @@ def _build_rate_card_generation_context(
         "feature_items": feature_items,
         "extracted_data": extracted_data,
         "complexity_profile": complexity_profile,
+        "cost_breakdown_hints": cost_breakdown_hints,
     }
 
 
@@ -124,6 +131,24 @@ async def _count_estimates_for_rate_card(db: AsyncSession, rate_card_id: uuid.UU
         .where(Estimate.rate_card_id == rate_card_id)
     )
     return int(result.scalar_one())
+
+
+async def is_estimate_owned_rate_card(db: AsyncSession, estimate: Estimate) -> bool:
+    if not estimate.rate_card_id:
+        return False
+    rate_card = await db.get(RateCard, estimate.rate_card_id)
+    if rate_card is None or rate_card.is_system:
+        return False
+    linked_count = await _count_estimates_for_rate_card(db, estimate.rate_card_id)
+    return linked_count <= 1
+
+
+async def should_tune_rate_card_on_extract(db: AsyncSession, estimate: Estimate) -> bool:
+    if not estimate.rate_card_id:
+        return False
+    if not get_rate_card_auto_tune_enabled(estimate):
+        return False
+    return True
 
 
 async def should_auto_tune_rate_card(db: AsyncSession, estimate: Estimate) -> bool:
@@ -158,6 +183,16 @@ def _normalize_phase_percentages(phases: list[dict[str, Any]]) -> list[dict[str,
     ]
 
 
+def _line_item_from_suggestion(item: GeneratedLineItem) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "name": item.name.strip(),
+        "amount": int(item.amount_jpy),
+    }
+    if item.service_description and item.service_description.strip():
+        row["service_description"] = item.service_description.strip()
+    return row
+
+
 def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dict[str, Any]:
     roles = []
     for role in suggestion.roles:
@@ -170,8 +205,15 @@ def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dic
             }
         )
 
+    monthly_items = [
+        _line_item_from_suggestion(item)
+        for item in suggestion.monthly_rc_items
+        if item.name.strip()
+    ]
+
     return normalize_settings_dict(
         {
+            "cost_breakdown_mode": "flexible",
             "development_approach": suggestion.development_approach,
             "roles": roles,
             "phases": _normalize_phase_percentages(
@@ -184,17 +226,11 @@ def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dic
                 "hours_per_feature_default": int(suggestion.productivity.hours_per_feature_default),
             },
             "setup_cost_items": [
-                {"name": item.name.strip(), "amount": int(item.amount_jpy)}
+                _line_item_from_suggestion(item)
                 for item in suggestion.setup_cost_items
                 if item.name.strip()
             ],
-            "monthly_rc_items": ensure_standard_monthly_rc_items(
-                [
-                    {"name": item.name.strip(), "amount": int(item.amount_jpy)}
-                    for item in suggestion.monthly_rc_items
-                    if item.name.strip()
-                ]
-            ),
+            "monthly_rc_items": monthly_items,
         }
     )
 
@@ -238,11 +274,8 @@ def _merge_with_defaults(suggestion: GeneratedRateCardSuggestion) -> tuple[dict[
     if not settings_dict.get("monthly_rc_items"):
         settings_dict["monthly_rc_items"] = DEFAULT_RATE_CARD_SETTINGS["monthly_rc_items"]
         default_fields.append("monthly_rc_items")
-    else:
-        settings_dict["monthly_rc_items"] = ensure_standard_monthly_rc_items(
-            settings_dict["monthly_rc_items"]
-        )
 
+    settings_dict["cost_breakdown_mode"] = "flexible"
     settings_dict, _ = patch_roles_to_regional_standard(settings_dict)
 
     return normalize_settings_dict(settings_dict), sorted(set(default_fields))
@@ -263,6 +296,7 @@ async def _call_generate_rate_card(
         feature_items=context.get("feature_items"),
         extracted_data=context.get("extracted_data"),
         complexity_profile=context.get("complexity_profile"),
+        cost_breakdown_hints=context.get("cost_breakdown_hints"),
     )
 
 
@@ -375,6 +409,59 @@ async def generate_rate_card_for_estimate(
         )
 
 
+async def _fork_rate_card_from_shared(
+    db: AsyncSession,
+    estimate: Estimate,
+    user_id: uuid.UUID,
+    generated: dict[str, Any],
+    *,
+    source_rate_card_id: uuid.UUID,
+    maintenance_assumptions: dict[str, Any] | None = None,
+) -> None:
+    user = await db.get(User, user_id)
+    if not user:
+        return
+
+    current_settings: dict[str, Any] = {}
+    version = await get_latest_version_for_card(db, source_rate_card_id)
+    if version and version.settings:
+        current_settings = dict(version.settings)
+
+    merged_settings = normalize_settings_dict(
+        {
+            **normalize_settings_dict(current_settings),
+            **generated["settings"],
+        }
+    )
+    merged_settings = apply_default_maintenance_to_settings(
+        merged_settings,
+        maintenance_assumptions,
+    )
+
+    card_name = generated.get("name") or estimate.project_name.strip() or "Generated Rate Card"
+    card, _version = await create_rate_card_with_settings(
+        db,
+        user=user,
+        name=card_name,
+        settings=merged_settings,
+        activate=False,
+    )
+    estimate.rate_card_id = card.id
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user_id,
+        action="rate_card_forked_from_shared",
+        changes={
+            "source_rate_card_id": str(source_rate_card_id),
+            "new_rate_card_id": str(card.id),
+            "generation_notes": generated.get("generation_notes", ""),
+            "used_defaults": generated.get("used_defaults", False),
+            "complexity_level": (generated.get("complexity_profile") or {}).get("level"),
+        },
+    )
+
+
 async def regenerate_rate_card_after_extraction(
     db: AsyncSession,
     estimate_id: uuid.UUID,
@@ -411,14 +498,25 @@ async def regenerate_rate_card_after_extraction(
         document_texts=context["document_texts"],
         complexity_profile=profile_dict,
     )
-    await _apply_generated_settings_to_estimate_card(
-        db,
-        estimate,
-        user_id,
-        generated,
-        audit_action="rate_card_auto_tuned",
-        maintenance_assumptions=maintenance_assumptions,
-    )
+    if not await is_estimate_owned_rate_card(db, estimate):
+        source_rate_card_id = estimate.rate_card_id
+        await _fork_rate_card_from_shared(
+            db,
+            estimate,
+            user_id,
+            generated,
+            source_rate_card_id=source_rate_card_id,
+            maintenance_assumptions=maintenance_assumptions,
+        )
+    else:
+        await _apply_generated_settings_to_estimate_card(
+            db,
+            estimate,
+            user_id,
+            generated,
+            audit_action="rate_card_auto_tuned",
+            maintenance_assumptions=maintenance_assumptions,
+        )
     return generated
 
 

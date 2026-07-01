@@ -32,6 +32,7 @@ class AIProvider(Protocol):
         feature_items: list[dict[str, Any]] | None = None,
         extracted_data: dict[str, Any] | None = None,
         complexity_profile: dict[str, Any] | None = None,
+        cost_breakdown_hints: dict[str, Any] | None = None,
     ) -> GeneratedRateCardSuggestion: ...
 
     async def suggest_rate_card_section(

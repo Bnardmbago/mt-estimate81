@@ -1,4 +1,5 @@
 from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.calculation.engine import CalculationError
@@ -45,6 +46,26 @@ async def calculation_error_handler(_request: Request, exc: CalculationError) ->
     return JSONResponse(
         status_code=400,
         content=_error_payload(str(exc), "UNKNOWN_ROLE", details),
+    )
+
+
+async def validation_exception_handler(
+    _request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    errors = exc.errors()
+    messages: list[str] = []
+    for err in errors:
+        loc = [str(part) for part in err.get("loc", []) if part != "body"]
+        label = ".".join(loc) if loc else "request"
+        msg = str(err.get("msg", "invalid"))
+        if msg.startswith("Value error, "):
+            msg = msg.removeprefix("Value error, ")
+        messages.append(f"{label}: {msg}")
+    message = messages[0] if len(messages) == 1 else "; ".join(messages)
+    return JSONResponse(
+        status_code=422,
+        content=_error_payload(message, "VALIDATION_ERROR", {"errors": errors}),
     )
 
 

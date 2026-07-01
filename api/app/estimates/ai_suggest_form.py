@@ -12,6 +12,7 @@ from app.estimates.form_fields import (
     snapshot_fields,
     specification_schema,
 )
+from app.estimates.project_name import is_usable_project_name
 from app.estimates.service import get_estimate_for_user
 from app.exceptions import AppError
 from app.i18n.localized_content import resolve_localized_dict
@@ -19,6 +20,11 @@ from app.models.estimate import Estimate, EstimateStatus
 from app.models.user import User
 from app.rate_cards.generation import _collect_document_texts, _extract_pending_documents
 from app.schemas.estimate import EstimateAiSuggestFormRequest, EstimateAiSuggestFormResponse
+
+DOCUMENT_ONLY_PROMPT = (
+    "Analyze the uploaded documents and project context to suggest values for each "
+    "questionnaire field."
+)
 
 
 async def suggest_form_for_estimate(
@@ -38,6 +44,15 @@ async def suggest_form_for_estimate(
             },
         )
 
+    if not is_usable_project_name(estimate.project_name):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Enter a project name before generating AI suggestions",
+                "code": "PROJECT_NAME_REQUIRED",
+            },
+        )
+
     locale: Literal["ja", "en"] = body.locale or (
         "ja" if estimate.locale == "ja" else "en"
     )
@@ -51,6 +66,16 @@ async def suggest_form_for_estimate(
     )
     estimate = result.scalar_one()
     document_texts = _collect_document_texts(list(estimate.documents))
+    prompt = body.prompt.strip()
+    if not prompt and not document_texts:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Enter a prompt or upload at least one extracted document",
+                "code": "PROMPT_OR_DOCUMENTS_REQUIRED",
+            },
+        )
+    effective_prompt = prompt or DOCUMENT_ONLY_PROMPT
     current_form_data = resolve_localized_dict(
         estimate.form_data,
         locale,
@@ -63,7 +88,7 @@ async def suggest_form_for_estimate(
     try:
         provider = await get_ai_provider(db)
         suggestion = await provider.suggest_estimate_form_fields(
-            prompt=body.prompt,
+            prompt=effective_prompt,
             project_name=estimate.project_name,
             client_name=estimate.client_name,
             current_form_data=current_form_data,
