@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ai.factory import get_ai_provider
+from app.ai.instruction_resolver import ResolvedInstructions, merge_user_message, resolve_instructions
+from app.ai.prompts import build_rate_card_section_system_prompt
 from app.ai.schemas import (
     GeneratedLineItem,
     GeneratedPhasePercentage,
@@ -242,14 +244,32 @@ async def suggest_rate_card_section_for_card(
 
     try:
         provider = await get_ai_provider(db)
+        instructions = await resolve_instructions(
+            db,
+            "rate_card_section",
+            locale,
+            build_base_system=build_rate_card_section_system_prompt,
+            system_kwargs={
+                "locale": locale,
+                "section": body.section,
+                "free_form": free_form,
+            },
+        )
+        runtime_prompt = merge_user_message(instructions.user_prefix, body.prompt.strip())
+        instructions_for_adapter = ResolvedInstructions(
+            system=instructions.system,
+            user_prefix="",
+            parameters=instructions.parameters,
+        )
         suggestion = await provider.suggest_rate_card_section(
             section=body.section,
-            prompt=body.prompt,
+            prompt=runtime_prompt,
             current_section=current_section,
             estimate_context=estimate_context,
             document_texts=document_texts,
             locale=locale,
             free_form=free_form,
+            instructions=instructions_for_adapter,
         )
     except Exception as exc:
         raise AppError(

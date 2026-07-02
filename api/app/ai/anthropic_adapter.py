@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 import anthropic
 
+from app.ai.adapter_instructions import AI_TIMEOUT_SECONDS, anthropic_completion_kwargs, max_document_chars
+from app.ai.instruction_resolver import ResolvedInstructions, merge_user_message
 from app.ai.rate_limit_retry import with_rate_limit_retry
 from app.ai.openai_schema import build_form_fields_suggestion_schema
 from app.ai.prompts import (
@@ -24,8 +26,6 @@ from app.ai.section_schemas import section_suggestion_model, section_tool_name
 from app.estimates.form_fields import field_metadata_for_prompt, schema_field_keys
 from app.schemas.rate_card import RateCardAiSection
 
-AI_TIMEOUT_SECONDS = 90.0
-
 
 class AnthropicProvider:
     def __init__(self, model: str, api_key: str) -> None:
@@ -45,17 +45,27 @@ class AnthropicProvider:
         locale: Literal["ja", "en"],
         *,
         rate_card_roles: list[dict[str, Any]] | None = None,
+        instructions: ResolvedInstructions | None = None,
     ) -> ExtractedRequirements:
+        doc_chars = max_document_chars(instructions)
+        system = (
+            instructions.system
+            if instructions
+            else build_system_prompt(locale)
+        )
+        user_content = build_user_prompt(
+            form_data,
+            document_texts,
+            rate_card_roles,
+            max_document_chars=doc_chars,
+        )
+        if instructions:
+            user_content = merge_user_message(instructions.user_prefix, user_content)
+
         response = await self._create_message(
             model=self.model,
-            max_tokens=8192,
-            system=build_system_prompt(locale),
-            messages=[
-                {
-                    "role": "user",
-                    "content": build_user_prompt(form_data, document_texts, rate_card_roles),
-                }
-            ],
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
             tools=[
                 {
                     "name": "extract_requirements",
@@ -64,6 +74,7 @@ class AnthropicProvider:
                 }
             ],
             tool_choice={"type": "tool", "name": "extract_requirements"},
+            **anthropic_completion_kwargs(instructions),
         )
 
         tool_block = next(
@@ -91,30 +102,36 @@ class AnthropicProvider:
         extracted_data: dict[str, Any] | None = None,
         complexity_profile: dict[str, Any] | None = None,
         cost_breakdown_hints: dict[str, Any] | None = None,
+        instructions: ResolvedInstructions | None = None,
     ) -> GeneratedRateCardSuggestion:
         has_extraction_context = bool(feature_items or extracted_data or complexity_profile)
-        response = await self._create_message(
-            model=self.model,
-            max_tokens=8192,
-            system=build_rate_card_system_prompt(
+        doc_chars = max_document_chars(instructions)
+        system = (
+            instructions.system
+            if instructions
+            else build_rate_card_system_prompt(
                 locale,
                 has_extraction_context=has_extraction_context,
-            ),
-            messages=[
-                {
-                    "role": "user",
-                    "content": build_rate_card_user_prompt(
-                        project_name=project_name,
-                        client_name=client_name,
-                        form_data=form_data,
-                        document_texts=document_texts,
-                        feature_items=feature_items,
-                        extracted_data=extracted_data,
-                        complexity_profile=complexity_profile,
-                        cost_breakdown_hints=cost_breakdown_hints,
-                    ),
-                }
-            ],
+            )
+        )
+        user_content = build_rate_card_user_prompt(
+            project_name=project_name,
+            client_name=client_name,
+            form_data=form_data,
+            document_texts=document_texts,
+            feature_items=feature_items,
+            extracted_data=extracted_data,
+            complexity_profile=complexity_profile,
+            cost_breakdown_hints=cost_breakdown_hints,
+            max_document_chars=doc_chars,
+        )
+        if instructions:
+            user_content = merge_user_message(instructions.user_prefix, user_content)
+
+        response = await self._create_message(
+            model=self.model,
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
             tools=[
                 {
                     "name": "generate_rate_card",
@@ -123,6 +140,7 @@ class AnthropicProvider:
                 }
             ],
             tool_choice={"type": "tool", "name": "generate_rate_card"},
+            **anthropic_completion_kwargs(instructions),
         )
 
         tool_block = next(
@@ -148,26 +166,32 @@ class AnthropicProvider:
         document_texts: list[str],
         locale: Literal["ja", "en"],
         free_form: bool = False,
+        instructions: ResolvedInstructions | None = None,
     ):
         model = section_suggestion_model(section)
         tool_name = section_tool_name(section)
+        doc_chars = max_document_chars(instructions)
+        system = (
+            instructions.system
+            if instructions
+            else build_rate_card_section_system_prompt(locale, section, free_form=free_form)
+        )
+        user_content = build_rate_card_section_user_prompt(
+            prompt=prompt,
+            section=section,
+            current_section=current_section,
+            estimate_context=estimate_context,
+            document_texts=document_texts,
+            free_form=free_form,
+            max_document_chars=doc_chars,
+        )
+        if instructions:
+            user_content = merge_user_message(instructions.user_prefix, user_content)
+
         response = await self._create_message(
             model=self.model,
-            max_tokens=8192,
-            system=build_rate_card_section_system_prompt(locale, section, free_form=free_form),
-            messages=[
-                {
-                    "role": "user",
-                    "content": build_rate_card_section_user_prompt(
-                        prompt=prompt,
-                        section=section,
-                        current_section=current_section,
-                        estimate_context=estimate_context,
-                        document_texts=document_texts,
-                        free_form=free_form,
-                    ),
-                }
-            ],
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
             tools=[
                 {
                     "name": tool_name,
@@ -176,6 +200,7 @@ class AnthropicProvider:
                 }
             ],
             tool_choice={"type": "tool", "name": tool_name},
+            **anthropic_completion_kwargs(instructions),
         )
 
         tool_block = next(
@@ -201,25 +226,31 @@ class AnthropicProvider:
         document_texts: list[str],
         locale: Literal["ja", "en"],
         form_schema: list[dict[str, Any]],
+        instructions: ResolvedInstructions | None = None,
     ) -> EstimateFormFieldsSuggestion:
         field_keys = schema_field_keys(form_schema)
         field_metadata = field_metadata_for_prompt(form_schema)
+        doc_chars = max_document_chars(instructions)
+        system = (
+            instructions.system
+            if instructions
+            else build_form_fields_system_prompt(locale, field_metadata)
+        )
+        user_content = build_form_fields_user_prompt(
+            prompt=prompt,
+            project_name=project_name,
+            client_name=client_name,
+            current_form_data=current_form_data,
+            document_texts=document_texts,
+            max_document_chars=doc_chars,
+        )
+        if instructions:
+            user_content = merge_user_message(instructions.user_prefix, user_content)
+
         response = await self._create_message(
             model=self.model,
-            max_tokens=8192,
-            system=build_form_fields_system_prompt(locale, field_metadata),
-            messages=[
-                {
-                    "role": "user",
-                    "content": build_form_fields_user_prompt(
-                        prompt=prompt,
-                        project_name=project_name,
-                        client_name=client_name,
-                        current_form_data=current_form_data,
-                        document_texts=document_texts,
-                    ),
-                }
-            ],
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
             tools=[
                 {
                     "name": "suggest_estimate_form_fields",
@@ -228,6 +259,7 @@ class AnthropicProvider:
                 }
             ],
             tool_choice={"type": "tool", "name": "suggest_estimate_form_fields"},
+            **anthropic_completion_kwargs(instructions),
         )
 
         tool_block = next(

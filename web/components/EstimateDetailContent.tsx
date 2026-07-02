@@ -35,11 +35,12 @@ export default function EstimateDetailContent({
 
   return (
     <>
-      {isDraft ? <EstimateFormTemplateSelect estimate={estimate} /> : null}
+      {isDraft && !isContactUser ? <EstimateFormTemplateSelect estimate={estimate} /> : null}
       <EstimateForm
         ref={formRef}
         estimate={estimate}
         hasUploadedDocuments={hasUploadedDocuments}
+        isContactUser={isContactUser}
         documentsSection={
           !isDraft ? (
             <DocumentUpload

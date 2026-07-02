@@ -3,6 +3,7 @@ from typing import Any
 from app.estimates.form_fields import (
     OPTION_LABELS,
     header_schema,
+    option_label_for_field,
     specification_schema,
     snapshot_fields,
 )
@@ -26,10 +27,13 @@ def format_field_value(field_schema: dict[str, Any], raw_value: Any, locale: str
         return ""
     if field_schema.get("type") == "select":
         value_str = str(raw_value)
+        field_key = str(field_schema.get("key", ""))
         for option in field_schema.get("options") or []:
             if option.get("value") == value_str:
                 label_map = option.get("label") or {}
                 return label_map.get(locale) or label_map.get("en") or value_str
+        if field_key:
+            return option_label_for_field(field_key, value_str, locale)
         fallback = OPTION_LABELS.get(value_str)
         if fallback:
             return fallback.get(locale) or fallback.get("en") or value_str

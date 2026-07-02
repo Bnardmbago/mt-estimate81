@@ -5,8 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import CalculationBreakdown, { type CalculationResult } from "@/components/CalculationBreakdown";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, parseApiErrorPayload } from "@/lib/api";
 import type { EstimateDetail } from "@/lib/estimate";
+import {
+  extractQuestionnaireMissingFields,
+  questionnaireMissingMessageKey,
+  type QuestionnaireMissingKey,
+} from "@/lib/questionnaireErrors";
 
 type EstimateCalculationProps = {
   estimate: EstimateDetail;
@@ -24,6 +29,7 @@ export default function EstimateCalculation({
   const t = useTranslations("calculation");
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [questionnaireMissing, setQuestionnaireMissing] = useState<string[]>([]);
   const [result, setResult] = useState<CalculationResult | null>(
     (estimate.calculation_result as CalculationResult | null) ?? null,
   );
@@ -57,6 +63,7 @@ export default function EstimateCalculation({
 
     setCalculating(true);
     setError(null);
+    setQuestionnaireMissing([]);
 
     try {
       const response = await apiFetch(
@@ -73,11 +80,19 @@ export default function EstimateCalculation({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        const message =
-          typeof payload.detail === "object"
-            ? payload.detail.error
-            : payload.detail || payload.error || response.statusText;
-        throw new Error(message || t("calculateError"));
+        const missingFields = extractQuestionnaireMissingFields(payload);
+        if (missingFields && missingFields.length > 0) {
+          setQuestionnaireMissing(
+            missingFields.map((field) =>
+              t(questionnaireMissingMessageKey(field as QuestionnaireMissingKey)),
+            ),
+          );
+          setError(t("questionnaireIncompleteIntro"));
+          return;
+        }
+
+        const { message } = parseApiErrorPayload(payload, t("calculateError"));
+        throw new Error(message);
       }
 
       const updated = (await response.json()) as EstimateDetail;
@@ -139,9 +154,16 @@ export default function EstimateCalculation({
       </div>
 
       {error && (
-        <p className="mb-4 text-sm text-red-600" role="alert">
-          {error}
-        </p>
+        <div className="mb-4 text-sm text-red-600" role="alert">
+          <p>{error}</p>
+          {questionnaireMissing.length > 0 ? (
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {questionnaireMissing.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       )}
 
       {result && (

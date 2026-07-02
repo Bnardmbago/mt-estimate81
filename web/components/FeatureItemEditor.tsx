@@ -166,7 +166,7 @@ export default function FeatureItemEditor({
       )}
 
       <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <table className="min-w-[48rem] w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-3 py-2 text-left font-medium text-gray-700">{t("columns.name")}</th>

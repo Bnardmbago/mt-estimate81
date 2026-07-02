@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.admin.discount_config import get_estimate_discount_rate, get_estimate_markup_rate
 from app.audit.service import log_change
+from app.calculation.development_approach import DevelopmentApproach
 from app.calculation.calendar import default_project_start_date
 from app.calculation.currency import rate_card_settings_to_jpy
 from app.calculation.engine import CalculationError, calculate_estimate
@@ -19,7 +20,10 @@ from app.calculation.line_items import normalize_calculation_result, sanitize_ca
 from app.calculation.schemas import FeatureItemInput as CalcFeatureItemInput
 from app.calculation.schemas import GanttFeatureItemInput, RateCardSettings
 from app.estimates.access import can_access_estimate, require_estimate_access
-from app.estimates.form_fields import prune_form_data_to_schema, snapshot_fields
+from app.estimates.form_fields import normalize_form_data, prune_form_data_to_schema, snapshot_fields
+from app.estimates.budget_comparison import build_budget_comparison
+from app.estimates.delivery_schedule import build_delivery_schedule_advisory
+from app.estimates.questionnaire_validation import missing_questionnaire_fields_for_calculation
 from app.form_templates.service import get_template_or_404, resolve_template
 from app.fx import get_fx_service
 from app.estimates.rate_card_stale import (
@@ -361,7 +365,15 @@ async def update_estimate(
 
     if form_data_payload is not None:
         locale = normalize_locale(content_locale, estimate.locale)
-        stored_form_data = store_localized_dict(estimate.form_data, locale, form_data_payload)
+        schema_snapshot = snapshot_fields(estimate.form_schema_snapshot)
+        existing_locale_data = resolve_localized_dict(
+            estimate.form_data,
+            locale,
+            estimate.locale,
+        )
+        merged_payload = {**existing_locale_data, **form_data_payload}
+        normalized_payload = normalize_form_data(schema_snapshot, merged_payload)
+        stored_form_data = store_localized_dict(estimate.form_data, locale, normalized_payload)
         if estimate.form_data != stored_form_data:
             changes["form_data"] = {
                 "old": "updated",
@@ -675,6 +687,28 @@ async def run_calculation(
             },
         )
 
+    resolved_locale = normalize_locale(estimate.locale, estimate.locale)
+    fallback_locale = normalize_locale(estimate.locale, resolved_locale)
+    form_data = resolve_localized_dict(estimate.form_data, resolved_locale, fallback_locale)
+    schema_snapshot = snapshot_fields(estimate.form_schema_snapshot)
+    if schema_snapshot:
+        form_data = normalize_form_data(schema_snapshot, form_data)
+
+    missing_fields = missing_questionnaire_fields_for_calculation(
+        has_documents=bool(estimate.documents),
+        form_data=form_data,
+        contact_user=is_contact_user(user),
+    )
+    if missing_fields:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Complete the questionnaire before calculating",
+                "code": "QUESTIONNAIRE_INCOMPLETE",
+                "fields": missing_fields,
+            },
+        )
+
     await get_rate_card_for_user(db, estimate.rate_card_id, user)
 
     if recalculate_with_current_rates:
@@ -704,6 +738,16 @@ async def run_calculation(
     rate_settings = RateCardSettings.model_validate(
         normalize_settings_dict(dict(version.settings or {}))
     )
+    form_development_approach_applied = False
+    form_approach = str(form_data.get("development_approach") or "").strip()
+    if form_approach:
+        try:
+            approach = DevelopmentApproach(form_approach)
+            rate_settings = rate_settings.model_copy(update={"development_approach": approach})
+            form_development_approach_applied = True
+        except ValueError:
+            pass
+
     source_currency = rate_settings.currency
     source_region = rate_settings.region
     jpy_settings, fx_snapshot = await rate_card_settings_to_jpy(rate_settings, get_fx_service())
@@ -761,6 +805,23 @@ async def run_calculation(
     result_payload["fx_snapshot"] = fx_snapshot
     result_payload["source_currency"] = source_currency
     result_payload["source_region"] = source_region
+    if form_development_approach_applied:
+        result_payload["form_development_approach_applied"] = True
+
+    gantt = result_payload.get("gantt") or {}
+    total_working_days = int(gantt.get("total_working_days") or 0)
+    delivery_schedule = str(form_data.get("delivery_schedule") or "").strip() or None
+    result_payload["delivery_schedule_advisory"] = build_delivery_schedule_advisory(
+        delivery_schedule,
+        total_working_days,
+    )
+    budget_comparison = build_budget_comparison(
+        form_data.get("client_budget"),
+        int(result.nrc["total_jpy"]),
+    )
+    if budget_comparison:
+        result_payload["budget_comparison"] = budget_comparison
+
     estimate.calculation_result = result_payload
     estimate.status = EstimateStatus.CALCULATED.value
 

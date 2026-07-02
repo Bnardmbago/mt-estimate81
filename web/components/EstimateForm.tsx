@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import AutoResizeTextarea from "@/components/AutoResizeTextarea";
 import CollapsibleFormSection from "@/components/CollapsibleFormSection";
 import { apiJson } from "@/lib/api";
+import { moneySymbol } from "@/lib/displayI18n";
 import type { EstimateDetail } from "@/lib/estimate";
 import { displayProjectName, localizedProjectName, resolveProjectNameForSave } from "@/lib/formFields";
 import {
@@ -16,6 +17,7 @@ import {
   getFieldLabel,
   getFieldPlaceholder,
   getOptionLabel,
+  isOrphanSelectValue,
   isSchemaFieldRequired,
   resolveFormSchema,
   specificationFieldKeys,
@@ -26,6 +28,7 @@ import {
 type EstimateFormProps = {
   estimate: EstimateDetail;
   hasUploadedDocuments?: boolean;
+  isContactUser?: boolean;
   children?: ReactNode;
   documentsSection?: ReactNode;
 };
@@ -55,6 +58,10 @@ function scrollToSection(sectionId: string): void {
 const inputClassName =
   "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
+function sanitizeNumericInput(value: string): string {
+  return value.replace(/[^\d]/g, "");
+}
+
 const statusBadgeClassName: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
   extracting: "bg-yellow-100 text-yellow-800",
@@ -76,7 +83,7 @@ function valuesEqual(
 }
 
 const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function EstimateForm(
-  { estimate, hasUploadedDocuments = false, children, documentsSection },
+  { estimate, hasUploadedDocuments = false, isContactUser = false, children, documentsSection },
   ref,
 ) {
   const router = useRouter();
@@ -150,7 +157,14 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
   }, []);
 
   function validate(nextValues: FormFieldValues): Partial<Record<string, string>> {
-    const errors = validateFormValues(schema, nextValues, hasUploadedDocuments, tForm("required"));
+    const fieldsToValidate = isContactUser
+      ? schema.filter((field) => field.section === "header")
+      : schema;
+    const errors = validateFormValues(fieldsToValidate, nextValues, hasUploadedDocuments, {
+      required: tForm("required"),
+      invalidNumber: tForm("invalidNumber"),
+      invalidCurrency: tForm("invalidCurrency"),
+    });
     const effectiveProjectName = resolveProjectNameForSave(
       nextValues.project_name,
       estimate.project_name,
@@ -359,9 +373,12 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
 
   const completeClientGuidanceStep = useCallback(() => {
     setGuidanceStep(null);
+    if (isContactUser) {
+      return;
+    }
     setSpecExpanded(true);
     scrollToSection(SECTION_ID_TECHNICAL_SPECIFICATION);
-  }, []);
+  }, [isContactUser]);
 
   const startPostApplyGuidance = useCallback(() => {
     setGuidanceStep("client");
@@ -456,22 +473,78 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
           />
         )}
 
-        {field.type === "select" && (
-          <select
+        {field.type === "number" && (
+          <input
             id={fieldId}
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
             value={values[field.key] ?? ""}
-            onChange={(event) => updateField(field.key, event.target.value)}
+            onChange={(event) =>
+              updateField(field.key, sanitizeNumericInput(event.target.value))
+            }
+            placeholder={getFieldPlaceholder(field, locale)}
             className={`${inputClassName} ${
               hasError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
             }`}
-          >
-            <option value="">{tForm("selectPlaceholder")}</option>
-            {(field.options ?? []).map((option) => (
-              <option key={option.value} value={option.value}>
-                {getOptionLabel(option, locale)}
-              </option>
-            ))}
-          </select>
+          />
+        )}
+
+        {field.type === "currency" && (
+          <div className="flex">
+            <span
+              className={`inline-flex items-center rounded-l border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600 ${
+                hasError ? "border-red-500" : ""
+              }`}
+            >
+              {moneySymbol("JPY")}
+            </span>
+            <input
+              id={fieldId}
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={values[field.key] ?? ""}
+              onChange={(event) =>
+                updateField(field.key, sanitizeNumericInput(event.target.value))
+              }
+              placeholder={getFieldPlaceholder(field, locale)}
+              className={`${inputClassName} rounded-l-none ${
+                hasError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+              }`}
+            />
+          </div>
+        )}
+
+        {field.type === "select" && (
+          <>
+            <select
+              id={fieldId}
+              value={
+                isOrphanSelectValue(field, values[field.key] ?? "")
+                  ? ""
+                  : (values[field.key] ?? "")
+              }
+              onChange={(event) => updateField(field.key, event.target.value)}
+              className={`${inputClassName} ${
+                hasError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+              }`}
+            >
+              <option value="">{tForm("selectPlaceholder")}</option>
+              {(field.options ?? []).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {getOptionLabel(option, locale)}
+                </option>
+              ))}
+            </select>
+            {isOrphanSelectValue(field, values[field.key] ?? "") && (
+              <p className="mt-1 text-sm text-amber-700">
+                {tForm("legacySelectValue", { value: values[field.key] ?? "" })}
+              </p>
+            )}
+          </>
         )}
 
         {hasError && (
@@ -510,7 +583,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
           <p className="mt-1 text-sm text-gray-500">
             {tEstimates("client")}: {estimate.client_name}
           </p>
-          {estimate.form_template_name && (
+          {estimate.form_template_name && !isContactUser && (
             <p className="mt-1 text-sm text-gray-500">
               {tForm("templateLabel")}: {estimate.form_template_name}
             </p>
@@ -568,7 +641,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
 
         {children}
 
-        {specificationFields.length > 0 ? (
+        {specificationFields.length > 0 && !isContactUser ? (
           <CollapsibleFormSection
             id={SECTION_ID_TECHNICAL_SPECIFICATION}
             title={tForm("specificationDetails")}

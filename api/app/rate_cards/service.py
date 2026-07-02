@@ -7,16 +7,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.calculation.development_approach import DevelopmentApproach
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
-from app.rate_cards.access import require_rate_card_access
+from app.rate_cards.access import rate_cards_visible_to_user_filter, require_rate_card_access
 from app.rate_cards.normalize import normalize_settings_dict
 from app.schemas.rate_card import RateCardOption, RateCardVersionOption
 
 
 async def get_active_rate_card(db: AsyncSession, user: User) -> RateCard | None:
-    query = select(RateCard).where(RateCard.is_active.is_(True))
     if not user.is_admin:
-        query = query.where(RateCard.created_by == user.id)
-    result = await db.execute(query)
+        own_result = await db.execute(
+            select(RateCard)
+            .where(RateCard.is_active.is_(True), RateCard.created_by == user.id)
+            .limit(1)
+        )
+        own_card = own_result.scalar_one_or_none()
+        if own_card:
+            return own_card
+
+    system_result = await db.execute(
+        select(RateCard)
+        .where(RateCard.is_active.is_(True), RateCard.is_system.is_(True))
+        .order_by(RateCard.created_at.asc())
+        .limit(1)
+    )
+    system_card = system_result.scalar_one_or_none()
+    if system_card:
+        return system_card
+
+    query = select(RateCard).where(RateCard.is_active.is_(True))
+    visibility = rate_cards_visible_to_user_filter(user)
+    if visibility is not None:
+        query = query.where(visibility)
+    result = await db.execute(query.order_by(RateCard.created_at.desc()).limit(1))
     return result.scalar_one_or_none()
 
 
@@ -40,8 +61,9 @@ async def set_active_rate_card(
 
 async def count_rate_cards_for_user(db: AsyncSession, user: User) -> int:
     query = select(func.count()).select_from(RateCard)
-    if not user.is_admin:
-        query = query.where(RateCard.created_by == user.id)
+    visibility = rate_cards_visible_to_user_filter(user)
+    if visibility is not None:
+        query = query.where(visibility)
     result = await db.execute(query)
     return int(result.scalar_one())
 
@@ -90,9 +112,10 @@ async def create_rate_card_with_settings(
 
 
 async def list_rate_card_options(db: AsyncSession, user: User) -> list[RateCardOption]:
-    query = select(RateCard).order_by(RateCard.name.asc())
-    if not user.is_admin:
-        query = query.where(RateCard.created_by == user.id)
+    query = select(RateCard).order_by(RateCard.is_system.desc(), RateCard.name.asc())
+    visibility = rate_cards_visible_to_user_filter(user)
+    if visibility is not None:
+        query = query.where(visibility)
     result = await db.execute(query)
     options: list[RateCardOption] = []
     for card in result.scalars().all():

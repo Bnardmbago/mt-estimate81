@@ -65,11 +65,13 @@ def build_user_prompt(
     form_data: dict[str, Any],
     texts: list[str],
     rate_card_roles: list[dict[str, Any]] | None = None,
+    *,
+    max_document_chars: int | None = None,
 ) -> str:
     roles = rate_card_roles or []
     truncated_texts, truncation_note = _truncate_document_texts(
         texts,
-        max_chars=MAX_EXTRACTION_DOCUMENT_CHARS,
+        max_chars=max_document_chars or MAX_EXTRACTION_DOCUMENT_CHARS,
     )
 
     sections = [
@@ -125,8 +127,12 @@ def build_form_fields_user_prompt(
     client_name: str,
     current_form_data: dict[str, Any],
     document_texts: list[str],
+    max_document_chars: int | None = None,
 ) -> str:
-    truncated_texts, truncation_note = _truncate_document_texts(document_texts)
+    truncated_texts, truncation_note = _truncate_document_texts(
+        document_texts,
+        max_chars=max_document_chars or MAX_DOCUMENT_CHARS,
+    )
 
     sections = [
         "## User Prompt",
@@ -227,8 +233,12 @@ def build_rate_card_section_user_prompt(
     estimate_context: dict[str, Any],
     document_texts: list[str],
     free_form: bool = False,
+    max_document_chars: int | None = None,
 ) -> str:
-    truncated_texts, truncation_note = _truncate_document_texts(document_texts)
+    truncated_texts, truncation_note = _truncate_document_texts(
+        document_texts,
+        max_chars=max_document_chars or MAX_DOCUMENT_CHARS,
+    )
     section_label = SECTION_LABELS[section]
 
     sections = [
@@ -365,8 +375,12 @@ def build_rate_card_user_prompt(
     extracted_data: dict[str, Any] | None = None,
     complexity_profile: dict[str, Any] | None = None,
     cost_breakdown_hints: dict[str, Any] | None = None,
+    max_document_chars: int | None = None,
 ) -> str:
-    truncated_texts, truncation_note = _truncate_document_texts(document_texts)
+    truncated_texts, truncation_note = _truncate_document_texts(
+        document_texts,
+        max_chars=max_document_chars or MAX_DOCUMENT_CHARS,
+    )
 
     sections = [
         "## Project",

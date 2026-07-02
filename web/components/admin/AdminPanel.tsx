@@ -3,8 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import AdminHelpReference from "@/components/admin/AdminHelpReference";
+import AiInstructionLayersPanel from "@/components/admin/AiInstructionLayersPanel";
 import AiSettingsPanel from "@/components/admin/AiSettingsPanel";
 import DiscountSettingsPanel from "@/components/admin/DiscountSettingsPanel";
+import QuotationSettingsPanel from "@/components/admin/QuotationSettingsPanel";
 import FormTemplatesPanel from "@/components/admin/FormTemplatesPanel";
 import FormulasReference from "@/components/admin/FormulasReference";
 import SmtpSettingsPanel from "@/components/admin/SmtpSettingsPanel";
@@ -15,7 +17,9 @@ type AdminTab =
   | "users"
   | "formTemplates"
   | "discountSettings"
+  | "quotationSettings"
   | "aiSettings"
+  | "aiInstructionLayers"
   | "smtpSettings"
   | "formulas"
   | "help"
@@ -25,7 +29,9 @@ const tabs: AdminTab[] = [
   "users",
   "formTemplates",
   "discountSettings",
+  "quotationSettings",
   "aiSettings",
+  "aiInstructionLayers",
   "smtpSettings",
   "formulas",
   "help",
@@ -51,7 +57,9 @@ export default function AdminPanel() {
     users: t("tabs.users"),
     formTemplates: t("tabs.formTemplates"),
     discountSettings: t("tabs.discountSettings"),
+    quotationSettings: t("tabs.quotationSettings"),
     aiSettings: t("tabs.aiSettings"),
+    aiInstructionLayers: t("tabs.aiInstructionLayers"),
     smtpSettings: t("tabs.smtpSettings"),
     formulas: t("tabs.formulas"),
     help: t("tabs.help"),
@@ -86,7 +94,9 @@ export default function AdminPanel() {
       {activeTab === "users" && <UserManager />}
       {activeTab === "formTemplates" && <FormTemplatesPanel />}
       {activeTab === "discountSettings" && <DiscountSettingsPanel />}
+      {activeTab === "quotationSettings" && <QuotationSettingsPanel />}
       {activeTab === "aiSettings" && <AiSettingsPanel />}
+      {activeTab === "aiInstructionLayers" && <AiInstructionLayersPanel />}
       {activeTab === "smtpSettings" && <SmtpSettingsPanel />}
       {activeTab === "formulas" && <FormulasReference />}
       {activeTab === "help" && <AdminHelpReference />}

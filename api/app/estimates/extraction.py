@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ai.factory import get_ai_provider
+from app.ai.instruction_resolver import resolve_instructions
+from app.ai.prompts import build_system_prompt
 from app.ai.schemas import ExtractedRequirements
 from app.audit.service import log_change
 from app.documents.service import run_extraction as run_document_extraction
@@ -39,6 +41,7 @@ from app.rate_cards.generation import (
     regenerate_rate_card_after_extraction,
     should_tune_rate_card_on_extract,
 )
+from app.estimates.form_fields import fill_complexity_from_profile
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +172,16 @@ async def _call_ai_provider(
     rate_card_roles: list[dict[str, Any]] | None,
 ) -> ExtractedRequirements:
     provider = await get_ai_provider(db)
+    instructions = await resolve_instructions(
+        db,
+        "extraction",
+        locale,
+        build_base_system=build_system_prompt,
+        system_kwargs={"locale": locale},
+    )
+    timeout_seconds = float(
+        instructions.parameters.get("timeout_seconds", EXTRACTION_AI_TIMEOUT_SECONDS)
+    )
     last_error: ValidationError | None = None
 
     for attempt in range(2):
@@ -179,8 +192,9 @@ async def _call_ai_provider(
                     document_texts,
                     locale,
                     rate_card_roles=rate_card_roles,
+                    instructions=instructions,
                 ),
-                timeout=EXTRACTION_AI_TIMEOUT_SECONDS,
+                timeout=timeout_seconds,
             )
         except ValidationError as exc:
             last_error = exc
@@ -430,6 +444,24 @@ async def run_extraction(
             form_data=form_data,
         )
         extracted_payload["complexity_profile"] = complexity_profile.model_dump()
+        filled_form_data = fill_complexity_from_profile(
+            form_data,
+            complexity_profile.level,
+            estimate.form_schema_snapshot,
+        )
+        complexity_updates = {
+            key: filled_form_data[key]
+            for key in ("data_complexity", "ui_complexity")
+            if not str(form_data.get(key, "") or "").strip() and filled_form_data.get(key)
+        }
+        if complexity_updates:
+            merged_form_data = {**form_data, **complexity_updates}
+            estimate.form_data = store_localized_dict(
+                estimate.form_data,
+                locale,
+                merged_form_data,
+            )
+            form_data = merged_form_data
         estimate.extracted_data = store_localized_dict(
             estimate.extracted_data,
             locale,
@@ -544,14 +576,14 @@ def _friendly_extraction_error(message: str) -> str:
     if "rate limit" in lowered or "error code: 429" in lowered or "429" in message:
         return (
             "AI rate limit reached. Wait a minute and try again, "
-            "or switch to gpt-4o-mini in Admin → AI settings."
+            "or switch to gpt-4o-mini in Admin → AI credentials."
         )
     if "invalid api key" in lowered or "authentication" in lowered or "401" in message:
-        return "Invalid API key. Check Admin → AI settings."
+        return "Invalid API key. Check Admin → AI credentials."
     if "credit balance" in lowered or "purchase credits" in lowered:
         return (
             "Anthropic API credits are exhausted. Add credits at console.anthropic.com "
-            "or switch to OpenAI in Admin → AI settings."
+            "or switch to OpenAI in Admin → AI credentials."
         )
     if "invalid schema" in lowered or "response_format" in lowered:
         return "AI configuration error. Contact your administrator."

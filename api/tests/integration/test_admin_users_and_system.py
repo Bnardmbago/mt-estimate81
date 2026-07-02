@@ -426,6 +426,44 @@ async def test_ai_connection_test_failure(client: AsyncClient, admin_headers: di
 
 
 @pytest.mark.asyncio
+async def test_get_quotation_settings_defaults(client: AsyncClient, admin_headers: dict[str, str]):
+    response = await client.get("/admin/quotation-settings", headers=admin_headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["special_notes_title_ja"] == "特記事項"
+    assert data["special_notes_title_en"] == "Special Notes"
+    assert "{issue_date}" in data["special_notes_body_ja"]
+    assert "{special_price}" in data["special_notes_body_en"]
+
+
+@pytest.mark.asyncio
+async def test_update_quotation_settings(client: AsyncClient, admin_headers: dict[str, str]):
+    response = await client.patch(
+        "/admin/quotation-settings",
+        headers=admin_headers,
+        json={
+            "special_notes_title_ja": "カスタム特記",
+            "special_notes_body_en": "Custom note for {issue_date} at {special_price}.",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["special_notes_title_ja"] == "カスタム特記"
+    assert data["special_notes_body_en"] == "Custom note for {issue_date} at {special_price}."
+
+    get_response = await client.get("/admin/quotation-settings", headers=admin_headers)
+    assert get_response.json()["special_notes_title_ja"] == "カスタム特記"
+
+
+@pytest.mark.asyncio
+async def test_quotation_settings_requires_admin(client: AsyncClient, auth_headers: dict[str, str]):
+    response = await client.get("/admin/quotation-settings", headers=auth_headers)
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_get_smtp_settings(client: AsyncClient, admin_headers: dict[str, str]):
     response = await client.get("/admin/smtp-settings", headers=admin_headers)
 

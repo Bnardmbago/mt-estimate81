@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ai.factory import get_ai_provider
+from app.ai.instruction_resolver import resolve_instructions
+from app.ai.prompts import build_rate_card_system_prompt
 from app.ai.schemas import GeneratedLineItem, GeneratedRateCardSuggestion
 from app.audit.service import log_change
 from app.calculation.schemas import RateCardSettings
@@ -287,6 +289,21 @@ async def _call_generate_rate_card(
     locale: Literal["ja", "en"],
 ) -> GeneratedRateCardSuggestion:
     provider = await get_ai_provider(db)
+    has_extraction_context = bool(
+        context.get("feature_items")
+        or context.get("extracted_data")
+        or context.get("complexity_profile")
+    )
+    instructions = await resolve_instructions(
+        db,
+        "rate_card_generation",
+        locale,
+        build_base_system=build_rate_card_system_prompt,
+        system_kwargs={
+            "locale": locale,
+            "has_extraction_context": has_extraction_context,
+        },
+    )
     return await provider.generate_rate_card(
         project_name=context["project_name"],
         client_name=context["client_name"],
@@ -297,6 +314,7 @@ async def _call_generate_rate_card(
         extracted_data=context.get("extracted_data"),
         complexity_profile=context.get("complexity_profile"),
         cost_breakdown_hints=context.get("cost_breakdown_hints"),
+        instructions=instructions,
     )
 
 

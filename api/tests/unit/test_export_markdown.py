@@ -147,11 +147,11 @@ def test_markdown_export_feature_effort_days(report_context):
 
 def test_markdown_export_omits_internal_sections():
     ctx = sample_report_context(
-        rate_card_name="2026 Standard Rates",
+        rate_card_name="Rate Card Default",
         rate_card_version_number=2,
     )
     md = generate_markdown(ctx)
-    assert "2026 Standard Rates" not in md
+    assert "Rate Card Default" not in md
     assert "Rate Card Reference" not in md
     assert "Cost Drivers" not in md
 

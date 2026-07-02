@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import AdminPanel from "@/components/admin/AdminPanel";
+import { loginUrl } from "@/lib/authRedirect";
 import { serverApiFetch } from "@/lib/server-api";
 
 export default async function AdminPage({
@@ -16,7 +17,7 @@ export default async function AdminPage({
   const t = await getTranslations("admin");
 
   if (!token) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, `/${locale}/admin`));
   }
 
   const response = await serverApiFetch("/admin/users", token.value);
@@ -26,7 +27,7 @@ export default async function AdminPage({
   }
 
   if (response.status === 401) {
-    redirect(`/${locale}/login`);
+    redirect(loginUrl(locale, `/${locale}/admin`));
   }
 
   if (!response.ok) {

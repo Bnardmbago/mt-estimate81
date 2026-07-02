@@ -1,7 +1,14 @@
 from fastapi import HTTPException
+from sqlalchemy import or_
 
 from app.models.rate_card import RateCard
 from app.models.user import User
+
+
+def rate_cards_visible_to_user_filter(user: User):
+    if user.is_admin:
+        return None
+    return or_(RateCard.created_by == user.id, RateCard.is_system.is_(True))
 
 
 def can_access_rate_card(rate_card: RateCard, user: User) -> bool:

@@ -1,5 +1,6 @@
 from typing import Any, Literal, Protocol
 
+from app.ai.instruction_resolver import ResolvedInstructions
 from app.ai.schemas import (
     EstimateFormFieldsSuggestion,
     ExtractedRequirements,
@@ -19,6 +20,7 @@ class AIProvider(Protocol):
         locale: Literal["ja", "en"],
         *,
         rate_card_roles: list[dict[str, Any]] | None = None,
+        instructions: ResolvedInstructions | None = None,
     ) -> ExtractedRequirements: ...
 
     async def generate_rate_card(
@@ -33,6 +35,7 @@ class AIProvider(Protocol):
         extracted_data: dict[str, Any] | None = None,
         complexity_profile: dict[str, Any] | None = None,
         cost_breakdown_hints: dict[str, Any] | None = None,
+        instructions: ResolvedInstructions | None = None,
     ) -> GeneratedRateCardSuggestion: ...
 
     async def suggest_rate_card_section(
@@ -45,6 +48,7 @@ class AIProvider(Protocol):
         document_texts: list[str],
         locale: Literal["ja", "en"],
         free_form: bool = False,
+        instructions: ResolvedInstructions | None = None,
     ) -> (
         RateCardRolesSectionSuggestion
         | RateCardPhasesSectionSuggestion
@@ -61,4 +65,5 @@ class AIProvider(Protocol):
         document_texts: list[str],
         locale: Literal["ja", "en"],
         form_schema: list[dict[str, Any]],
+        instructions: ResolvedInstructions | None = None,
     ) -> EstimateFormFieldsSuggestion: ...

@@ -153,6 +153,8 @@ async def test_extract_auto_creates_rate_card(
     assert payload["rate_card_id"] is not None
     assert payload["status"] == "review"
     assert payload["complexity_profile"]["level"] in ("low", "medium", "high")
+    assert payload["form_data"]["data_complexity"] in ("low", "medium", "high", "simple", "moderate", "complex")
+    assert payload["form_data"]["ui_complexity"] in ("low", "medium", "high", "simple", "moderate", "complex")
     assert payload["rate_card_auto_tuned"] is True
     assert payload["rate_card_tune_recommended"] is False
 

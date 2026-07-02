@@ -47,6 +47,147 @@ async def test_owner_lists_only_own_rate_cards(
 
 
 @pytest.mark.asyncio
+async def test_user_lists_system_default_rate_card(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    user_owned_rate_card: RateCardVersion,
+    db_session: AsyncSession,
+    admin_user: User,
+):
+    from app.rate_cards.defaults import DEFAULT_RATE_CARD_NAME, DEFAULT_RATE_CARD_SETTINGS
+    from app.models.rate_card import RateCard, RateCardVersion
+
+    system_card = RateCard(
+        name=DEFAULT_RATE_CARD_NAME,
+        is_active=True,
+        is_system=True,
+        created_by=admin_user.id,
+    )
+    db_session.add(system_card)
+    await db_session.flush()
+    db_session.add(
+        RateCardVersion(
+            rate_card_id=system_card.id,
+            version_number=1,
+            settings=DEFAULT_RATE_CARD_SETTINGS,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get("/rate-cards/cards", headers=auth_headers)
+    assert response.status_code == 200
+    ids = {item["id"] for item in response.json()}
+    assert str(user_owned_rate_card.rate_card_id) in ids
+    assert str(system_card.id) in ids
+    system_row = next(item for item in response.json() if item["id"] == str(system_card.id))
+    assert system_row["is_system"] is True
+
+
+@pytest.mark.asyncio
+async def test_user_can_open_system_default_rate_card(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    db_session: AsyncSession,
+    admin_user: User,
+):
+    from app.rate_cards.defaults import DEFAULT_RATE_CARD_NAME, DEFAULT_RATE_CARD_SETTINGS
+    from app.models.rate_card import RateCard, RateCardVersion
+
+    system_card = RateCard(
+        name=DEFAULT_RATE_CARD_NAME,
+        is_active=True,
+        is_system=True,
+        created_by=admin_user.id,
+    )
+    db_session.add(system_card)
+    await db_session.flush()
+    db_session.add(
+        RateCardVersion(
+            rate_card_id=system_card.id,
+            version_number=1,
+            settings=DEFAULT_RATE_CARD_SETTINGS,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get(f"/rate-cards/cards/{system_card.id}", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["is_system"] is True
+
+
+@pytest.mark.asyncio
+async def test_cannot_delete_system_default_rate_card(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    user_owned_rate_card: RateCardVersion,
+    db_session: AsyncSession,
+    admin_user: User,
+):
+    from app.rate_cards.defaults import DEFAULT_RATE_CARD_NAME, DEFAULT_RATE_CARD_SETTINGS
+    from app.models.rate_card import RateCard, RateCardVersion
+
+    system_card = RateCard(
+        name=DEFAULT_RATE_CARD_NAME,
+        is_active=True,
+        is_system=True,
+        created_by=admin_user.id,
+    )
+    db_session.add(system_card)
+    await db_session.flush()
+    db_session.add(
+        RateCardVersion(
+            rate_card_id=system_card.id,
+            version_number=1,
+            settings=DEFAULT_RATE_CARD_SETTINGS,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.delete(
+        f"/rate-cards/cards/{system_card.id}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "RATE_CARD_SYSTEM"
+
+
+@pytest.mark.asyncio
+async def test_get_active_prefers_system_default_when_user_has_no_active_card(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    db_session: AsyncSession,
+    admin_user: User,
+):
+    from app.rate_cards.defaults import DEFAULT_RATE_CARD_NAME, DEFAULT_RATE_CARD_SETTINGS
+    from app.models.rate_card import RateCard, RateCardVersion
+
+    for card in (await db_session.execute(select(RateCard))).scalars():
+        card.is_active = False
+    await db_session.flush()
+
+    system_card = RateCard(
+        name=DEFAULT_RATE_CARD_NAME,
+        is_active=True,
+        is_system=True,
+        created_by=admin_user.id,
+    )
+    db_session.add(system_card)
+    await db_session.flush()
+    db_session.add(
+        RateCardVersion(
+            rate_card_id=system_card.id,
+            version_number=1,
+            settings=DEFAULT_RATE_CARD_SETTINGS,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get("/rate-cards/active", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["id"] == str(system_card.id)
+
+
+@pytest.mark.asyncio
 async def test_other_user_does_not_see_owner_rate_card_in_list(
     client: AsyncClient,
     auth_headers: dict[str, str],

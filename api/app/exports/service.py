@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.admin.smtp_config import get_smtp_config, smtp_runtime_config
+from app.admin.quotation_notes_config import QuotationNotesConfig, get_quotation_notes_config
 from app.estimates.access import require_estimate_access
 from app.estimates.service import get_estimate_for_user
 from app.audit.service import log_change
@@ -105,6 +105,7 @@ def _generate_content(
     tax_rate: float,
     show_watermark: bool = False,
     export_user_display_name: str | None = None,
+    quotation_notes_config: QuotationNotesConfig | None = None,
 ) -> bytes:
     report_context = build_report_context(
         estimate,
@@ -141,6 +142,7 @@ def _generate_content(
             rate_card_effective_date=rate_card_effective_date,
             export_revision=export_revision,
             tax_rate=tax_rate,
+            quotation_notes_config=quotation_notes_config,
         )
         return generate_quotation_pdf(quotation_context, show_watermark=show_watermark)
 
@@ -161,6 +163,7 @@ def _generate_content(
             rate_card_effective_date=rate_card_effective_date,
             export_revision=export_revision,
             tax_rate=tax_rate,
+            quotation_notes_config=quotation_notes_config,
         )
         return generate_quotation_docx(quotation_context)
 
@@ -274,6 +277,10 @@ async def export_estimate(
     )
     export_user_display_name = user.display_name.strip() or user.email
 
+    quotation_notes_config = None
+    if export_format in (ExportFormat.PDF_QUOTATION.value, ExportFormat.DOCX_QUOTATION.value):
+        quotation_notes_config = await get_quotation_notes_config(db)
+
     try:
         content = _generate_content(
             estimate,
@@ -287,6 +294,7 @@ async def export_estimate(
             tax_rate=tax_rate,
             show_watermark=show_watermark,
             export_user_display_name=export_user_display_name,
+            quotation_notes_config=quotation_notes_config,
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)

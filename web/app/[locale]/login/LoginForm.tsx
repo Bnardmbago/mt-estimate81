@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { resolveReturnPath } from "@/lib/authRedirect";
+import { parseApiErrorPayload } from "@/lib/api";
 
 export default function LoginForm() {
   const t = useTranslations("login");
@@ -17,6 +18,21 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const returnTo = resolveReturnPath(params.locale, searchParams.get("next"));
+
+  function loginErrorMessage(code: string | undefined, apiMessage: string): string {
+    switch (code) {
+      case "AUTH_INVALID":
+        return t("errorInvalidCredentials");
+      case "CONTACT_USE_MAGIC_LINK":
+        return t("errorContactUseMagicLink");
+      case "USER_DISABLED":
+        return t("errorUserDisabled");
+      case "API_UNREACHABLE":
+        return t("errorApiUnreachable");
+      default:
+        return apiMessage || t("error");
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,14 +48,16 @@ export default function LoginForm() {
       });
 
       if (!response.ok) {
-        setError(t("error"));
+        const payload = await response.json().catch(() => ({}));
+        const { message, code } = parseApiErrorPayload(payload, t("error"));
+        setError(loginErrorMessage(code, message));
         return;
       }
 
       router.push(returnTo);
       router.refresh();
     } catch {
-      setError(t("error"));
+      setError(t("errorApiUnreachable"));
     } finally {
       setLoading(false);
     }

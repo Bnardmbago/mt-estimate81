@@ -144,18 +144,26 @@ def _integration_points(integration_count: int) -> int:
 
 def _count_form_integrations(form_data: dict[str, Any]) -> int:
     integrations = form_data.get("integrations")
-    if not integrations:
-        return 0
-    if isinstance(integrations, list):
-        return len([item for item in integrations if str(item).strip()])
-    text = str(integrations).strip()
-    if not text or text.casefold() in ("none", "n/a", "なし"):
-        return 0
-    separators = [",", ";", "\n", "、", "・"]
-    for separator in separators:
-        if separator in text:
-            return len([part for part in text.split(separator) if part.strip()])
-    return 1
+    count = 0
+    if integrations:
+        if isinstance(integrations, list):
+            count = len([item for item in integrations if str(item).strip()])
+        else:
+            text = str(integrations).strip()
+            if text and text.casefold() not in ("none", "n/a", "なし"):
+                separators = [",", ";", "\n", "、", "・"]
+                for separator in separators:
+                    if separator in text:
+                        count = len([part for part in text.split(separator) if part.strip()])
+                        break
+                else:
+                    count = 1
+    explicit = form_data.get("integration_count")
+    if explicit is not None:
+        digits = "".join(char for char in str(explicit) if char.isdigit())
+        if digits:
+            count = max(count, int(digits))
+    return count
 
 
 def score_project_complexity(
@@ -203,15 +211,33 @@ def score_project_complexity(
 
     data_complexity = str(form_data.get("data_complexity", "") or "")
     ui_complexity = str(form_data.get("ui_complexity", "") or "")
+    auth_complexity = str(form_data.get("auth_complexity", "") or "")
+    compliance_level = str(form_data.get("compliance_level", "") or "")
+    data_migration = str(form_data.get("data_migration_needed", "") or "")
     form_signals = {
         key: value
         for key, value in {
             "data_complexity": data_complexity,
             "ui_complexity": ui_complexity,
+            "auth_complexity": auth_complexity,
+            "compliance_level": compliance_level,
+            "data_migration_needed": data_migration,
         }.items()
-        if value
+        if value and value.casefold() not in {"undecided", "none", "no"}
     }
     form_points = _form_complexity_points(data_complexity) + _form_complexity_points(ui_complexity)
+    if auth_complexity.casefold() in {"sso", "multi_tenant"}:
+        form_points += 4
+    elif auth_complexity.casefold() == "simple_login":
+        form_points += 2
+    if compliance_level.casefold() == "regulated":
+        form_points += 5
+    elif compliance_level.casefold() == "standard":
+        form_points += 3
+    if data_migration.casefold() == "yes_major":
+        form_points += 4
+    elif data_migration.casefold() == "yes_limited":
+        form_points += 2
 
     module_points = min(len(modules), 5)
     risk_points = min(risk_count, 5)

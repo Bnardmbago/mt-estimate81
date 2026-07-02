@@ -6,8 +6,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.admin.ai_instruction_layers import router as admin_ai_instruction_layers_router
 from app.admin.ai_settings import router as admin_ai_settings_router
 from app.admin.discount_settings import router as admin_discount_settings_router
+from app.admin.quotation_settings import router as admin_quotation_settings_router
 from app.admin.smtp_settings import router as admin_smtp_settings_router
 from app.admin.system import router as admin_system_router
 from app.admin.form_templates import public_router as form_templates_router
@@ -67,7 +69,9 @@ app.include_router(estimates_router)
 app.include_router(documents_router)
 app.include_router(rate_cards_router)
 app.include_router(admin_ai_settings_router)
+app.include_router(admin_ai_instruction_layers_router)
 app.include_router(admin_discount_settings_router)
+app.include_router(admin_quotation_settings_router)
 app.include_router(admin_smtp_settings_router)
 app.include_router(admin_users_router)
 app.include_router(admin_form_templates_router)

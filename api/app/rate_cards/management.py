@@ -17,6 +17,7 @@ from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS, Currency
 from app.rate_cards.regional_profiles import apply_regional_standard
 from app.fx import get_fx_service
 from app.rate_cards import service as rate_card_service
+from app.rate_cards.access import rate_cards_visible_to_user_filter
 from app.rate_cards.ai_suggest import suggest_rate_card_section_for_card
 from app.schemas.rate_card import (
     ActiveRateCardResponse,
@@ -72,6 +73,7 @@ async def _to_active_response(
         id=rate_card.id,
         name=rate_card.name,
         is_active=rate_card.is_active,
+        is_system=rate_card.is_system,
         version_number=version.version_number,
         version_id=version.id,
         version_label=version.label,
@@ -94,6 +96,7 @@ async def _to_card_summary(db: AsyncSession, card: RateCard) -> RateCardSummary:
         id=card.id,
         name=card.name,
         is_active=card.is_active,
+        is_system=card.is_system,
         development_approach=DevelopmentApproach(approach_raw),
         version_count=await _count_versions(db, card.id),
         latest_version_number=latest.version_number if latest else 0,
@@ -224,9 +227,14 @@ async def list_rate_cards(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_full_account),
 ):
-    query = select(RateCard).order_by(RateCard.is_active.desc(), RateCard.created_at.desc())
-    if not user.is_admin:
-        query = query.where(RateCard.created_by == user.id)
+    query = select(RateCard).order_by(
+        RateCard.is_system.desc(),
+        RateCard.is_active.desc(),
+        RateCard.created_at.desc(),
+    )
+    visibility = rate_cards_visible_to_user_filter(user)
+    if visibility is not None:
+        query = query.where(visibility)
     result = await db.execute(query)
     cards = list(result.scalars().all())
     summaries: list[RateCardSummary] = []
@@ -268,7 +276,7 @@ async def update_rate_card_by_id(
             detail={"error": "Rate card has no versions", "code": "RATE_CARD_NOT_FOUND"},
         )
 
-    if body.name:
+    if body.name and not rate_card.is_system:
         rate_card.name = body.name.strip()
 
     version.settings = _serialize_settings(body.settings)
@@ -448,6 +456,15 @@ async def delete_rate_card(
 ):
     rate_card = await rate_card_service.get_rate_card_for_user(db, card_id, user)
 
+    if rate_card.is_system:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "The system default rate card cannot be deleted",
+                "code": "RATE_CARD_SYSTEM",
+            },
+        )
+
     usage_count = await _count_estimates_using_card(db, card_id)
     if usage_count > 0:
         raise HTTPException(
@@ -472,11 +489,12 @@ async def delete_rate_card(
         replacement_query = (
             select(RateCard)
             .where(RateCard.id != card_id)
-            .order_by(RateCard.created_at.desc())
+            .order_by(RateCard.is_system.desc(), RateCard.created_at.desc())
             .limit(1)
         )
-        if not user.is_admin:
-            replacement_query = replacement_query.where(RateCard.created_by == user.id)
+        visibility = rate_cards_visible_to_user_filter(user)
+        if visibility is not None:
+            replacement_query = replacement_query.where(visibility)
         result = await db.execute(replacement_query)
         replacement = result.scalar_one_or_none()
         if not replacement:
@@ -598,7 +616,7 @@ async def update_rate_card_version(
 
     version = await _get_version_for_rate_card(db, rate_card.id, version_id)
 
-    if body.name:
+    if body.name and not rate_card.is_system:
         rate_card.name = body.name.strip()
 
     version.settings = _serialize_settings(body.settings)
@@ -665,7 +683,7 @@ async def update_rate_card(
             detail={"error": "No active rate card", "code": "RATE_CARD_NOT_FOUND"},
         )
 
-    if body.name:
+    if body.name and not rate_card.is_system:
         rate_card.name = body.name.strip()
 
     result = await db.execute(

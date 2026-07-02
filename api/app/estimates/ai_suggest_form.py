@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ai.factory import get_ai_provider
+from app.ai.instruction_resolver import ResolvedInstructions, merge_user_message, resolve_instructions
+from app.ai.prompts import build_form_fields_system_prompt
 from app.estimates.form_fields import (
+    field_metadata_for_prompt,
     normalize_suggested_form_data,
     snapshot_fields,
     specification_schema,
@@ -75,15 +78,35 @@ async def suggest_form_for_estimate(
                 "code": "PROMPT_OR_DOCUMENTS_REQUIRED",
             },
         )
-    effective_prompt = prompt or DOCUMENT_ONLY_PROMPT
+
+    schema = snapshot_fields(estimate.form_schema_snapshot)
+    spec_schema = specification_schema(schema)
+    field_metadata = field_metadata_for_prompt(spec_schema)
+
+    instructions = await resolve_instructions(
+        db,
+        "ai_spec_assistant",
+        locale,
+        build_base_system=build_form_fields_system_prompt,
+        system_kwargs={"locale": locale, "field_metadata": field_metadata},
+    )
+
+    if prompt:
+        effective_prompt = merge_user_message(instructions.user_prefix, prompt)
+    else:
+        effective_prompt = instructions.user_prefix or DOCUMENT_ONLY_PROMPT
+
+    instructions_for_adapter = ResolvedInstructions(
+        system=instructions.system,
+        user_prefix="",
+        parameters=instructions.parameters,
+    )
+
     current_form_data = resolve_localized_dict(
         estimate.form_data,
         locale,
         content_locale,
     )
-
-    schema = snapshot_fields(estimate.form_schema_snapshot)
-    spec_schema = specification_schema(schema)
 
     try:
         provider = await get_ai_provider(db)
@@ -95,6 +118,7 @@ async def suggest_form_for_estimate(
             document_texts=document_texts,
             locale=locale,
             form_schema=spec_schema,
+            instructions=instructions_for_adapter,
         )
     except Exception as exc:
         raise AppError(

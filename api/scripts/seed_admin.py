@@ -8,38 +8,14 @@ from sqlalchemy import select
 
 from app.auth.service import hash_password
 from app.database import SessionLocal
-from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
-from app.rate_cards.defaults import DEFAULT_RATE_CARD_NAME, DEFAULT_RATE_CARD_SETTINGS
+from app.rate_cards.system import ensure_system_rate_card, sync_system_rate_card_from_defaults
 
 
-async def _ensure_rate_card(db, admin_id) -> None:
-    existing = await db.execute(select(RateCard).where(RateCard.is_active.is_(True)))
-    active_card = existing.scalar_one_or_none()
-    if active_card:
-        if not active_card.is_system:
-            active_card.is_system = True
-            print("Marked active rate card as system card")
-        else:
-            print("Active system rate card already exists")
-        return
-
-    rate_card = RateCard(
-        name=DEFAULT_RATE_CARD_NAME,
-        is_active=True,
-        is_system=True,
-        created_by=admin_id,
-    )
-    db.add(rate_card)
-    await db.flush()
-
-    version = RateCardVersion(
-        rate_card_id=rate_card.id,
-        version_number=1,
-        settings=DEFAULT_RATE_CARD_SETTINGS,
-    )
-    db.add(version)
-    print(f"Rate card created: {DEFAULT_RATE_CARD_NAME} (v1)")
+async def _ensure_rate_card(db, admin: User) -> None:
+    card = await ensure_system_rate_card(db, admin)
+    synced = await sync_system_rate_card_from_defaults(db, admin=admin)
+    print(f"System rate card ready: {synced.name} (synced from defaults if drifted)")
 
 
 async def main():
@@ -75,7 +51,7 @@ async def main():
             await db.flush()
             print("Admin created: admin@example.com / admin123")
 
-        await _ensure_rate_card(db, admin.id)
+        await _ensure_rate_card(db, admin)
         await db.commit()
 
 

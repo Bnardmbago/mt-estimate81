@@ -65,4 +65,4 @@ DEFAULT_RATE_CARD_SETTINGS = {
     "cost_breakdown_mode": "flexible",
 }
 
-DEFAULT_RATE_CARD_NAME = "2026 Standard Rates"
+DEFAULT_RATE_CARD_NAME = "Rate Card Default"

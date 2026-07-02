@@ -25,6 +25,10 @@
     "password": "パスワード",
     "submit": "ログイン",
     "error": "ログインに失敗しました",
+    "errorInvalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
+    "errorContactUseMagicLink": "コンタクトアカウントはウェルカムページのマジックリンクをご利用ください。",
+    "errorUserDisabled": "このアカウントは無効です。管理者にお問い合わせください。",
+    "errorApiUnreachable": "サーバーに接続できません。APIが起動しているか確認して再試行してください。",
     "signInToContinue": "続行するにはサインインしてください。"
   },
   "estimates": {
@@ -101,7 +105,7 @@
     "apply": "フォーム欄に適用",
     "applyHint": "構造化されたAI提案を下の質問票欄に反映します。適用後も各欄を編集できます。",
     "processingDocuments": "アップロードしたドキュメントを処理中です。抽出が完了すると生成できます。",
-    "error": "AI提案に失敗しました。再試行するか、AI設定を確認してください。",
+    "error": "AI提案に失敗しました。再試行するか、AI認証情報を確認してください。",
     "promptOrDocumentsRequired": "生成する前にプロンプトを入力するか、ドキュメントを1件以上アップロードしてください。",
     "projectNameRequired": "提案を生成する前にプロジェクト名を入力してください。",
     "saveFormBeforeGenerate": "生成前にフォームを保存できませんでした。プロジェクト名を入力して再試行してください。",
@@ -329,6 +333,26 @@
     "totalDevelopmentCostFormula": "デプロイ・引渡し検収までのNRC合計",
     "firstYearTotal": "初年度合計",
     "firstYearFormula": "初年度 = NRC + 年額RC",
+    "questionnaireIncomplete": "計算前にアンケートを完成させてください。スコープ（資料、スコープ境界、または必須機能）とデータ・UI複雑度を入力してください。",
+    "questionnaireIncompleteIntro": "計算前にアンケートを完成させてください：",
+    "questionnaireMissing": {
+      "scope_signal": "スコープを入力してください：資料をアップロードするか、技術仕様またはクライアント質問票でスコープ境界または必須機能を入力。",
+      "data_complexity": "技術仕様でデータ複雑度を設定してください。",
+      "ui_complexity": "技術仕様でUI複雑度を設定してください。"
+    },
+    "deliverySchedule": {
+      "withinBand": "見積タイムライン（{actualDays}営業日）はクライアントの希望スケジュール（目安約{targetDays}日）の範囲内です。",
+      "overBand": "見積タイムライン（{actualDays}営業日）はクライアントの希望スケジュール（目安約{targetDays}日）を超えています。段階的リリースやスコープ調整を検討してください。",
+      "unknown": "納期バンドとの比較対象がないか、クライアントが柔軟・長期のスケジュールを選択しています。"
+    },
+    "budgetComparison": {
+      "title": "クライアント予算との比較",
+      "under": "見積はクライアント予算より {amount} 低いです。",
+      "over": "見積はクライアント予算より {amount} 高いです。",
+      "aligned": "見積はクライアント予算の10%以内です。",
+      "clientBudget": "クライアント予算",
+      "calculatedNrc": "算出NRC"
+    },
     "pricing": {
       "developmentCost": "開発費用",
       "limitedTimeDiscount": "期間限定割引",
@@ -485,6 +509,8 @@
       "cardName": "レートカード名",
       "selectCard": "レートカード",
       "activeCard": "有効",
+      "systemDefault": "レートカードシステム標準",
+      "systemDefaultCardName": "レートカードデフォルト",
       "createCard": "カードを作成",
       "createCardConfirm": "作成",
       "createCardCancel": "キャンセル",
@@ -528,6 +554,7 @@
       "deleteCardError": "レートカードの削除に失敗しました",
       "deleteCardInUse": "削除できません：このレートカードは見積で使用されています。",
       "deleteLastCardHint": "少なくとも1つのレートカードが必要です。",
+      "deleteSystemCardHint": "レートカードシステム標準はシステムレートカードのため削除できません。",
       "estimateCountBadge": "{count}件の見積",
       "lockedBanner": "このレートカードは{count}件の出力済みまたは完了見積で使用されているため編集できません。変更するには複製してください。",
       "lockedSaveError": "このレートカードはロックされています。変更するには複製してください。",
@@ -561,7 +588,7 @@
         "generating": "生成中…",
         "apply": "提案を適用",
         "cancel": "キャンセル",
-        "error": "AI提案に失敗しました。再試行するかAI設定を確認してください。",
+        "error": "AI提案に失敗しました。再試行するかAI認証情報を確認してください。",
         "previewTitle": "{project} 向けの提案",
         "previewTitleNoLink": "自由入力の提案",
         "noSuggestions": "追加する新規項目がありません。別のプロンプトまたはプロジェクトをお試しください。",
@@ -606,6 +633,7 @@
         "statusActive": "有効",
         "statusInactive": "無効",
         "statusLocked": "ロック中",
+        "systemDefault": "レートカードシステム標準",
         "backToList": "← すべてのレートカード",
         "detailTitle": "レートカード詳細",
         "detailDescription": "ロール、単価、コスト前提を表示・編集します。"
@@ -619,7 +647,9 @@
       "users": "ユーザー",
       "formTemplates": "フォームテンプレート",
       "discountSettings": "割引とマークアップ",
-      "aiSettings": "AI設定",
+      "quotationSettings": "見積書設定",
+      "aiSettings": "AI認証情報",
+      "aiInstructionLayers": "AI指示レイヤー",
       "smtpSettings": "SMTP設定",
       "formulas": "計算式",
       "help": "ヘルプ",
@@ -724,8 +754,8 @@
       "upgradePassword": "フルアカウント化用パスワード"
     },
     "aiSettings": {
-      "loading": "AI設定を読み込み中…",
-      "loadError": "AI設定の読み込みに失敗しました",
+      "loading": "AI認証情報を読み込み中…",
+      "loadError": "AI認証情報の読み込みに失敗しました",
       "description": "使用中のAIプロバイダーとモデルを選択し、OpenAIおよびAnthropicのAPIキーを設定します。",
       "provider": "プロバイダー",
       "providerOpenai": "OpenAI (GPT)",
@@ -738,8 +768,8 @@
       "apiKeyNotConfigured": "未設定",
       "save": "設定を保存",
       "saving": "保存中…",
-      "saved": "AI設定を保存しました",
-      "saveError": "AI設定の保存に失敗しました",
+      "saved": "AI認証情報を保存しました",
+      "saveError": "AI認証情報の保存に失敗しました",
       "testConnection": "接続テスト",
       "testing": "テスト中…",
       "testSuccess": "接続に成功しました",
@@ -749,6 +779,57 @@
       "hermesHealth": "Hermesサービス",
       "statusOk": "正常",
       "statusIssue": "問題あり"
+    },
+    "aiInstructionLayers": {
+      "title": "AI生成指示レイヤー",
+      "loading": "指示レイヤーを読み込み中…",
+      "loadError": "指示レイヤーの読み込みに失敗しました",
+      "description": "各AI生成フロー向けの任意のプロンプトレイヤーとパラメータを設定します。空欄の場合は組み込みの既定値を使用します。",
+      "safetyNote": "空欄の項目は組み込みの既定値を使用します。JSONスキーマと見積品質のガードレールは削除できません。",
+      "locationLabel": "AIフロー",
+      "localeLabel": "言語",
+      "locations": {
+        "ai_spec_assistant": "AI技術仕様アシスタント",
+        "extraction": "AI抽出",
+        "rate_card_generation": "レートカード生成",
+        "rate_card_section": "レートカードセクションAI"
+      },
+      "systemPrompt": "システムプロンプト",
+      "systemPromptHint": "組み込みシステムプロンプトの後に追加する任意の指示です。",
+      "defaultPrompt": "デフォルトプロンプト",
+      "defaultPromptHint": "システムプロンプトの後に追加する会社方針やスタイルの既定値です。",
+      "userPrompt": "ユーザープロンプト",
+      "userPromptHints": {
+        "ai_spec_assistant": "見積担当者のプロンプトの前に付与します。プロンプト未入力時は文書のみのフォールバックを置き換えます。",
+        "extraction": "アンケートと文書の構造化コンテンツの前に追加する任意の接頭辞です。",
+        "rate_card_generation": "プロジェクト文脈の構造化コンテンツの前に追加する任意の接頭辞です。",
+        "rate_card_section": "ユーザーが入力したセクションAIプロンプトの前に付与します。"
+      },
+      "negativePrompt": "ネガティブプロンプト",
+      "negativePromptHint": "システムプロンプトに「禁止事項」セクションとして追加する任意の制約です。",
+      "parametersTitle": "パラメータ",
+      "parametersHint": "空欄の場合はこのフローの組み込み既定値を使用します。",
+      "parameters": {
+        "max_tokens": "最大トークン数",
+        "temperature": "温度",
+        "timeout_seconds": "タイムアウト（秒）",
+        "max_document_chars": "文書の最大文字数"
+      },
+      "parameterBounds": "許容範囲: {min} 〜 {max}",
+      "optionalPlaceholder": "空欄で既定値を使用",
+      "previewTitle": "マージ後プレビュー",
+      "previewHint": "組み込み既定値、カスタムレイヤー、ガードレールをマージした後のシステムプロンプトの読み取り専用プレビューです。",
+      "previewSystem": "システムプロンプト",
+      "previewUserPrefix": "ユーザー接頭辞",
+      "save": "レイヤーを保存",
+      "saving": "保存中…",
+      "saved": "指示レイヤーを保存しました",
+      "saveError": "指示レイヤーの保存に失敗しました",
+      "reset": "既定値にリセット",
+      "resetting": "リセット中…",
+      "resetConfirm": "このフローを組み込み既定値にリセットしますか？この言語のカスタムレイヤーは削除されます。",
+      "resetError": "指示レイヤーのリセットに失敗しました",
+      "invalidParameters": "パラメータに有効な数値を入力してください"
     },
     "discountSettings": {
       "loading": "割引・マークアップ設定を読み込み中…",
@@ -779,6 +860,26 @@
       "saving": "保存中…",
       "saved": "割引・マークアップ設定を保存しました",
       "saveError": "割引・マークアップ設定の保存に失敗しました"
+    },
+    "quotationSettings": {
+      "loading": "見積書設定を読み込み中…",
+      "loadError": "見積書設定の読み込みに失敗しました",
+      "description": "割引表示時に正式見積書エクスポート（PDF/DOCX）に表示される特記事項を編集します。",
+      "placeholdersTitle": "利用可能なプレースホルダー",
+      "placeholderIssueDate": "{issue_date} — 見積書発行日",
+      "placeholderSpecialPrice": "{special_price} — 割引後の開発費用（税抜）",
+      "placeholderOriginalPrice": "{original_price} — 割引前の開発費用",
+      "placeholderDiscountPercent": "{discount_percent} — 割引率（%）",
+      "placeholderDiscountAmount": "{discount_amount} — 割引額",
+      "visibilityNote": "特記事項は、見積に割引が適用されている場合のみ表示されます。",
+      "jaSection": "日本語",
+      "enSection": "英語",
+      "titleLabel": "タイトル（特記事項 / Special Notes）",
+      "bodyLabel": "本文",
+      "save": "設定を保存",
+      "saving": "保存中…",
+      "saved": "見積書設定を保存しました",
+      "saveError": "見積書設定の保存に失敗しました"
     },
     "smtpSettings": {
       "loading": "SMTP設定を読み込み中…",
@@ -1121,7 +1222,7 @@
           },
           {
             "metric": "PDF透かし",
-            "formula": "PDFエクスポートに「Contact Estimate」透かし",
+            "formula": "PDFエクスポートに「Draft Estimate」透かし",
             "notes": "Excel・Markdownには透かしなし"
           }
         ]
@@ -1174,12 +1275,200 @@
         "faqs": "FAQ",
         "documentation": "ドキュメント"
       },
+      "pipeline": {
+        "eyebrow": "システムパイプライン",
+        "title": "見積処理パイプライン",
+        "intro": "すべての見積は、アクセスからエクスポートまで同じコア段階をたどります。管理者は計算とクライアント向け成果物に適用される入力を設定します。",
+        "flowLabel": "コアフロー",
+        "adminLabel": "管理者設定",
+        "adminIntro": "これらの管理パネルは、パイプライン実行時に適用されるデフォルト、価格ルール、エクスポート内容を制御します。",
+        "stages": [
+          {
+            "id": "access",
+            "title": "アクセス",
+            "description": "コンタクトユーザーはマジックリンクで確認、フルユーザーはパスワードでサインイン。"
+          },
+          {
+            "id": "form",
+            "title": "プロジェクトフォーム",
+            "description": "見積に保存される21項目のクライアント・スコープテンプレート。"
+          },
+          {
+            "id": "upload",
+            "title": "アップロード",
+            "description": "任意のAI抽出用に要件文書を添付。"
+          },
+          {
+            "id": "extract",
+            "title": "AI抽出",
+            "description": "Hermesが機能と提案工数を返し、レビュー待ち。"
+          },
+          {
+            "id": "review",
+            "title": "レビュー",
+            "description": "計算前に機能、工数、前提条件を編集。"
+          },
+          {
+            "id": "calculate",
+            "title": "計算",
+            "description": "確定的エンジンがレートカード、割引、マークアップを適用。"
+          },
+          {
+            "id": "export",
+            "title": "エクスポート",
+            "description": "PDF/DOCX（詳細レポートまたは正式見積）、Excel、Markdown（日英）。"
+          }
+        ],
+        "adminItems": [
+          {
+            "id": "users",
+            "title": "ユーザー",
+            "description": "フルアカウントの作成、無効化、コンタクトユーザーの昇格。"
+          },
+          {
+            "id": "rate-cards",
+            "title": "レートカード",
+            "description": "コンタクト向けシステムレートカード、フルユーザー向け個別カード。"
+          },
+          {
+            "id": "ai",
+            "title": "AI認証情報",
+            "description": "文書抽出用のプロバイダー、モデル、APIキー。"
+          },
+          {
+            "id": "discount",
+            "title": "割引",
+            "description": "見積計算時に適用される全体割引率。"
+          },
+          {
+            "id": "quotation",
+            "title": "見積設定",
+            "description": "正式見積エクスポート用の特記事項タイトルと本文。"
+          },
+          {
+            "id": "templates",
+            "title": "フォームテンプレート",
+            "description": "見積作成時に使用するプロジェクトフォーム項目とデフォルト。"
+          }
+        ]
+      },
+      "userGuide": {
+        "eyebrow": "ユーザーワークフロー",
+        "title": "コンタクト vs フルユーザーガイド",
+        "intro": "サインイン後は両方とも同じ見積パイプラインを共有します。コンタクトアクセスは確認済みメールあたり1見積、システムレートカードに限定されます。",
+        "tracks": [
+          {
+            "id": "contact",
+            "title": "コンタクトユーザー",
+            "description": "ウェルカムページからのマジックリンクアクセス。パスワードやレートカード設定は不要。",
+            "steps": [
+              {
+                "icon": "login",
+                "title": "アクセス申請",
+                "description": "ウェルカムページでメール、お名前または会社名、Turnstileチェックを送信。",
+                "href": null
+              },
+              {
+                "icon": "review",
+                "title": "メール確認",
+                "description": "15分以内にワンタイムマジックリンクを開く。確認済みメールあたり1見積。",
+                "href": null
+              },
+              {
+                "icon": "create",
+                "title": "プロジェクトフォーム入力",
+                "description": "自動作成された見積で21項目フォームを入力。",
+                "href": null
+              },
+              {
+                "icon": "upload",
+                "title": "文書アップロード",
+                "description": "AI機能抽出用に要件PDFを添付。",
+                "href": null
+              },
+              {
+                "icon": "review",
+                "title": "機能レビュー",
+                "description": "計算前に抽出機能と工数を調整。",
+                "href": null
+              },
+              {
+                "icon": "calculate",
+                "title": "計算",
+                "description": "システムレートカード（Rate Card Default、JPY）で計算を実行。",
+                "href": null
+              },
+              {
+                "icon": "export",
+                "title": "エクスポート",
+                "description": "見積あたり最大3回（PDF/DOCX詳細レポートまたは正式見積、Excel、Markdown）。PDFには「Draft Estimate」透かし、各エクスポートはメール送信。",
+                "href": null
+              }
+            ]
+          },
+          {
+            "id": "full",
+            "title": "フルユーザー",
+            "description": "パスワードログイン、レートカード管理、見積数無制限。",
+            "steps": [
+              {
+                "icon": "login",
+                "title": "サインイン",
+                "description": "管理者が発行したメールとパスワードでログイン。",
+                "href": null
+              },
+              {
+                "icon": "rateCard",
+                "title": "レートカード管理",
+                "description": "ロール、フェーズ、経常項目を含むレートカードを作成または複製。",
+                "href": null
+              },
+              {
+                "icon": "create",
+                "title": "見積作成",
+                "description": "新規見積を作成し、アクティブなレートカードを選択。",
+                "href": null
+              },
+              {
+                "icon": "create",
+                "title": "プロジェクトフォーム入力",
+                "description": "構造化テンプレートにクライアントとスコープ情報を入力。",
+                "href": null
+              },
+              {
+                "icon": "upload",
+                "title": "文書アップロード",
+                "description": "任意のAI抽出用に要件文書を添付。",
+                "href": null
+              },
+              {
+                "icon": "review",
+                "title": "機能レビュー",
+                "description": "計算前に機能一覧と工数を編集。",
+                "href": null
+              },
+              {
+                "icon": "calculate",
+                "title": "計算",
+                "description": "選択したレートカード、管理者割引、マークアップルールを適用。",
+                "href": null
+              },
+              {
+                "icon": "export",
+                "title": "エクスポート",
+                "description": "詳細レポートまたは正式見積をPDF/DOCXで、Excel・Markdownも出力。エクスポート上限・透かしなし。",
+                "href": null
+              }
+            ]
+          }
+        ]
+      },
       "articles": [
         {
           "id": "contact-estimate-access",
           "title": "コンタクト見積アクセス",
           "summary": "マジックリンクサインイン、メールあたり1見積、システムレートカード、エクスポート上限。",
-          "body": "訪問者はウェルカムページからメール、お名前または会社名、Turnstileチェックでアクセスを申請します。15分有効のマジックリンクでサインインし見積が開きます—確認済みメールあたり1件です。コンタクトユーザーはシステムレートカードを自動使用（レートカード管理UIなし）。計算後、見積あたり最大3回PDF・Excel・Markdownでエクスポートでき、各エクスポートはメールで届き、PDFにはContact Estimateの透かしが入ります。管理者はコンタクトアカウントをパスワードログインとレートカードアクセス付きのフルユーザーへ昇格できます。"
+          "body": "訪問者はウェルカムページからメール、お名前または会社名、Turnstileチェックでアクセスを申請します。15分有効のマジックリンクでサインインし見積が開きます—確認済みメールあたり1件です。コンタクトユーザーはシステムレートカードを自動使用（レートカード管理UIなし）。計算後、見積あたり最大3回PDF・Excel・Markdownでエクスポートでき、各エクスポートはメールで届き、PDFには「Draft Estimate」の透かしが入ります。管理者はコンタクトアカウントをパスワードログインとレートカードアクセス付きのフルユーザーへ昇格できます。"
         },
         {
           "id": "rate-cards-basics",
@@ -1191,7 +1480,7 @@
           "id": "export-formats",
           "title": "エクスポート形式",
           "summary": "日本語または英語のPDF、Excel、Markdownエクスポート。",
-          "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。コンタクトユーザーは見積あたり3回まで。各エクスポートは自動メールされ、PDFにはContact Estimateの透かしが入ります。"
+          "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。コンタクトユーザーは見積あたり3回まで。各エクスポートは自動メールされ、PDFには「Draft Estimate」の透かしが入ります。"
         },
         {
           "id": "locale-switching",
@@ -1224,7 +1513,7 @@
         {
           "id": "export-options",
           "question": "利用できるエクスポート形式は？",
-          "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。コンタクトユーザーは見積あたり最大3回。各エクスポートは確認済みアドレスへメールされ、PDFにはContact Estimateの透かしが入ります。"
+          "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。コンタクトユーザーは見積あたり最大3回。各エクスポートは確認済みアドレスへメールされ、PDFには「Draft Estimate」の透かしが入ります。"
         },
         {
           "id": "contact-magic-link",
@@ -1385,7 +1674,10 @@
   },
   "form": {
     "selectPlaceholder": "選択してください",
+    "legacySelectValue": "以前の回答: {value}。上から選択して更新してください。",
     "required": "必須項目です",
+    "invalidNumber": "0以上の整数を入力してください",
+    "invalidCurrency": "0以上の金額を入力してください",
     "optionalWithDocuments": "ドキュメントがアップロードされています。プロジェクト名以外の項目は任意です。",
     "headerQuestionnaire": "お客様ヒアリング",
     "headerQuestionnaireDescription": "お客様から伺ったビジネス目的、利用者、機能、制約条件を記入します。",
@@ -1517,7 +1809,7 @@
         {
           "icon": "export",
           "title": "結果をエクスポート",
-          "description": "見積あたり最大3回、PDF・Excel・Markdownでエクスポートできます。各エクスポートはメールで届き、PDFにはContact Estimateの透かしが入ります。",
+          "description": "見積あたり最大3回、PDF・Excel・Markdownでエクスポートできます。各エクスポートはメールで届き、PDFには「Draft Estimate」の透かしが入ります。",
           "href": null
         }
       ]

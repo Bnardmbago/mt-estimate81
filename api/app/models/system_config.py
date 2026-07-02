@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -22,4 +22,8 @@ class SystemConfig(Base):
     smtp_use_tls: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     estimate_discount_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     estimate_markup_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quotation_special_notes_title_ja: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_special_notes_title_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_special_notes_body_ja: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_special_notes_body_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

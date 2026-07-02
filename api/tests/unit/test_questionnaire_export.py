@@ -21,14 +21,16 @@ def test_format_field_value_select_from_schema_options():
     assert format_field_value(field, "web_browser", "ja") == "Webブラウザ"
 
 
-def test_format_field_value_select_fallback_to_option_labels():
-    field = _select_field("development_location")
-    assert format_field_value(field, "hybrid", "en") == "Mix of Japan and offshore"
+def test_format_field_value_development_approach_hybrid_label():
+    field = _select_field("development_approach")
+    assert format_field_value(field, "hybrid", "en") == "Hybrid"
+    location = _select_field("development_location")
+    assert format_field_value(location, "hybrid", "en") == "Mix of Japan and offshore"
 
 
 def test_format_field_value_text_passthrough():
-    field = _select_field("desired_system")
-    assert format_field_value(field, "Customer portal", "en") == "Customer portal"
+    field = _select_field("problem_to_solve")
+    assert format_field_value(field, "Reduce manual work", "en") == "Reduce manual work"
 
 
 def test_build_questionnaire_sections_groups_header_and_specification():

@@ -4,6 +4,7 @@ from typing import Any
 
 from app.config import settings
 from app.exports.markdown import format_date
+from app.exports.pricing_summary import apply_quotation_special_notes
 from app.exports.report_context import build_report_context
 from app.models.estimate import Estimate
 
@@ -168,6 +169,7 @@ def build_quotation_context(
     rate_card_effective_date: datetime | None,
     export_revision: int,
     tax_rate: float | None = None,
+    quotation_notes_config: Any | None = None,
 ) -> dict[str, Any]:
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
@@ -214,6 +216,14 @@ def build_quotation_context(
         settings.quotation_remarks_ja if locale == "ja" else settings.quotation_remarks_en
     )
     pricing_summary = report.get("pricing_summary") or {}
+    if quotation_notes_config is not None:
+        issue_date = format_date(generated_at, locale)
+        pricing_summary = apply_quotation_special_notes(
+            pricing_summary,
+            locale,
+            issue_date,
+            quotation_notes_config,
+        )
 
     client_display = report["project_summary"]["client_name"]
     if locale == "ja" and labels["client_suffix"]:

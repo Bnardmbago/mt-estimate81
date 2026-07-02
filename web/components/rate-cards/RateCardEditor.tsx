@@ -76,6 +76,7 @@ type RateCardSettings = {
 type ActiveRateCard = {
   id: string;
   name: string;
+  is_system?: boolean;
   version_number: number;
   version_id: string;
   version_label: string | null;
@@ -122,6 +123,7 @@ type RateCardSummary = {
   id: string;
   name: string;
   is_active: boolean;
+  is_system?: boolean;
   development_approach: string;
   version_count: number;
   latest_version_number: number;
@@ -137,6 +139,13 @@ type RateCardEditorProps = {
 
 const inputClassName =
   "w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+function displayRateCardName(
+  card: { name: string; is_system?: boolean },
+  t: (key: string) => string,
+): string {
+  return card.is_system ? t("systemDefaultCardName") : card.name;
+}
 
 function defaultDailyRate(hourlyRate: number): number {
   return hourlyRate * HOURS_PER_DAY;
@@ -231,6 +240,7 @@ export default function RateCardEditor({
   const [rateCardId, setRateCardId] = useState("");
   const [cards, setCards] = useState<RateCardSummary[]>([]);
   const [cardName, setCardName] = useState("");
+  const [isSystemCard, setIsSystemCard] = useState(false);
   const [versionId, setVersionId] = useState("");
   const [versionNumber, setVersionNumber] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
@@ -262,6 +272,7 @@ export default function RateCardEditor({
     const normalized = normalizeSettings(data.settings);
     setRateCardId(data.id);
     setCardName(data.name);
+    setIsSystemCard(Boolean(data.is_system));
     setVersionId(data.version_id);
     setVersionNumber(data.version_number);
     setIsLocked(data.is_locked);
@@ -681,7 +692,7 @@ export default function RateCardEditor({
   }
 
   function openDuplicateModal() {
-    setDuplicateName(t("duplicateDefaultName", { name: cardName }));
+    setDuplicateName(t("duplicateDefaultName", { name: displayedCardName }));
     setDuplicateModalOpen(true);
     setError(null);
   }
@@ -758,6 +769,9 @@ export default function RateCardEditor({
         const detail = await readApiError(response, t("deleteCardError"));
         if (detail.code === "RATE_CARD_IN_USE") {
           throw new Error(t("deleteCardInUse"));
+        }
+        if (detail.code === "RATE_CARD_SYSTEM") {
+          throw new Error(t("deleteSystemCardHint"));
         }
         throw new Error(detail.error ?? t("deleteCardError"));
       }
@@ -949,8 +963,15 @@ export default function RateCardEditor({
     : t("fxLastUpdatedUnknown");
   const canSaveCard =
     canSaveSettings && dirty && !saving && !deletingCard && !switchingCard && !creating && !isLocked;
-  const canDeleteCard = cards.length > 1 && !deletingCard && !creating && !switchingCard && !saving;
+  const canDeleteCard =
+    !isSystemCard &&
+    cards.length > 1 &&
+    !deletingCard &&
+    !creating &&
+    !switchingCard &&
+    !saving;
   const fieldsDisabled = isLocked || saving || switchingCard || deletingCard || creating || duplicating;
+  const displayedCardName = isSystemCard ? t("systemDefaultCardName") : cardName;
 
   function formatUsageDate(value: string): string {
     return new Date(value).toLocaleDateString(locale, {
@@ -987,12 +1008,12 @@ export default function RateCardEditor({
               <span className="mb-1 block font-medium text-gray-700">{t("cardName")}</span>
               <input
                 type="text"
-                value={cardName}
+                value={displayedCardName}
                 onChange={(event) => {
                   setCardName(event.target.value);
                   markDirty();
                 }}
-                disabled={fieldsDisabled}
+                disabled={fieldsDisabled || isSystemCard}
                 className={`${inputClassName} max-w-md disabled:bg-gray-50 disabled:text-gray-600`}
               />
             </label>
@@ -1020,7 +1041,7 @@ export default function RateCardEditor({
                 >
                   {cards.map((card) => (
                     <option key={card.id} value={card.id}>
-                      {card.name}
+                      {displayRateCardName(card, t)}
                       {card.is_active ? ` (${t("activeCard")})` : ""}
                       {card.estimate_count > 0
                         ? ` (${t("estimateCountBadge", { count: card.estimate_count })})`
@@ -1071,10 +1092,12 @@ export default function RateCardEditor({
               </button>
             )}
 
-            {deleteCardConfirm ? (
+            {isSystemCard ? (
+              <p className="text-xs text-gray-500">{t("deleteSystemCardHint")}</p>
+            ) : deleteCardConfirm ? (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-gray-600">
-                  {t("deleteCardConfirm", { name: cardName })}
+                  {t("deleteCardConfirm", { name: displayedCardName })}
                 </span>
                 <button
                   type="button"
@@ -1211,7 +1234,7 @@ export default function RateCardEditor({
                 </span>
                 <input
                   type="text"
-                  value={cardName}
+                  value={displayedCardName}
                   readOnly
                   className={`${inputClassName} bg-gray-50 text-gray-600`}
                 />
@@ -1257,12 +1280,12 @@ export default function RateCardEditor({
             <span className="mb-1 block font-medium text-gray-700">{t("cardName")}</span>
             <input
               type="text"
-              value={cardName}
+              value={displayedCardName}
               onChange={(event) => {
                 setCardName(event.target.value);
                 markDirty();
               }}
-              disabled={fieldsDisabled}
+              disabled={fieldsDisabled || isSystemCard}
               className={`${inputClassName} max-w-md disabled:bg-gray-50 disabled:text-gray-600`}
             />
           </label>

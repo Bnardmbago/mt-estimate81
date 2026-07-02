@@ -112,6 +112,18 @@ export type CalculationResult = {
   nrc_original_total_jpy?: number | null;
   discount_rate_applied?: number | null;
   discount_amount_jpy?: number | null;
+  budget_comparison?: {
+    client_budget_jpy: number;
+    calculated_nrc_jpy: number;
+    delta_jpy: number;
+    status: "under" | "over" | "aligned";
+  };
+  delivery_schedule_advisory?: {
+    delivery_schedule_status: "within_band" | "over_band" | "unknown";
+    delivery_schedule_message_key?: string;
+    target_working_days?: number | null;
+    actual_working_days?: number;
+  };
 };
 
 export type ExportRecord = {

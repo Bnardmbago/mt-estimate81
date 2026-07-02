@@ -63,7 +63,7 @@ Run before each release or after major changes. Requires a running stack (`docke
 - [ ] With `AI_PROVIDER=openai` — extraction completes successfully
 - [ ] Stop API, set `AI_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`, restart API
 - [ ] Extraction completes successfully with Anthropic provider
-- [ ] Admin → AI settings tab shows correct provider/model (read-only)
+- [ ] Admin → AI credentials tab shows correct provider/model (read-only)
 
 ---
 

@@ -11,7 +11,7 @@ import EstimateRateCardPanel from "@/components/EstimateRateCardPanel";
 import ExportPanel from "@/components/ExportPanel";
 import ActualsForm from "@/components/ActualsForm";
 import FeatureItemEditor from "@/components/FeatureItemEditor";
-import GanttChart from "@/components/GanttChart";
+import GanttChart, { type DeliveryScheduleAdvisory } from "@/components/GanttChart";
 import RequirementsReview from "@/components/RequirementsReview";
 import { resolveExtractedData } from "@/lib/resolveLocalizedContent";
 
@@ -306,6 +306,9 @@ export default function EstimateExtraction({
     const showExportPanel =
       status === "calculated" || status === "exported" || status === "completed";
     const storedGantt = (estimate.calculation_result?.gantt as GanttData | undefined) ?? null;
+    const deliveryScheduleAdvisory =
+      (estimate.calculation_result as { delivery_schedule_advisory?: unknown } | null)
+        ?.delivery_schedule_advisory ?? null;
     const featureItems = estimate.feature_items ?? [];
     const canReExtract =
       status === "review" || status === "calculated" || status === "exported";
@@ -368,6 +371,9 @@ export default function EstimateExtraction({
           initialGantt={storedGantt}
           hasFeatureItems={featureItems.length > 0}
           onStartDateChange={setProjectStartDate}
+          deliveryScheduleAdvisory={
+            deliveryScheduleAdvisory as DeliveryScheduleAdvisory | null
+          }
         />
         <EstimateCalculation
           estimate={estimate}

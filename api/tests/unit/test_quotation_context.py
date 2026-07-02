@@ -99,9 +99,16 @@ def test_quotation_bank_details_default_when_setting_empty(monkeypatch):
     assert "住信SBIネット銀行 法人第一支店（ 106） 普通口座 2112728" in ctx["bank_details"]
 
 
-def test_quotation_includes_campaign_terms_when_discount_present():
+def test_quotation_includes_special_notes_when_discount_present():
     estimate = sample_estimate_with_discount()
     ctx = sample_quotation_context(estimate=estimate, locale="en")
     assert ctx["pricing_summary"]["has_discount"] is True
+    assert ctx["pricing_summary"]["campaign_terms_title"] == "Special Notes"
     assert "special discounted price" in ctx["pricing_summary"]["campaign_terms"]
     assert "¥700,000" in ctx["pricing_summary"]["campaign_terms"]
+
+
+def test_quotation_ja_special_notes_title():
+    estimate = sample_estimate_with_discount()
+    ctx = sample_quotation_context(estimate=estimate, locale="ja")
+    assert ctx["pricing_summary"]["campaign_terms_title"] == "特記事項"

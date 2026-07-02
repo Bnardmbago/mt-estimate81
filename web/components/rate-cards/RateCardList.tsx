@@ -7,6 +7,7 @@ export type RateCardListItem = {
   id: string;
   name: string;
   is_active: boolean;
+  is_system?: boolean;
   development_approach: string;
   estimate_count: number;
   is_locked: boolean;
@@ -46,6 +47,10 @@ export default function RateCardList({
     return t("statusInactive");
   }
 
+  function displayRateCardName(card: RateCardListItem): string {
+    return card.is_system ? tRateCards("systemDefaultCardName") : card.name;
+  }
+
   return (
     <section className="mt-10 border-t border-gray-200 pt-8">
       <h2 className="text-lg font-semibold text-gray-900">{t("title")}</h2>
@@ -83,7 +88,7 @@ export default function RateCardList({
                         href={`/${locale}/rate-cards/${card.id}`}
                         className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
                       >
-                        {card.name}
+                        {displayRateCardName(card)}
                       </Link>
                     </td>
                     <td className="px-4 py-2.5 text-gray-700">

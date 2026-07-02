@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from types import SimpleNamespace
 
+from app.admin.quotation_notes_config import default_quotation_notes_config
 from app.exports.quotation_context import build_quotation_context
 from app.exports.report_context import build_report_context
 from app.i18n.localized_content import store_localized_dict
@@ -169,7 +170,7 @@ def sample_report_context(
     *,
     locale: str = "en",
     generated_at: datetime | None = None,
-    rate_card_name: str | None = "2026 Standard Rates",
+    rate_card_name: str | None = "Rate Card Default",
     rate_card_version_number: int | None = 2,
     rate_card_effective_date: datetime | None = None,
     export_revision: int = 1,
@@ -193,7 +194,7 @@ def sample_quotation_context(
     *,
     locale: str = "en",
     generated_at: datetime | None = None,
-    rate_card_name: str | None = "2026 Standard Rates",
+    rate_card_name: str | None = "Rate Card Default",
     rate_card_version_number: int | None = 2,
     rate_card_effective_date: datetime | None = None,
     export_revision: int = 1,
@@ -209,4 +210,5 @@ def sample_quotation_context(
         rate_card_effective_date=rate_card_effective_date or datetime(2026, 1, 1),
         export_revision=export_revision,
         tax_rate=tax_rate,
+        quotation_notes_config=default_quotation_notes_config(),
     )

@@ -33,12 +33,20 @@ export type GanttData = {
   tasks: GanttTask[];
 };
 
+export type DeliveryScheduleAdvisory = {
+  delivery_schedule_status: "within_band" | "over_band" | "unknown";
+  delivery_schedule_message_key?: string;
+  target_working_days?: number | null;
+  actual_working_days?: number;
+};
+
 type GanttChartProps = {
   estimateId: string;
   initialStartDate: string | null;
   initialGantt: GanttData | null;
   hasFeatureItems: boolean;
   onStartDateChange?: (value: string) => void;
+  deliveryScheduleAdvisory?: DeliveryScheduleAdvisory | null;
 };
 
 const inputClassName =
@@ -105,6 +113,7 @@ export default function GanttChart({
   initialGantt,
   hasFeatureItems,
   onStartDateChange,
+  deliveryScheduleAdvisory = null,
 }: GanttChartProps) {
   const t = useTranslations("gantt");
   const tCalc = useTranslations("calculation");
@@ -254,6 +263,31 @@ export default function GanttChart({
         </p>
       )}
 
+      {deliveryScheduleAdvisory && (
+        <div
+          className={`mb-4 rounded-lg border p-4 text-sm ${
+            deliveryScheduleAdvisory.delivery_schedule_status === "over_band"
+              ? "border-amber-300 bg-amber-50 text-amber-900"
+              : deliveryScheduleAdvisory.delivery_schedule_status === "within_band"
+                ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                : "border-gray-200 bg-gray-50 text-gray-700"
+          }`}
+          role="status"
+        >
+          {deliveryScheduleAdvisory.delivery_schedule_status === "unknown"
+            ? tCalc("deliverySchedule.unknown")
+            : tCalc(
+                deliveryScheduleAdvisory.delivery_schedule_status === "within_band"
+                  ? "deliverySchedule.withinBand"
+                  : "deliverySchedule.overBand",
+                {
+                  actualDays: deliveryScheduleAdvisory.actual_working_days ?? 0,
+                  targetDays: deliveryScheduleAdvisory.target_working_days ?? 0,
+                },
+              )}
+        </div>
+      )}
+
       {loading && !gantt && <p className="text-sm text-gray-500">{t("loading")}</p>}
 
       {gantt && gantt.tasks.length > 0 && (
@@ -311,30 +345,30 @@ export default function GanttChart({
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <table className="min-w-[56rem] w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">{t("task")}</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">{t("phase")}</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">{t("role")}</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700">{tCalc("headcount")}</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700">{t("hours")}</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">{t("startDate")}</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-700">{t("endDate")}</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-700">{t("durationDays")}</th>
+                  <th className="min-w-[10rem] px-3 py-2 text-left font-medium text-gray-700">{t("task")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-700">{t("phase")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-700">{t("role")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium text-gray-700">{tCalc("headcount")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium text-gray-700">{t("hours")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-700">{t("startDate")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-left font-medium text-gray-700">{t("endDate")}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium text-gray-700">{t("durationDays")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {gantt.tasks.map((task) => (
                   <tr key={`row-${task.feature_item_id ?? task.name}-${task.start_date}`}>
-                    <td className="px-3 py-2">{task.name}</td>
-                    <td className="px-3 py-2">{translatePhase(task.phase)}</td>
-                    <td className="px-3 py-2">{translateRole(task.role)}</td>
-                    <td className="px-3 py-2 text-right">{task.personnel_count ?? 1}</td>
-                    <td className="px-3 py-2 text-right">{task.hours}</td>
-                    <td className="px-3 py-2">{formatDisplayDate(task.start_date, locale)}</td>
-                    <td className="px-3 py-2">{formatDisplayDate(task.end_date, locale)}</td>
-                    <td className="px-3 py-2 text-right">{task.duration_working_days}</td>
+                    <td className="min-w-[10rem] px-3 py-2">{task.name}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{translatePhase(task.phase)}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{translateRole(task.role)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right">{task.personnel_count ?? 1}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right">{task.hours}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{formatDisplayDate(task.start_date, locale)}</td>
+                    <td className="whitespace-nowrap px-3 py-2">{formatDisplayDate(task.end_date, locale)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right">{task.duration_working_days}</td>
                   </tr>
                 ))}
               </tbody>

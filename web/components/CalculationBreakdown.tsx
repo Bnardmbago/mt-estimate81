@@ -71,6 +71,18 @@ export type CalculationResult = {
   nrc_original_total_jpy?: number | null;
   discount_rate_applied?: number | null;
   discount_amount_jpy?: number | null;
+  budget_comparison?: {
+    client_budget_jpy: number;
+    calculated_nrc_jpy: number;
+    delta_jpy: number;
+    status: "under" | "over" | "aligned";
+  };
+  delivery_schedule_advisory?: {
+    delivery_schedule_status: "within_band" | "over_band" | "unknown";
+    delivery_schedule_message_key?: string;
+    target_working_days?: number | null;
+    actual_working_days?: number;
+  };
 };
 
 type CalculationBreakdownProps = {
@@ -369,6 +381,35 @@ export default function CalculationBreakdown({
 
       {!embedded && (
         <>
+          {result.budget_comparison && (
+            <div
+              className={`rounded-lg border p-4 ${
+                result.budget_comparison.status === "over"
+                  ? "border-amber-300 bg-amber-50"
+                  : result.budget_comparison.status === "under"
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-gray-200 bg-gray-50"
+              }`}
+            >
+              <p className="text-sm font-medium text-gray-800">{t("budgetComparison.title")}</p>
+              <p className="mt-1 text-sm text-gray-700">
+                {t(`budgetComparison.${result.budget_comparison.status}`, {
+                  amount: formatJpy(Math.abs(result.budget_comparison.delta_jpy)),
+                })}
+              </p>
+              <div className="mt-2 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
+                <p>
+                  {t("budgetComparison.clientBudget")}:{" "}
+                  {formatJpy(result.budget_comparison.client_budget_jpy)}
+                </p>
+                <p>
+                  {t("budgetComparison.calculatedNrc")}:{" "}
+                  {formatJpy(result.budget_comparison.calculated_nrc_jpy)}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div
             id="total-development-cost"
             className="scroll-mt-20 rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4"

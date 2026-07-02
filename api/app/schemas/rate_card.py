@@ -57,6 +57,7 @@ class ActiveRateCardResponse(BaseModel):
     id: uuid.UUID
     name: str
     is_active: bool
+    is_system: bool = False
     version_number: int
     version_id: uuid.UUID
     version_label: str | None
@@ -71,6 +72,7 @@ class RateCardSummary(BaseModel):
     id: uuid.UUID
     name: str
     is_active: bool
+    is_system: bool = False
     development_approach: DevelopmentApproach
     version_count: int
     latest_version_number: int

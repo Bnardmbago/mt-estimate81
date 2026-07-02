@@ -11,10 +11,11 @@ from app.auth.web_base_url import resolve_web_base_url
 from app.config import settings
 from app.dependencies import get_db, require_admin
 from app.email.smtp import smtp_configured
-from app.rate_cards.system import get_system_rate_card
+from app.rate_cards.system import get_system_rate_card, sync_system_rate_card_from_defaults
 from app.documents.hermes_client import HermesClient
 from app.estimates.extraction import STUCK_EXTRACTION_MINUTES
 from app.models.estimate import Estimate, EstimateStatus
+from app.models.rate_card import RateCardVersion
 from app.models.user import User
 from app.storage.factory import get_storage_backend
 
@@ -93,4 +94,45 @@ async def system_health(
         contact_magic_link_ttl_minutes=settings.contact_magic_link_ttl_minutes,
         web_base_url=resolve_web_base_url(),
         system_rate_card_configured=system_rate_card is not None,
+    )
+
+
+class SyncRateCardDefaultsResponse(BaseModel):
+    rate_card_id: str
+    rate_card_name: str
+    synced: bool
+    version_number: int
+
+
+@router.post("/sync-rate-card-defaults", response_model=SyncRateCardDefaultsResponse)
+async def sync_rate_card_defaults(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    before = await get_system_rate_card(db)
+    before_version = None
+    if before:
+        version_result = await db.execute(
+            select(func.max(RateCardVersion.version_number)).where(
+                RateCardVersion.rate_card_id == before.id
+            )
+        )
+        before_version = version_result.scalar_one()
+
+    rate_card = await sync_system_rate_card_from_defaults(db, admin=admin)
+    await db.commit()
+
+    latest = await db.execute(
+        select(func.max(RateCardVersion.version_number)).where(
+            RateCardVersion.rate_card_id == rate_card.id
+        )
+    )
+    version_number = int(latest.scalar_one() or 1)
+    synced = before is None or version_number != int(before_version or 0)
+
+    return SyncRateCardDefaultsResponse(
+        rate_card_id=str(rate_card.id),
+        rate_card_name=rate_card.name,
+        synced=synced,
+        version_number=version_number,
     )

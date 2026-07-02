@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from app.exports.markdown import format_currency
@@ -31,6 +32,27 @@ PRICING_LABELS: dict[str, dict[str, str]] = {
     },
 }
 
+DEFAULT_QUOTATION_SPECIAL_NOTES: dict[str, dict[str, str]] = {
+    "ja": {
+        "title": "特記事項",
+        "body": PRICING_LABELS["ja"]["campaign_terms_body"],
+    },
+    "en": {
+        "title": "Special Notes",
+        "body": PRICING_LABELS["en"]["campaign_terms_body"],
+    },
+}
+
+_PLACEHOLDER_PATTERN = re.compile(r"\{([a-z_]+)\}")
+
+
+def render_special_notes(template: str, variables: dict[str, str]) -> str:
+    def replace(match: re.Match[str]) -> str:
+        key = match.group(1)
+        return variables.get(key, match.group(0))
+
+    return _PLACEHOLDER_PATTERN.sub(replace, template)
+
 
 def build_campaign_terms(locale: str, special_price_jpy: int, issue_date: str) -> str:
     labels = PRICING_LABELS[locale]
@@ -39,6 +61,47 @@ def build_campaign_terms(locale: str, special_price_jpy: int, issue_date: str) -
         issue_date=issue_date,
         special_price=special_price,
     )
+
+
+def build_special_notes_variables(
+    pricing_summary: dict[str, Any],
+    locale: str,
+    issue_date: str,
+) -> dict[str, str]:
+    labels = PRICING_LABELS[locale]
+    nrc_discounted = int(pricing_summary["nrc_discounted_total_jpy"])
+    special_price = f"{format_currency(nrc_discounted)} {labels['excluding_tax']}"
+    original = int(pricing_summary.get("nrc_original_total_jpy") or nrc_discounted)
+    amount = int(pricing_summary.get("discount_amount_jpy") or max(original - nrc_discounted, 0))
+    percent = int(pricing_summary.get("discount_percent_display") or 0)
+
+    return {
+        "issue_date": issue_date,
+        "special_price": special_price,
+        "original_price": format_currency(original),
+        "discount_percent": str(percent),
+        "discount_amount": format_currency(amount),
+    }
+
+
+def apply_quotation_special_notes(
+    pricing_summary: dict[str, Any],
+    locale: str,
+    issue_date: str,
+    notes_config: Any,
+) -> dict[str, Any]:
+    if not pricing_summary.get("has_discount"):
+        return pricing_summary
+
+    title = notes_config.title_ja if locale == "ja" else notes_config.title_en
+    body_template = notes_config.body_ja if locale == "ja" else notes_config.body_en
+    variables = build_special_notes_variables(pricing_summary, locale, issue_date)
+    body = render_special_notes(body_template, variables)
+
+    updated = dict(pricing_summary)
+    updated["campaign_terms_title"] = title
+    updated["campaign_terms"] = body
+    return updated
 
 
 def build_pricing_summary(
