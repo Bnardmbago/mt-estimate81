@@ -22,7 +22,7 @@ export default async function AppHeader({
   const t = await getTranslations("nav");
 
   return (
-    <header className="relative border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
         <AppHeaderNav
           locale={locale}
