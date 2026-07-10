@@ -13,7 +13,9 @@ from app.auth.service import create_access_token, hash_password, verify_password
 from app.main import app
 from app.models.contact_magic_link import ContactMagicLink
 from app.models.estimate import Estimate, EstimateStatus
+from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import ACCOUNT_TYPE_CONTACT, User
+from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 
 
 @pytest.fixture
@@ -221,6 +223,51 @@ async def test_delete_contact_user_with_magic_link_and_estimate(
         select(Estimate).where(Estimate.created_by == contact.id)
     )
     assert list(estimates.scalars().all()) == []
+
+
+@pytest.mark.asyncio
+async def test_delete_contact_user_with_owned_rate_card(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+    db_session: AsyncSession,
+):
+    contact = User(
+        id=uuid.uuid4(),
+        email="contact-rate-card-delete@example.com",
+        password_hash=None,
+        display_name="Contact Rate Card Delete",
+        account_type=ACCOUNT_TYPE_CONTACT,
+        preferred_locale="en",
+    )
+    db_session.add(contact)
+    await db_session.flush()
+
+    rate_card = RateCard(
+        name="Contact Owned Card",
+        is_active=False,
+        created_by=contact.id,
+    )
+    db_session.add(rate_card)
+    await db_session.flush()
+    db_session.add(
+        RateCardVersion(
+            rate_card_id=rate_card.id,
+            version_number=1,
+            settings=DEFAULT_RATE_CARD_SETTINGS,
+        )
+    )
+    await db_session.commit()
+
+    delete = await client.delete(f"/admin/users/{contact.id}", headers=admin_headers)
+    assert delete.status_code == 204
+
+    users = await client.get("/admin/users", headers=admin_headers)
+    assert all(user["id"] != str(contact.id) for user in users.json())
+
+    remaining_cards = await db_session.execute(
+        select(RateCard).where(RateCard.created_by == contact.id)
+    )
+    assert list(remaining_cards.scalars().all()) == []
 
 
 @pytest.mark.asyncio

@@ -1,14 +1,14 @@
 import uuid
 
 from fastapi import HTTPException
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.audit import AuditLog
 from app.models.contact_magic_link import ContactMagicLink
 from app.models.estimate import Actuals, Estimate, Export
-from app.models.rate_card import RateCard
+from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
 from app.storage.factory import get_storage_backend
 
@@ -55,16 +55,23 @@ async def _delete_orphaned_actuals(db: AsyncSession, user_id: uuid.UUID) -> None
 
 
 async def _delete_user_rate_cards(db: AsyncSession, user_id: uuid.UUID) -> None:
-    result = await db.execute(select(RateCard).where(RateCard.created_by == user_id))
-    rate_cards = list(result.scalars().all())
-    if not rate_cards:
+    result = await db.execute(select(RateCard.id).where(RateCard.created_by == user_id))
+    card_ids = [row[0] for row in result.all()]
+    if not card_ids:
         return
 
-    card_ids = [card.id for card in rate_cards]
+    version_ids = list(
+        (
+            await db.execute(
+                select(RateCardVersion.id).where(RateCardVersion.rate_card_id.in_(card_ids))
+            )
+        ).scalars().all()
+    )
+    in_use_filters = [Estimate.rate_card_id.in_(card_ids)]
+    if version_ids:
+        in_use_filters.append(Estimate.rate_card_version_id.in_(version_ids))
     in_use = await db.scalar(
-        select(func.count())
-        .select_from(Estimate)
-        .where(Estimate.rate_card_id.in_(card_ids))
+        select(func.count()).select_from(Estimate).where(or_(*in_use_filters))
     )
     if in_use:
         raise HTTPException(
@@ -76,8 +83,9 @@ async def _delete_user_rate_cards(db: AsyncSession, user_id: uuid.UUID) -> None:
             },
         )
 
-    for rate_card in rate_cards:
-        await db.delete(rate_card)
+    if version_ids:
+        await db.execute(delete(RateCardVersion).where(RateCardVersion.id.in_(version_ids)))
+    await db.execute(delete(RateCard).where(RateCard.id.in_(card_ids)))
 
 
 async def delete_user_and_dependencies(db: AsyncSession, user: User) -> None:
@@ -88,5 +96,6 @@ async def delete_user_and_dependencies(db: AsyncSession, user: User) -> None:
     await _delete_orphaned_exports(db, user.id)
     await _delete_orphaned_actuals(db, user.id)
     await _delete_user_rate_cards(db, user.id)
+    await db.flush()
     await db.delete(user)
     await db.commit()
