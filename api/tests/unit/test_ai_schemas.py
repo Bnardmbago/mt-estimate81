@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from app.ai.schemas import (
     CostDriverSuggestion,
+    EstimateFormFieldsSuggestion,
     ExtractedRequirements,
     FeatureItemSuggestion,
     accuracy_level_from_score,
@@ -69,3 +70,19 @@ def test_confidence_score_bounds():
 def test_invalid_feature_item_rejected():
     with pytest.raises(ValidationError):
         FeatureItemSuggestion(name="", description="", suggested_hours=-1, phase="dev", role="dev")
+
+
+def test_estimate_form_fields_suggestion_coerces_numeric_values():
+    suggestion = EstimateFormFieldsSuggestion.model_validate(
+        {
+            "form_data": {
+                "integration_count": 0,
+                "expected_user_count": 120,
+                "business_domain": "retail",
+            },
+            "generation_notes": "No integrations required.",
+        }
+    )
+    assert suggestion.form_data["integration_count"] == "0"
+    assert suggestion.form_data["expected_user_count"] == "120"
+    assert suggestion.form_data["business_domain"] == "retail"

@@ -110,3 +110,18 @@ def accuracy_level_from_score(score: float) -> Literal["high", "medium", "low"]:
 class EstimateFormFieldsSuggestion(BaseModel):
     form_data: dict[str, str] = Field(default_factory=dict)
     generation_notes: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_form_data_values(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        form_data = data.get("form_data")
+        if not isinstance(form_data, dict):
+            return data
+        coerced = dict(data)
+        coerced["form_data"] = {
+            key: "" if value is None else str(value)
+            for key, value in form_data.items()
+        }
+        return coerced
