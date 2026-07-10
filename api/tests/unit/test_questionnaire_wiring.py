@@ -11,6 +11,7 @@ from app.estimates.questionnaire_validation import missing_questionnaire_fields_
 def test_delivery_schedule_target_working_days():
     assert delivery_schedule_target_working_days("asap") == 45
     assert delivery_schedule_target_working_days("flexible") is None
+    assert delivery_schedule_target_working_days("over_12_months") == 520
 
 
 def test_build_delivery_schedule_advisory_over_band():

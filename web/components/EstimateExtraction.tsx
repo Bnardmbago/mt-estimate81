@@ -23,6 +23,17 @@ type EstimateExtractionProps = {
   isContactUser?: boolean;
 };
 
+type ConstraintConfirmation = {
+  pending?: boolean;
+  budget_below_minimum?: boolean;
+  schedule_below_minimum?: boolean;
+  original_total_hours?: number;
+  max_hours_cap?: number;
+  binding_constraint?: "budget" | "schedule" | null;
+  estimation_warnings?: string[];
+  estimate_exclusions?: string[];
+};
+
 type EstimateStatusResponse = {
   status: string;
   extraction_progress: {
@@ -31,6 +42,7 @@ type EstimateStatusResponse = {
     phase?: "documents" | "rate_card" | "ai" | "rate_card_tune";
   } | null;
   extraction_error: string | null;
+  constraint_confirmation?: ConstraintConfirmation | null;
 };
 
 const emptyExtractedData = (): ExtractedData => resolveExtractedData(null, "ja", "ja");
@@ -97,10 +109,26 @@ export default function EstimateExtraction({
   const extractionPendingRef = useRef(false);
   const extractionStartedAtRef = useRef<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [constraintConfirmation, setConstraintConfirmation] =
+    useState<ConstraintConfirmation | null>(null);
+  const [constraintProcessing, setConstraintProcessing] = useState(false);
 
   useEffect(() => {
     setStatus(estimate.status);
-  }, [estimate.status]);
+    if (estimate.status === "constraint_paused") {
+      const extracted = resolveExtractedData(
+        estimate.extracted_data as Record<string, unknown> | null,
+        locale,
+        estimate.locale,
+      );
+      const confirmation = (
+        extracted as Record<string, unknown> & { constraint_confirmation?: ConstraintConfirmation }
+      ).constraint_confirmation;
+      if (confirmation?.pending) {
+        setConstraintConfirmation(confirmation);
+      }
+    }
+  }, [estimate.status, estimate.extracted_data, estimate.locale, locale]);
 
   useEffect(() => {
     setProjectStartDate(estimate.project_start_date ?? null);
@@ -134,6 +162,13 @@ export default function EstimateExtraction({
       setStatus(response.status);
       setProgress(response.extraction_progress);
 
+      if (response.status === "constraint_paused") {
+        extractionPendingRef.current = false;
+        setExtracting(false);
+        setConstraintConfirmation(response.constraint_confirmation ?? null);
+        return;
+      }
+
       if (response.status === "extracting") {
         return;
       }
@@ -154,6 +189,7 @@ export default function EstimateExtraction({
       if (response.status === "review" || response.status === "calculated" || response.status === "exported") {
         extractionPendingRef.current = false;
         setExtracting(false);
+        setConstraintConfirmation(null);
         setError(null);
         router.refresh();
         return;
@@ -200,7 +236,19 @@ export default function EstimateExtraction({
   }, [status, extracting]);
 
   useEffect(() => {
-    if (status !== "extracting" && !extracting) {
+    if (status !== "constraint_paused") {
+      return;
+    }
+    void pollStatus();
+  }, [status, pollStatus]);
+
+  useEffect(() => {
+    if (status !== "extracting" && !extracting && status !== "constraint_paused") {
+      return;
+    }
+
+    if (status === "constraint_paused") {
+      void pollStatus();
       return;
     }
 
@@ -251,6 +299,147 @@ export default function EstimateExtraction({
       setStatus(estimate.status);
       setError(extractError instanceof Error ? extractError.message : t("extractError"));
     }
+  }
+
+  async function handleConstraintDecision(decision: "stop" | "continue") {
+    setConstraintProcessing(true);
+    setError(null);
+    try {
+      const response = await apiFetch(
+        `/estimates/${estimate.id}/extract/constraint-confirmation`,
+        {
+          method: "POST",
+          body: JSON.stringify({ decision }),
+        },
+        locale,
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(parseApiError(payload, t("constraintConfirmationError")));
+      }
+      if (decision === "stop") {
+        setConstraintConfirmation(null);
+        setStatus("draft");
+        router.refresh();
+        return;
+      }
+      extractionPendingRef.current = true;
+      setExtracting(true);
+      setStatus("extracting");
+      setConstraintConfirmation(null);
+      await pollStatus();
+    } catch (decisionError) {
+      setError(
+        decisionError instanceof Error
+          ? decisionError.message
+          : t("constraintConfirmationError"),
+      );
+    } finally {
+      setConstraintProcessing(false);
+    }
+  }
+
+  function constraintConfirmationBody(confirmation: ConstraintConfirmation): string {
+    if (confirmation.budget_below_minimum && confirmation.schedule_below_minimum) {
+      return t("constraintConfirmationBody");
+    }
+    if (confirmation.budget_below_minimum) {
+      return t("constraintConfirmationBodyBudgetOnly");
+    }
+    return t("constraintConfirmationBodyScheduleOnly");
+  }
+
+  if (status === "constraint_paused") {
+    if (!constraintConfirmation) {
+      return (
+        <section className="mt-8 border-t border-gray-200 pt-8">
+          <p className="text-sm text-gray-500">{t("constraintConfirmationProcessing")}</p>
+        </section>
+      );
+    }
+
+    const bindingLabel =
+      constraintConfirmation.binding_constraint === "schedule"
+        ? t("constraintBindingSchedule")
+        : t("constraintBindingBudget");
+    const warnings = constraintConfirmation.estimation_warnings ?? [];
+    const exclusions = constraintConfirmation.estimate_exclusions ?? [];
+
+    return (
+      <section className="mt-8 border-t border-gray-200 pt-8">
+        <div
+          className="mx-auto max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-6 shadow-sm"
+          role="dialog"
+          aria-labelledby="constraint-confirmation-title"
+        >
+          <h2 id="constraint-confirmation-title" className="text-lg font-semibold text-amber-950">
+            {t("constraintConfirmationTitle")}
+          </h2>
+          <p className="mt-2 text-sm text-amber-900">
+            {constraintConfirmationBody(constraintConfirmation)}
+          </p>
+          <p className="mt-2 text-sm font-medium text-amber-950">
+            {t("constraintConfirmationHours", {
+              originalHours: constraintConfirmation.original_total_hours ?? 0,
+              capHours: constraintConfirmation.max_hours_cap ?? 0,
+              binding: bindingLabel,
+            })}
+          </p>
+          {warnings.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-amber-950">
+                {t("constraintConfirmationWarnings")}
+              </p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-amber-900">
+                {warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {exclusions.length > 0 ? (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-amber-950">
+                {t("constraintConfirmationExclusions")}
+              </p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-amber-900">
+                {exclusions.map((exclusion) => (
+                  <li key={exclusion}>{exclusion}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {error ? (
+            <p
+              className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              role="alert"
+            >
+              {error}
+            </p>
+          ) : null}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleConstraintDecision("stop")}
+              disabled={constraintProcessing}
+              className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {t("constraintConfirmationStop")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleConstraintDecision("continue")}
+              disabled={constraintProcessing}
+              className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {constraintProcessing
+                ? t("constraintConfirmationProcessing")
+                : t("constraintConfirmationContinue")}
+            </button>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (status === "extracting" || extracting) {
@@ -359,6 +548,26 @@ export default function EstimateExtraction({
             </div>
           </section>
         )}
+        {extractedData.extraction_constraints?.hours_scaled ? (
+          <div
+            className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            role="status"
+          >
+            <p className="font-medium">{t("constraintScaledTitle")}</p>
+            <p className="mt-1">
+              {t("constraintScaledDescription", {
+                originalHours: extractedData.extraction_constraints.original_total_hours ?? 0,
+                adjustedHours: extractedData.extraction_constraints.adjusted_total_hours ?? 0,
+                factor: extractedData.extraction_constraints.applied_scale_factor ?? 1,
+                capHours: extractedData.extraction_constraints.max_hours_cap ?? 0,
+                binding:
+                  extractedData.extraction_constraints.binding_constraint === "schedule"
+                    ? t("constraintBindingSchedule")
+                    : t("constraintBindingBudget"),
+              })}
+            </p>
+          </div>
+        ) : null}
         <RequirementsReview
           estimateId={estimate.id}
           estimateUpdatedAt={estimate.updated_at}

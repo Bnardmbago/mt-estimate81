@@ -107,7 +107,6 @@ export function resolveExtractedData(
   );
 
   return {
-    ...emptyExtractedData(),
     functional_requirements: asStringArray(resolved.functional_requirements),
     non_functional_requirements: asStringArray(resolved.non_functional_requirements),
     user_roles: asStringArray(resolved.user_roles),
@@ -117,5 +116,14 @@ export function resolveExtractedData(
     gaps: asStringArray(resolved.gaps),
     confidence_notes:
       typeof resolved.confidence_notes === "string" ? resolved.confidence_notes : "",
+    complexity_profile:
+      resolved.complexity_profile && typeof resolved.complexity_profile === "object"
+        ? (resolved.complexity_profile as ExtractedData["complexity_profile"])
+        : undefined,
+    estimation_warnings: asStringArray(resolved.estimation_warnings),
+    extraction_constraints:
+      resolved.extraction_constraints && typeof resolved.extraction_constraints === "object"
+        ? (resolved.extraction_constraints as ExtractedData["extraction_constraints"])
+        : undefined,
   };
 }

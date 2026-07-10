@@ -1,6 +1,7 @@
 from typing import Any, Literal, Protocol
 
 from app.ai.instruction_resolver import ResolvedInstructions
+from app.estimates.extraction_constraints import ExtractionConstraints
 from app.ai.schemas import (
     EstimateFormFieldsSuggestion,
     ExtractedRequirements,
@@ -21,6 +22,7 @@ class AIProvider(Protocol):
         *,
         rate_card_roles: list[dict[str, Any]] | None = None,
         instructions: ResolvedInstructions | None = None,
+        client_constraints: ExtractionConstraints | None = None,
     ) -> ExtractedRequirements: ...
 
     async def generate_rate_card(

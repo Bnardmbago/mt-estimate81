@@ -8,3 +8,8 @@ def test_each_location_has_guardrails_with_json_schema_language():
         assert guardrails
         assert "valid JSON" in guardrails
         assert location in LOCATION_GUARDRAILS
+
+
+def test_extraction_guardrails_mention_estimation_warnings():
+    guardrails = get_guardrails("extraction")
+    assert "estimation_warnings" in guardrails

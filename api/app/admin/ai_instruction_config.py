@@ -31,6 +31,55 @@ DEFAULT_PARAMETERS: dict[str, int | float] = {
 EXTRACTION_DEFAULT_MAX_DOCUMENT_CHARS = 40_000
 
 
+def get_prompt_defaults(
+    location: InstructionLocation,
+    locale: InstructionLocale,
+) -> dict[str, str | None]:
+    from app.admin.ai_instruction_preview import build_preview_base_system
+    from app.ai.extraction_constraint_prompts import (
+        get_default_constraint_negative_prompt,
+        get_default_constraint_system_prompt,
+        get_default_constraint_user_prompt_template,
+    )
+    from app.ai.guardrails import get_guardrails
+
+    if location == "extraction_client_constraints":
+        return {
+            "system_prompt": get_default_constraint_system_prompt(locale),
+            "default_prompt": get_guardrails(location),
+            "user_prompt": get_default_constraint_user_prompt_template(locale),
+            "negative_prompt": get_default_constraint_negative_prompt(locale),
+        }
+
+    return {
+        "system_prompt": build_preview_base_system(location, locale),
+        "default_prompt": get_guardrails(location),
+        "user_prompt": None,
+        "negative_prompt": None,
+    }
+
+
+def effective_prompt_fields(
+    location: InstructionLocation,
+    locale: InstructionLocale,
+    layer: AiInstructionLayer | None,
+) -> dict[str, str | None]:
+    defaults = get_prompt_defaults(location, locale)
+
+    def pick(field: str) -> str | None:
+        stored = getattr(layer, field, None) if layer else None
+        if stored is not None and str(stored).strip():
+            return str(stored).strip()
+        return defaults.get(field)
+
+    return {
+        "system_prompt": pick("system_prompt"),
+        "default_prompt": pick("default_prompt"),
+        "user_prompt": pick("user_prompt"),
+        "negative_prompt": pick("negative_prompt"),
+    }
+
+
 def is_valid_location(value: str) -> bool:
     return value in INSTRUCTION_LOCATIONS
 

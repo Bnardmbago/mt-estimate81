@@ -1,51 +1,53 @@
 import pytest
 
-from app.admin.ai_instruction_config import validate_parameters
+from app.admin.ai_instruction_config import get_prompt_defaults, validate_parameters
 from app.ai.guardrails import get_guardrails
 from app.ai.instruction_resolver import (
+    ResolvedInstructions,
+    merge_client_constraint_instructions,
     merge_system_prompt,
     merge_user_message,
     preview_instructions,
 )
-from app.models.ai_instruction_layer import INSTRUCTION_LOCATIONS
+from app.models.ai_instruction_layer import INSTRUCTION_LOCATIONS, INSTRUCTION_LOCALES
 
 
-def test_merge_system_prompt_blank_admin_layers_only_adds_guardrails():
+def test_merge_system_prompt_without_layers_returns_base_only():
     base = "Base system prompt."
     merged = merge_system_prompt(
         location="extraction",
         base_system=base,
     )
-    assert merged.startswith(base)
-    assert get_guardrails("extraction") in merged
+    assert merged == base
 
 
 def test_merge_system_prompt_appends_layers_in_order():
-    base = "Base."
     merged = merge_system_prompt(
         location="ai_spec_assistant",
-        base_system=base,
+        base_system="",
         system_prompt="Admin system.",
         default_prompt="Admin default.",
         negative_prompt="Do not invent fields.",
     )
-    assert merged.index("Base.") < merged.index("Admin system.")
     assert merged.index("Admin system.") < merged.index("Admin default.")
     assert merged.index("Admin default.") < merged.index("## Restrictions")
     assert merged.index("## Restrictions") < merged.index("Do not invent fields.")
-    assert merged.endswith(get_guardrails("ai_spec_assistant"))
 
 
-def test_guardrails_always_present_when_admin_fills_all_fields():
+def test_prompt_defaults_include_system_and_guardrails_for_each_location():
     for location in INSTRUCTION_LOCATIONS:
-        merged = merge_system_prompt(
-            location=location,
-            base_system="Custom base.",
-            system_prompt="Extra system.",
-            default_prompt="Extra default.",
-            negative_prompt="Avoid hallucinations.",
-        )
-        assert get_guardrails(location) in merged
+        for locale in INSTRUCTION_LOCALES:
+            defaults = get_prompt_defaults(location, locale)
+            assert defaults["system_prompt"]
+            assert defaults["default_prompt"] == get_guardrails(location)
+
+
+def test_get_prompt_defaults_extraction_client_constraints():
+    defaults = get_prompt_defaults("extraction_client_constraints", "en")
+    assert defaults["system_prompt"]
+    assert defaults["user_prompt"]
+    assert "{max_hours}" in defaults["user_prompt"]
+    assert defaults["negative_prompt"]
 
 
 def test_merge_user_message_prefix_and_runtime():
@@ -109,3 +111,23 @@ def test_preview_instructions_merges_custom_parameters():
     )
     assert resolved.parameters["max_tokens"] == 2048
     assert resolved.parameters["temperature"] == 0.2
+
+
+def test_merge_client_constraint_instructions_adds_template():
+    base = ResolvedInstructions(
+        system="Extraction base.",
+        user_prefix="",
+        parameters={"max_tokens": 8192, "temperature": 0.0, "timeout_seconds": 120, "max_document_chars": 40000},
+    )
+    merged = merge_client_constraint_instructions(
+        base,
+        {
+            "system_prompt": "Estimate full scope.",
+            "default_prompt": None,
+            "user_prompt": "Template {max_hours}",
+            "negative_prompt": "Do not pre-shrink.",
+        },
+    )
+    assert "Estimate full scope." in merged.system
+    assert "## Restrictions" in merged.system
+    assert merged.constraints_section_template == "Template {max_hours}"

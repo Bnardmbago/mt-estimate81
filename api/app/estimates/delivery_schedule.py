@@ -9,6 +9,7 @@ DELIVERY_SCHEDULE_TARGET_WORKING_DAYS: dict[str, int] = {
     "within_1_3_months": 65,
     "within_3_6_months": 130,
     "within_6_12_months": 260,
+    "over_12_months": 520,
 }
 
 

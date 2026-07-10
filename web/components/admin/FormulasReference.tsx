@@ -16,20 +16,24 @@ type FormulaSection = {
 
 type FormulaSectionKey =
   | "effort"
+  | "extractionConstraints"
   | "nrc"
   | "rc"
   | "discount"
   | "gantt"
+  | "clientAdvisories"
   | "rateCard"
   | "contactAccess"
   | "variance";
 
 const SECTION_ORDER: FormulaSectionKey[] = [
   "effort",
+  "extractionConstraints",
   "nrc",
   "rc",
   "discount",
   "gantt",
+  "clientAdvisories",
   "rateCard",
   "contactAccess",
   "variance",

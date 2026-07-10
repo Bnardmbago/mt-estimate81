@@ -18,6 +18,7 @@ from app.ai.prompts import (
     build_user_prompt,
 )
 from app.estimates.form_fields import field_metadata_for_prompt, schema_field_keys
+from app.estimates.extraction_constraints import ExtractionConstraints
 from app.ai.schemas import (
     EstimateFormFieldsSuggestion,
     ExtractedRequirements,
@@ -46,6 +47,7 @@ class OpenAIProvider:
         *,
         rate_card_roles: list[dict[str, Any]] | None = None,
         instructions: ResolvedInstructions | None = None,
+        client_constraints: ExtractionConstraints | None = None,
     ) -> ExtractedRequirements:
         doc_chars = max_document_chars(instructions)
         system = (
@@ -58,6 +60,11 @@ class OpenAIProvider:
             document_texts,
             rate_card_roles,
             max_document_chars=doc_chars,
+            client_constraints=client_constraints,
+            locale=locale,
+            constraints_section_template=(
+                instructions.constraints_section_template if instructions else None
+            ),
         )
         if instructions:
             user_content = merge_user_message(instructions.user_prefix, user_content)

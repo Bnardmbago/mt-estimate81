@@ -113,6 +113,11 @@ class EstimateStatusResponse(BaseModel):
     status: str
     extraction_progress: dict[str, Any] | None = None
     extraction_error: str | None = None
+    constraint_confirmation: dict[str, Any] | None = None
+
+
+class ConstraintConfirmationRequest(BaseModel):
+    decision: Literal["stop", "continue"]
 
 
 class EstimateDetail(EstimateSummary):

@@ -65,6 +65,7 @@
     "status": {
       "draft": "Draft",
       "extracting": "Extracting",
+      "constraint_paused": "Awaiting confirmation",
       "review": "Review",
       "calculated": "Calculated",
       "exported": "Exported",
@@ -137,6 +138,21 @@
     "reExtractDescription": "Re-extract requirements using your current rate card (including any edits you made). The rate card itself is not overwritten.",
     "rateCardStaleTitle": "Rate card has changed",
     "rateCardStaleDescription": "The linked rate card was updated after the last extraction. Re-run extraction below to refresh requirements and feature items.",
+    "constraintScaledTitle": "Scope adjusted for client constraints",
+    "constraintScaledDescription": "Feature hours were scaled from {originalHours}h to {adjustedHours}h (factor {factor}) to respect the client {binding} constraint (cap {capHours}h). Review feature items and exclusions below.",
+    "constraintBindingBudget": "budget",
+    "constraintBindingSchedule": "delivery schedule",
+    "constraintConfirmationTitle": "Budget or schedule below minimum for documented scope",
+    "constraintConfirmationBody": "Your budget is below the minimum threshold and/or your delivery schedule is too tight for the documented scope. You can Stop or Continue; Continue scales hours to the nearest achievable value within your constraints.",
+    "constraintConfirmationBodyBudgetOnly": "Your budget is below the minimum threshold for the documented scope. You can Stop or Continue; Continue scales hours to the nearest achievable value within your budget.",
+    "constraintConfirmationBodyScheduleOnly": "Your delivery schedule is too tight for the documented scope. You can Stop or Continue; Continue scales hours to the nearest achievable value within your schedule.",
+    "constraintConfirmationHours": "Documented scope: {originalHours}h — constraint cap: {capHours}h ({binding})",
+    "constraintConfirmationWarnings": "Estimation warnings",
+    "constraintConfirmationExclusions": "Estimate exclusions",
+    "constraintConfirmationStop": "Stop",
+    "constraintConfirmationContinue": "Continue",
+    "constraintConfirmationProcessing": "Applying constraints…",
+    "constraintConfirmationError": "Failed to process your choice",
     "rateCardPanel": {
       "autoTitle": "Project rate card",
       "autoDescription": "A rate card is created automatically from your form and documents when you extract requirements. It includes role rates, NRC setup costs, and monthly RC items.",
@@ -814,24 +830,26 @@
       "title": "AI Generation Instruction Layers",
       "loading": "Loading instruction layers…",
       "loadError": "Failed to load instruction layers",
-      "description": "Configure optional prompt layers and parameters for each AI generation flow. Blank fields keep the built-in defaults.",
-      "safetyNote": "Blank fields use built-in defaults. Core JSON schema and estimation guardrails cannot be removed.",
+      "description": "Configure prompt layers and parameters for each AI generation flow. Fields show built-in defaults; save to override, or reset to restore defaults.",
+      "safetyNote": "Core JSON schema and estimation guardrails cannot be removed. Reset restores code defaults for this flow and locale.",
       "locationLabel": "AI flow",
       "localeLabel": "Locale",
       "locations": {
         "ai_spec_assistant": "AI Technical Specification Assistant",
         "extraction": "AI Extraction",
+        "extraction_client_constraints": "Extraction client constraints",
         "rate_card_generation": "Rate card generation",
         "rate_card_section": "Rate card section AI"
       },
       "systemPrompt": "System prompt",
-      "systemPromptHint": "Optional instructions appended after the built-in system prompt.",
+      "systemPromptHint": "Primary system instructions for this flow. Pre-filled with the built-in default; save to override.",
       "defaultPrompt": "Default prompt",
-      "defaultPromptHint": "Optional company or style defaults appended after the system prompt layers.",
+      "defaultPromptHint": "Additional system instructions appended after the system prompt. Pre-filled with built-in guardrails.",
       "userPrompt": "User prompt",
       "userPromptHints": {
         "ai_spec_assistant": "Prefixes the estimator prompt, or replaces the document-only fallback when no prompt is entered.",
         "extraction": "Optional prefix added before the structured questionnaire and document content.",
+        "extraction_client_constraints": "Template for the Client Constraints section in the extraction user prompt. Placeholders: {client_budget_jpy}, {max_labor_jpy}, {blended_hourly_rate_jpy}, {max_hours_budget}, {delivery_schedule_label}, {target_working_days}, {max_hours_schedule}, {max_hours}, {binding_constraint_label}, {budget_section}, {schedule_section}.",
         "rate_card_generation": "Optional prefix added before the structured project context.",
         "rate_card_section": "Prefixes the section AI prompt entered by the user."
       },
@@ -1026,7 +1044,7 @@
     },
     "formulas": {
       "title": "Formulas",
-      "intro": "Reference for how estimates, rate cards, variance, and KPIs are calculated. Contact users (magic-link access) use the system rate card automatically. Full users use the selected rate card version when set; otherwise the active rate card. Administrators can access all rate cards.",
+      "intro": "Reference for how estimates, rate cards, variance, and KPIs are calculated. Client budget and delivery schedule can constrain AI extraction and are compared again after Calculate. Contact users (magic-link access) use the system rate card automatically. Full users use the selected rate card version when set; otherwise the active rate card. Administrators can access all rate cards.",
       "columns": {
         "metric": "Metric",
         "formula": "Formula",
@@ -1075,6 +1093,62 @@
             "metric": "Development approach",
             "formula": "Rate card setting (required)",
             "notes": "traditional | ai_assisted | hybrid | low_code — affects effort and team size multipliers"
+          }
+        ]
+      },
+      "extractionConstraints": {
+        "title": "AI extraction — client budget & schedule",
+        "description": "During Extract Requirements, optional header fields client_budget and delivery_schedule can cap suggested feature hours. When AI-documented scope exceeds the cap, extraction pauses for Stop/Continue confirmation. Continue scales hours proportionally. Blank budget, flexible schedule, or both empty → no constraint.",
+        "rows": [
+          {
+            "metric": "When constraints apply",
+            "formula": "parse(client_budget) OR delivery_schedule with known target",
+            "notes": "Empty, zero, or non-numeric budget → ignored. flexible or unknown schedule slug → ignored"
+          },
+          {
+            "metric": "Max labor from budget",
+            "formula": "client_budget_jpy × 0.65",
+            "notes": "Labor share of client-facing budget; remainder reserved for setup, overhead, contingency"
+          },
+          {
+            "metric": "Blended hourly rate",
+            "formula": "avg(role.hourly_rate_jpy), fallback daily_rate_jpy ÷ 8",
+            "notes": "From active rate card roles at extract time; default ¥8,000/h if unavailable"
+          },
+          {
+            "metric": "Max hours (budget)",
+            "formula": "max_labor_jpy ÷ blended_hourly_rate",
+            "notes": ""
+          },
+          {
+            "metric": "Schedule working-day targets",
+            "formula": "asap: 45 | within_1_3_months: 65 | within_3_6_months: 130 | within_6_12_months: 260 | over_12_months: 520",
+            "notes": "flexible → no schedule cap"
+          },
+          {
+            "metric": "Max hours (schedule)",
+            "formula": "target_working_days × 8",
+            "notes": "Sequential upper bound (HOURS_PER_EFFORT_DAY)"
+          },
+          {
+            "metric": "Binding cap",
+            "formula": "min(max_hours_budget, max_hours_schedule) when both set",
+            "notes": "Tighter limit wins; single constraint uses that cap only"
+          },
+          {
+            "metric": "Feasibility gate",
+            "formula": "Pause when Σ suggested_hours > binding cap",
+            "notes": "Status constraint_paused; user Stop → draft, Continue → scale and finalize"
+          },
+          {
+            "metric": "Post-Continue hour scaling",
+            "formula": "scale = max_hours ÷ Σ suggested_hours; each item × scale, min 0.5h",
+            "notes": "Only after user confirms Continue; report in extracted_data.extraction_constraints"
+          },
+          {
+            "metric": "AI prompts",
+            "formula": "Admin → AI instruction layers → Extraction client constraints",
+            "notes": "Editable defaults for constraint system/user/negative prompts; reset restores code defaults"
           }
         ]
       },
@@ -1189,6 +1263,32 @@
             "metric": "Estimated duration (days)",
             "formula": "gantt.total_working_days when present, else total_effort_days",
             "notes": "Used for personnel count and recommended team sizing context"
+          }
+        ]
+      },
+      "clientAdvisories": {
+        "title": "Client budget & schedule (after Calculate)",
+        "description": "After calculation, compares results to client questionnaire header fields. Independent of extraction-time scaling; authoritative check on final NRC and Gantt duration.",
+        "rows": [
+          {
+            "metric": "Budget comparison",
+            "formula": "calculated NRC total_jpy vs client_budget_jpy",
+            "notes": "Skipped when budget blank. Status: under | over | aligned (within 10% of budget)"
+          },
+          {
+            "metric": "Budget delta",
+            "formula": "calculated_nrc_jpy − client_budget_jpy",
+            "notes": "Positive = estimate above stated budget"
+          },
+          {
+            "metric": "Schedule advisory",
+            "formula": "gantt.total_working_days vs delivery_schedule target",
+            "notes": "within_band if actual ≤ target; over_band if exceeds; unknown if flexible or no target"
+          },
+          {
+            "metric": "Schedule targets",
+            "formula": "Same working-day map as extraction constraints",
+            "notes": "Uses parallel Gantt total, not sequential hour cap used at extract"
           }
         ]
       },

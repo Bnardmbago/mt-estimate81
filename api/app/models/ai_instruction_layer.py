@@ -9,6 +9,7 @@ from app.database import Base
 InstructionLocation = Literal[
     "ai_spec_assistant",
     "extraction",
+    "extraction_client_constraints",
     "rate_card_generation",
     "rate_card_section",
 ]
@@ -18,6 +19,7 @@ InstructionLocale = Literal["en", "ja"]
 INSTRUCTION_LOCATIONS: tuple[InstructionLocation, ...] = (
     "ai_spec_assistant",
     "extraction",
+    "extraction_client_constraints",
     "rate_card_generation",
     "rate_card_section",
 )

@@ -22,6 +22,7 @@ from app.database import Base
 class EstimateStatus(str, enum.Enum):
     DRAFT = "draft"
     EXTRACTING = "extracting"
+    CONSTRAINT_PAUSED = "constraint_paused"
     REVIEW = "review"
     CALCULATED = "calculated"
     EXPORTED = "exported"

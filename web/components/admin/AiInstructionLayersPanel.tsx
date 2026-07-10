@@ -7,6 +7,7 @@ import { apiJson } from "@/lib/api";
 type InstructionLocation =
   | "ai_spec_assistant"
   | "extraction"
+  | "extraction_client_constraints"
   | "rate_card_generation"
   | "rate_card_section";
 
@@ -32,6 +33,8 @@ type InstructionLayerResponse = {
   location: InstructionLocation;
   locale: InstructionLocale;
   layer: InstructionLayerData;
+  effective_prompt: InstructionLayerData;
+  prompt_defaults: InstructionLayerData;
   preview: {
     system: string;
     user_prefix: string;
@@ -44,6 +47,7 @@ type InstructionLayerResponse = {
 const LOCATIONS: InstructionLocation[] = [
   "ai_spec_assistant",
   "extraction",
+  "extraction_client_constraints",
   "rate_card_generation",
   "rate_card_section",
 ];
@@ -68,6 +72,15 @@ function parametersToForm(parameters: InstructionParameters | null): Record<stri
     temperature: parameters?.temperature?.toString() ?? "",
     timeout_seconds: parameters?.timeout_seconds?.toString() ?? "",
     max_document_chars: parameters?.max_document_chars?.toString() ?? "",
+  };
+}
+
+function promptFieldsFromLayer(layer: InstructionLayerData) {
+  return {
+    systemPrompt: layer.system_prompt ?? "",
+    defaultPrompt: layer.default_prompt ?? "",
+    userPrompt: layer.user_prompt ?? "",
+    negativePrompt: layer.negative_prompt ?? "",
   };
 }
 
@@ -101,10 +114,11 @@ export default function AiInstructionLayersPanel() {
         `/admin/ai-instruction-layers/${location}/${locale}`,
       );
       setData(response);
-      setSystemPrompt(response.layer.system_prompt ?? "");
-      setDefaultPrompt(response.layer.default_prompt ?? "");
-      setUserPrompt(response.layer.user_prompt ?? "");
-      setNegativePrompt(response.layer.negative_prompt ?? "");
+      const fields = promptFieldsFromLayer(response.effective_prompt);
+      setSystemPrompt(fields.systemPrompt);
+      setDefaultPrompt(fields.defaultPrompt);
+      setUserPrompt(fields.userPrompt);
+      setNegativePrompt(fields.negativePrompt);
       setParameterFields(parametersToForm(response.layer.parameters));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t("loadError"));
@@ -163,10 +177,11 @@ export default function AiInstructionLayersPanel() {
         },
       );
       setData(response);
-      setSystemPrompt(response.layer.system_prompt ?? "");
-      setDefaultPrompt(response.layer.default_prompt ?? "");
-      setUserPrompt(response.layer.user_prompt ?? "");
-      setNegativePrompt(response.layer.negative_prompt ?? "");
+      const fields = promptFieldsFromLayer(response.effective_prompt);
+      setSystemPrompt(fields.systemPrompt);
+      setDefaultPrompt(fields.defaultPrompt);
+      setUserPrompt(fields.userPrompt);
+      setNegativePrompt(fields.negativePrompt);
       setParameterFields(parametersToForm(response.layer.parameters));
       setSaved(true);
     } catch (saveError) {
@@ -191,10 +206,11 @@ export default function AiInstructionLayersPanel() {
         { method: "DELETE" },
       );
       setData(response);
-      setSystemPrompt("");
-      setDefaultPrompt("");
-      setUserPrompt("");
-      setNegativePrompt("");
+      const fields = promptFieldsFromLayer(response.effective_prompt);
+      setSystemPrompt(fields.systemPrompt);
+      setDefaultPrompt(fields.defaultPrompt);
+      setUserPrompt(fields.userPrompt);
+      setNegativePrompt(fields.negativePrompt);
       setParameterFields(parametersToForm(null));
       setSaved(true);
     } catch (resetError) {

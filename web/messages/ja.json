@@ -65,6 +65,7 @@
     "status": {
       "draft": "下書き",
       "extracting": "抽出中",
+      "constraint_paused": "確認待ち",
       "review": "レビュー",
       "calculated": "計算済み",
       "exported": "出力済み",
@@ -137,6 +138,21 @@
     "reExtractDescription": "現在のレートカード（編集内容を含む）を使って要件を再抽出します。レートカード自体は上書きされません。",
     "rateCardStaleTitle": "レートカードが変更されました",
     "rateCardStaleDescription": "リンクされたレートカードが最後の抽出後に更新されています。下の「抽出を再実行」で要件と機能項目を更新してください。",
+    "constraintScaledTitle": "クライアント制約に合わせてスコープを調整しました",
+    "constraintScaledDescription": "機能工数を {originalHours}h から {adjustedHours}h に調整しました（係数 {factor}）。クライアントの{binding}制約（上限 {capHours}h）に合わせています。機能項目と除外事項を確認してください。",
+    "constraintBindingBudget": "予算",
+    "constraintBindingSchedule": "納期",
+    "constraintConfirmationTitle": "予算または納期が文書化されたスコープの最小要件を下回っています",
+    "constraintConfirmationBody": "予算が最小しきい値を下回っている、または納期が文書化されたスコープに対して厳しすぎます。停止または続行を選択できます。続行すると、制約内で達成可能な最も近い工数に調整されます。",
+    "constraintConfirmationBodyBudgetOnly": "予算が文書化されたスコープの最小要件を下回っています。停止または続行を選択できます。続行すると、予算内で達成可能な最も近い工数に調整されます。",
+    "constraintConfirmationBodyScheduleOnly": "納期が文書化されたスコープに対して厳しすぎます。停止または続行を選択できます。続行すると、納期内で達成可能な最も近い工数に調整されます。",
+    "constraintConfirmationHours": "文書化スコープ: {originalHours}h — 制約上限: {capHours}h（{binding}）",
+    "constraintConfirmationWarnings": "見積警告",
+    "constraintConfirmationExclusions": "見積対象外",
+    "constraintConfirmationStop": "停止",
+    "constraintConfirmationContinue": "続行",
+    "constraintConfirmationProcessing": "制約を適用中…",
+    "constraintConfirmationError": "選択の処理に失敗しました",
     "rateCardPanel": {
       "autoTitle": "プロジェクトレートカード",
       "autoDescription": "要件抽出時にフォームと資料からレートカードが自動作成されます。役割単価、NRCセットアップ費、月額RC項目が含まれます。",
@@ -814,24 +830,26 @@
       "title": "AI生成指示レイヤー",
       "loading": "指示レイヤーを読み込み中…",
       "loadError": "指示レイヤーの読み込みに失敗しました",
-      "description": "各AI生成フロー向けの任意のプロンプトレイヤーとパラメータを設定します。空欄の場合は組み込みの既定値を使用します。",
-      "safetyNote": "空欄の項目は組み込みの既定値を使用します。JSONスキーマと見積品質のガードレールは削除できません。",
+      "description": "各AI生成フロー向けのプロンプトレイヤーとパラメータを設定します。フィールドには組み込みの既定値が表示されます。保存で上書き、リセットで既定値に戻します。",
+      "safetyNote": "JSONスキーマと見積品質のガードレールは削除できません。リセットするとこのフローと言語のコード既定値に戻ります。",
       "locationLabel": "AIフロー",
       "localeLabel": "言語",
       "locations": {
         "ai_spec_assistant": "AI技術仕様アシスタント",
         "extraction": "AI抽出",
+        "extraction_client_constraints": "抽出クライアント制約",
         "rate_card_generation": "レートカード生成",
         "rate_card_section": "レートカードセクションAI"
       },
       "systemPrompt": "システムプロンプト",
-      "systemPromptHint": "組み込みシステムプロンプトの後に追加する任意の指示です。",
+      "systemPromptHint": "このフローの主要なシステム指示です。組み込みの既定値が事前入力されています。保存すると上書きされます。",
       "defaultPrompt": "デフォルトプロンプト",
-      "defaultPromptHint": "システムプロンプトの後に追加する会社方針やスタイルの既定値です。",
+      "defaultPromptHint": "システムプロンプトの後に追加される補助指示です。組み込みのガードレールが事前入力されています。",
       "userPrompt": "ユーザープロンプト",
       "userPromptHints": {
         "ai_spec_assistant": "見積担当者のプロンプトの前に付与します。プロンプト未入力時は文書のみのフォールバックを置き換えます。",
         "extraction": "アンケートと文書の構造化コンテンツの前に追加する任意の接頭辞です。",
+        "extraction_client_constraints": "抽出ユーザープロンプトの Client Constraints セクション用テンプレート。プレースホルダ: {client_budget_jpy}, {max_labor_jpy}, {blended_hourly_rate_jpy}, {max_hours_budget}, {delivery_schedule_label}, {target_working_days}, {max_hours_schedule}, {max_hours}, {binding_constraint_label}, {budget_section}, {schedule_section}。",
         "rate_card_generation": "プロジェクト文脈の構造化コンテンツの前に追加する任意の接頭辞です。",
         "rate_card_section": "ユーザーが入力したセクションAIプロンプトの前に付与します。"
       },
@@ -1026,7 +1044,7 @@
     },
     "formulas": {
       "title": "計算式リファレンス",
-      "intro": "見積、レートカード、差異、KPIの計算方法のリファレンスです。コンタクトユーザー（マジックリンクアクセス）はシステムレートカードを自動使用します。フルユーザーは見積に指定されたレートカードバージョン、未指定時はアクティブなレートカードを使用します。管理者はすべてのレートカードにアクセスできます。",
+      "intro": "見積、レートカード、差異、KPIの計算方法のリファレンスです。クライアント予算・納期はAI抽出時の制約および計算後の比較に使用されます。コンタクトユーザー（マジックリンクアクセス）はシステムレートカードを自動使用します。フルユーザーは見積に指定されたレートカードバージョン、未指定時はアクティブなレートカードを使用します。管理者はすべてのレートカードにアクセスできます。",
       "columns": {
         "metric": "項目",
         "formula": "計算式",
@@ -1075,6 +1093,62 @@
             "metric": "開発アプローチ",
             "formula": "レートカード設定（必須）",
             "notes": "traditional | ai_assisted | hybrid | low_code — 工数・チーム規模係数に影響"
+          }
+        ]
+      },
+      "extractionConstraints": {
+        "title": "AI抽出 — クライアント予算・納期",
+        "description": "「要件を抽出」実行時、ヘッダー項目の client_budget と delivery_schedule により機能工数の上限を設けられます。AIが文書化スコープを上限超過と判断した場合、停止/続行の確認で一時停止します。続行で比例スケーリング。予算未入力、納期 flexible、または両方空 → 制約なし。",
+        "rows": [
+          {
+            "metric": "制約が有効になる条件",
+            "formula": "parse(client_budget) または 既知ターゲットの delivery_schedule",
+            "notes": "空・0・非数値の予算は無視。flexible または未知の納期スラッグは無視"
+          },
+          {
+            "metric": "予算からの労務費上限",
+            "formula": "client_budget_jpy × 0.65",
+            "notes": "クライアント予算に対する労務費割合。残りはセットアップ・間接費・予備費用"
+          },
+          {
+            "metric": "平均時間単価",
+            "formula": "avg(role.hourly_rate_jpy)、なければ daily_rate_jpy ÷ 8",
+            "notes": "抽出時のアクティブレートカード役割から。未取得時は ¥8,000/h"
+          },
+          {
+            "metric": "最大時間（予算）",
+            "formula": "max_labor_jpy ÷ blended_hourly_rate",
+            "notes": ""
+          },
+          {
+            "metric": "納期の稼働日ターゲット",
+            "formula": "asap: 45 | within_1_3_months: 65 | within_3_6_months: 130 | within_6_12_months: 260 | over_12_months: 520",
+            "notes": "flexible → 納期上限なし"
+          },
+          {
+            "metric": "最大時間（納期）",
+            "formula": "target_working_days × 8",
+            "notes": "順次作業の上限（HOURS_PER_EFFORT_DAY）"
+          },
+          {
+            "metric": "拘束する上限",
+            "formula": "両方設定時 min(max_hours_budget, max_hours_schedule)",
+            "notes": "厳しい方を採用。片方のみの場合はその上限"
+          },
+          {
+            "metric": "実現可能性ゲート",
+            "formula": "Σ suggested_hours > 拘束上限 で一時停止",
+            "notes": "ステータス constraint_paused。停止 → 下書き、続行 → スケールして確定"
+          },
+          {
+            "metric": "続行後の工数スケーリング",
+            "formula": "scale = max_hours ÷ Σ suggested_hours; 各項目 × scale、最低 0.5h",
+            "notes": "ユーザーが続行を選択した後のみ。extracted_data.extraction_constraints に記録"
+          },
+          {
+            "metric": "AIプロンプト",
+            "formula": "管理 → AI指示レイヤー → 抽出クライアント制約",
+            "notes": "制約用 system/user/negative プロンプトの既定値を編集可能。リセットでコード既定値に復帰"
           }
         ]
       },
@@ -1189,6 +1263,32 @@
             "metric": "推定期間（日）",
             "formula": "gantt.total_working_days があればそれ、なければ total_effort_days",
             "notes": "要員数とチーム規模の文脈で使用"
+          }
+        ]
+      },
+      "clientAdvisories": {
+        "title": "クライアント予算・納期（計算後）",
+        "description": "計算完了後、クライアントアンケートのヘッダー項目と結果を比較します。抽出時のスケーリングとは独立。最終 NRC とガント期間に対する正式なチェック。",
+        "rows": [
+          {
+            "metric": "予算比較",
+            "formula": "計算 NRC total_jpy vs client_budget_jpy",
+            "notes": "予算未入力時はスキップ。状態: under | over | aligned（予算の ±10% 以内）"
+          },
+          {
+            "metric": "予算差分",
+            "formula": "calculated_nrc_jpy − client_budget_jpy",
+            "notes": "正の値 = 見積が提示予算を上回る"
+          },
+          {
+            "metric": "納期アドバイザリ",
+            "formula": "gantt.total_working_days vs delivery_schedule ターゲット",
+            "notes": "actual ≤ target → within_band; 超過 → over_band; flexible 等 → unknown"
+          },
+          {
+            "metric": "納期ターゲット",
+            "formula": "抽出制約と同じ稼働日マップ",
+            "notes": "並行ガント合計を使用（抽出時の順次時間上限とは異なる）"
           }
         ]
       },

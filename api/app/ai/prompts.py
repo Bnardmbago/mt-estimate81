@@ -67,7 +67,15 @@ def build_user_prompt(
     rate_card_roles: list[dict[str, Any]] | None = None,
     *,
     max_document_chars: int | None = None,
+    client_constraints: Any | None = None,
+    locale: Literal["ja", "en"] = "en",
+    constraints_section_template: str | None = None,
 ) -> str:
+    from app.estimates.extraction_constraints import (
+        ExtractionConstraints,
+        format_constraints_for_prompt,
+    )
+
     roles = rate_card_roles or []
     truncated_texts, truncation_note = _truncate_document_texts(
         texts,
@@ -79,8 +87,21 @@ def build_user_prompt(
         json.dumps(form_data, ensure_ascii=False, indent=2),
         "## Rate Card Roles and Phases",
         json.dumps(roles, ensure_ascii=False, indent=2),
-        "## Document Excerpts",
     ]
+
+    if isinstance(client_constraints, ExtractionConstraints):
+        sections.extend(
+            [
+                "## Client Constraints",
+                format_constraints_for_prompt(
+                    client_constraints,
+                    locale,
+                    template=constraints_section_template,
+                ),
+            ]
+        )
+
+    sections.append("## Document Excerpts")
 
     if not truncated_texts:
         sections.append("(No documents provided)")

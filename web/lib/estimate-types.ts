@@ -23,6 +23,20 @@ export type FeatureItem = {
   updated_at: string;
 };
 
+export type ExtractionConstraintsReport = {
+  client_budget_jpy?: number | null;
+  delivery_schedule?: string | null;
+  target_working_days?: number | null;
+  max_hours_cap?: number;
+  original_total_hours?: number;
+  adjusted_total_hours?: number;
+  budget_limited?: boolean;
+  schedule_limited?: boolean;
+  binding_constraint?: "budget" | "schedule" | null;
+  applied_scale_factor?: number;
+  hours_scaled?: boolean;
+};
+
 export type ExtractedData = {
   functional_requirements: string[];
   non_functional_requirements: string[];
@@ -33,6 +47,8 @@ export type ExtractedData = {
   gaps: string[];
   confidence_notes: string;
   complexity_profile?: ComplexityProfile;
+  estimation_warnings?: string[];
+  extraction_constraints?: ExtractionConstraintsReport;
 };
 
 export type ComplexityProfile = {
@@ -210,6 +226,7 @@ export type EstimateDetail = {
 export const ESTIMATE_STATUS_KEYS = [
   "draft",
   "extracting",
+  "constraint_paused",
   "review",
   "calculated",
   "exported",

@@ -16,7 +16,13 @@ LOCATION_GUARDRAILS: dict[InstructionLocation, str] = {
         f"{JSON_SCHEMA_GUARDRAIL}\n"
         "Suggested hours must be positive numbers. "
         "Use only roles and phases from the provided rate card when assigning feature items. "
-        "Each feature item role must exactly match one rate card role name."
+        "Each feature item role must exactly match one rate card role name. "
+        "List estimation_warnings and estimate_exclusions when scope uncertainty or client "
+        "constraints apply."
+    ),
+    "extraction_client_constraints": (
+        f"{JSON_SCHEMA_GUARDRAIL}\n"
+        "Constraint prompts apply only when client budget or delivery schedule is set on extraction."
     ),
     "rate_card_generation": (
         f"{JSON_SCHEMA_GUARDRAIL}\n"

@@ -17,6 +17,7 @@ from app.schemas.estimate import (
     EstimateAiSuggestFormResponse,
     EstimateCreate,
     EstimateDetail,
+    ConstraintConfirmationRequest,
     EstimateStatusResponse,
     EstimateSummary,
     EstimateUpdate,
@@ -127,6 +128,26 @@ async def start_extraction(
         )
 
     return {"status": "accepted"}
+
+
+@router.post("/{estimate_id}/extract/constraint-confirmation", status_code=200)
+async def confirm_constraint_extraction(
+    estimate_id: uuid.UUID,
+    body: ConstraintConfirmationRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    content_locale: str | None = Depends(get_content_locale),
+):
+    if body.decision == "stop":
+        await extraction.stop_constraint_extraction(db, estimate_id, user)
+        return {"status": "draft"}
+    await extraction.continue_constraint_extraction(
+        db,
+        estimate_id,
+        user,
+        content_locale=content_locale,
+    )
+    return {"status": "review"}
 
 
 @router.post("/{estimate_id}/ai/suggest-form", response_model=EstimateAiSuggestFormResponse)

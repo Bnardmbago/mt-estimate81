@@ -21,8 +21,28 @@ async def test_get_instruction_layer_preview(client: AsyncClient, admin_headers:
     payload = response.json()
     assert payload["location"] == "extraction"
     assert payload["locale"] == "en"
+    assert payload["effective_prompt"]["system_prompt"]
+    assert payload["effective_prompt"]["default_prompt"]
     assert "valid JSON" in payload["preview"]["system"]
     assert payload["parameter_defaults"]["max_document_chars"] == 40_000
+
+
+@pytest.mark.asyncio
+async def test_get_extraction_client_constraints_layer_defaults(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+):
+    response = await client.get(
+        "/admin/ai-instruction-layers/extraction_client_constraints/en",
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["location"] == "extraction_client_constraints"
+    assert payload["effective_prompt"]["system_prompt"]
+    assert payload["effective_prompt"]["user_prompt"]
+    assert "{max_hours}" in payload["effective_prompt"]["user_prompt"]
+    assert payload["prompt_defaults"]["system_prompt"] == payload["effective_prompt"]["system_prompt"]
 
 
 @pytest.mark.asyncio
@@ -66,6 +86,9 @@ async def test_patch_and_reset_instruction_layers(
     reset = delete_response.json()
     assert reset["layer"]["system_prompt"] is None
     assert reset["layer"]["user_prompt"] is None
+    assert reset["effective_prompt"]["system_prompt"]
+    assert reset["effective_prompt"]["default_prompt"]
+    assert "valid JSON" in reset["preview"]["system"]
     assert reset["preview"]["user_prefix"] == ""
 
 

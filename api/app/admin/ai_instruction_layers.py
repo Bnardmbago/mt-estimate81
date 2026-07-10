@@ -5,8 +5,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.ai_instruction_config import (
+    effective_prompt_fields,
     get_default_parameters,
     get_instruction_layer,
+    get_prompt_defaults,
     is_valid_locale,
     is_valid_location,
     list_instruction_layers,
@@ -14,8 +16,13 @@ from app.admin.ai_instruction_config import (
     reset_instruction_layer,
     upsert_instruction_layer,
 )
-from app.admin.ai_instruction_preview import build_preview_base_system, layer_to_dict
-from app.ai.instruction_resolver import preview_instructions
+from app.admin.ai_instruction_preview import layer_to_dict
+from app.ai.instruction_resolver import (
+    ResolvedInstructions,
+    merge_client_constraint_instructions,
+    merge_system_prompt,
+    preview_instructions as base_preview_instructions,
+)
 from app.dependencies import get_db, require_admin
 from app.models.ai_instruction_layer import INSTRUCTION_LOCATIONS, InstructionLocation
 from app.models.user import User
@@ -51,6 +58,8 @@ class InstructionLayerResponse(BaseModel):
     location: InstructionLocation
     locale: InstructionLocale
     layer: InstructionLayerData
+    effective_prompt: InstructionLayerData
+    prompt_defaults: InstructionLayerData
     preview: InstructionPreview
     parameter_defaults: dict[str, int | float]
     parameter_bounds: dict[str, list[int | float]]
@@ -105,24 +114,93 @@ def _build_response(
     location: InstructionLocation,
     locale: InstructionLocale,
     layer_data: dict[str, Any],
+    *,
+    row: Any | None = None,
 ) -> InstructionLayerResponse:
-    base_system = build_preview_base_system(location, locale)
-    resolved = preview_instructions(
-        location=location,
-        locale=locale,
-        base_system=base_system,
-        system_prompt=layer_data["system_prompt"],
-        default_prompt=layer_data["default_prompt"],
-        user_prompt=layer_data["user_prompt"],
-        negative_prompt=layer_data["negative_prompt"],
-        parameters=layer_data["parameters"],
+    defaults = get_prompt_defaults(location, locale)
+    effective = effective_prompt_fields(location, locale, row)
+    prompt_defaults = InstructionLayerData(
+        system_prompt=defaults.get("system_prompt"),
+        default_prompt=defaults.get("default_prompt"),
+        user_prompt=defaults.get("user_prompt"),
+        negative_prompt=defaults.get("negative_prompt"),
+        parameters=None,
+        updated_at=None,
     )
+    effective_prompt = InstructionLayerData(
+        system_prompt=effective.get("system_prompt"),
+        default_prompt=effective.get("default_prompt"),
+        user_prompt=effective.get("user_prompt"),
+        negative_prompt=effective.get("negative_prompt"),
+        parameters=layer_data.get("parameters"),
+        updated_at=layer_data.get("updated_at"),
+    )
+
+    if location == "extraction_client_constraints":
+        from app.estimates.extraction_constraints import (
+            ExtractionConstraints,
+            format_constraints_for_prompt,
+        )
+
+        extraction_effective = effective_prompt_fields("extraction", locale, None)
+        base = ResolvedInstructions(
+            system=merge_system_prompt(
+                location="extraction",
+                base_system="",
+                system_prompt=extraction_effective.get("system_prompt"),
+                default_prompt=extraction_effective.get("default_prompt"),
+                negative_prompt=extraction_effective.get("negative_prompt"),
+            ),
+            user_prefix="",
+            parameters=get_default_parameters("extraction"),
+        )
+        constraint_prompts = {
+            "system_prompt": effective.get("system_prompt"),
+            "default_prompt": effective.get("default_prompt"),
+            "user_prompt": effective.get("user_prompt"),
+            "negative_prompt": effective.get("negative_prompt"),
+        }
+        merged = merge_client_constraint_instructions(base, constraint_prompts)
+        sample_constraints = ExtractionConstraints(
+            client_budget_jpy=5_000_000,
+            max_labor_jpy=3_250_000,
+            blended_hourly_rate_jpy=10_000,
+            max_hours_budget=325.0,
+            delivery_schedule="within_3_6_months",
+            target_working_days=130,
+            max_hours_schedule=1040.0,
+            max_hours=325.0,
+            binding_constraint="budget",
+        )
+        sample_section = format_constraints_for_prompt(
+            sample_constraints,
+            locale,
+            template=effective.get("user_prompt"),
+        )
+        resolved = ResolvedInstructions(
+            system=merged.system,
+            user_prefix=f"## Client Constraints\n{sample_section}",
+            parameters=get_default_parameters(location),
+        )
+    else:
+        resolved = base_preview_instructions(
+            location=location,
+            locale=locale,
+            base_system="",
+            system_prompt=effective.get("system_prompt"),
+            default_prompt=effective.get("default_prompt"),
+            user_prompt=effective.get("user_prompt"),
+            negative_prompt=effective.get("negative_prompt"),
+            parameters=layer_data["parameters"],
+        )
     from app.admin.ai_instruction_config import PARAMETER_BOUNDS
 
     return InstructionLayerResponse(
         location=location,
         locale=locale,
         layer=InstructionLayerData(**layer_data),
+        effective_prompt=effective_prompt,
+        prompt_defaults=prompt_defaults,
         preview=InstructionPreview(
             system=resolved.system,
             user_prefix=resolved.user_prefix,
@@ -159,7 +237,7 @@ async def get_layer(
 ):
     loc, lang = _validate_path_params(location, locale)
     row = await get_instruction_layer(db, loc, lang)
-    return _build_response(loc, lang, layer_to_dict(row))
+    return _build_response(loc, lang, layer_to_dict(row), row=row)
 
 
 @router.patch("/{location}/{locale}", response_model=InstructionLayerResponse)
@@ -214,7 +292,7 @@ async def patch_layer(
             detail={"error": str(exc), "code": "INVALID_INSTRUCTION_LAYER"},
         ) from exc
 
-    return _build_response(loc, lang, layer_to_dict(row))
+    return _build_response(loc, lang, layer_to_dict(row), row=row)
 
 
 @router.delete("/{location}/{locale}", response_model=InstructionLayerResponse)
@@ -226,4 +304,4 @@ async def delete_layer(
 ):
     loc, lang = _validate_path_params(location, locale)
     await reset_instruction_layer(db, loc, lang)
-    return _build_response(loc, lang, layer_to_dict(None))
+    return _build_response(loc, lang, layer_to_dict(None), row=None)

@@ -493,6 +493,122 @@ async def test_extraction_populates_feature_items(
 
 
 @pytest.mark.asyncio
+async def test_extraction_scales_hours_for_client_budget(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    active_rate_card: RateCardVersion,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("EXTRACT_SYNC", "1")
+
+    class HighHoursProvider:
+        async def extract_requirements(self, form_data, document_texts, locale, **kwargs):
+            return ExtractedRequirements(
+                functional_requirements=["Login"],
+                non_functional_requirements=[],
+                user_roles=["User"],
+                modules=["Auth"],
+                external_systems=[],
+                risks=[],
+                gaps=[],
+                confidence_notes="High scope",
+                feature_items=[
+                    FeatureItemSuggestion(
+                        name="Feature A",
+                        description="Large scope A",
+                        suggested_hours=200,
+                        phase="development",
+                        role="developer",
+                    ),
+                    FeatureItemSuggestion(
+                        name="Feature B",
+                        description="Large scope B",
+                        suggested_hours=200,
+                        phase="development",
+                        role="developer",
+                    ),
+                ],
+                maintenance_assumptions=MaintenanceAssumptions(),
+            )
+
+    create = await client.post(
+        "/estimates",
+        json={
+            "project_name": "Budget Constraint Test",
+            "client_name": "ACME",
+            "locale": "en",
+        },
+        headers=auth_headers,
+    )
+    assert create.status_code == 201
+    estimate_id = create.json()["id"]
+
+    await client.patch(
+        f"/estimates/{estimate_id}",
+        json={
+            "form_data": {
+                "main_functional_needs": "User login and dashboard",
+                "client_budget": "1000000",
+            }
+        },
+        headers=auth_headers,
+    )
+    await assign_rate_card(client, estimate_id, active_rate_card, auth_headers)
+
+    with patch(
+        "app.estimates.extraction.get_ai_provider",
+        new=AsyncMock(return_value=HighHoursProvider()),
+    ):
+        extract = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
+        assert extract.status_code == 202
+
+    status = await client.get(f"/estimates/{estimate_id}/status", headers=auth_headers)
+    assert status.status_code == 200
+    assert status.json()["status"] == "constraint_paused"
+    assert status.json()["constraint_confirmation"]["budget_below_minimum"] is True
+
+    detail = await client.get(f"/estimates/{estimate_id}", headers=auth_headers)
+    assert detail.status_code == 200
+    assert detail.json()["feature_items"] == []
+
+    stop = await client.post(
+        f"/estimates/{estimate_id}/extract/constraint-confirmation",
+        headers=auth_headers,
+        json={"decision": "stop"},
+    )
+    assert stop.status_code == 200
+    assert stop.json()["status"] == "draft"
+
+    with patch(
+        "app.estimates.extraction.get_ai_provider",
+        new=AsyncMock(return_value=HighHoursProvider()),
+    ):
+        extract = await client.post(f"/estimates/{estimate_id}/extract", headers=auth_headers)
+        assert extract.status_code == 202
+
+    status = await client.get(f"/estimates/{estimate_id}/status", headers=auth_headers)
+    assert status.json()["status"] == "constraint_paused"
+
+    cont = await client.post(
+        f"/estimates/{estimate_id}/extract/constraint-confirmation",
+        headers=auth_headers,
+        json={"decision": "continue"},
+    )
+    assert cont.status_code == 200
+    assert cont.json()["status"] == "review"
+
+    detail = await client.get(f"/estimates/{estimate_id}", headers=auth_headers)
+    assert detail.status_code == 200
+    payload = detail.json()
+    total_hours = sum(item["hours"] for item in payload["feature_items"])
+    constraints = payload["extracted_data"]["extraction_constraints"]
+    assert constraints["hours_scaled"] is True
+    assert constraints["client_budget_jpy"] == 1_000_000
+    assert total_hours <= constraints["max_hours_cap"] + 1
+    assert payload["extracted_data"]["estimation_warnings"]
+
+
+@pytest.mark.asyncio
 async def test_stuck_extraction_status_recovers_to_draft(
     client: AsyncClient,
     auth_headers: dict[str, str],

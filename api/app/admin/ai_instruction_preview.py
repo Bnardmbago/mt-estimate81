@@ -28,6 +28,11 @@ def build_preview_base_system(
         return build_form_fields_system_prompt(locale, SAMPLE_FIELD_METADATA)
     if location == "extraction":
         return build_system_prompt(locale)
+    if location == "extraction_client_constraints":
+        return (
+            "Client constraint prompts are merged into the extraction flow when budget or "
+            "delivery schedule constraints are present."
+        )
     if location == "rate_card_generation":
         return build_rate_card_system_prompt(locale, has_extraction_context=False)
     if location == "rate_card_section":
