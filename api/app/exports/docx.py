@@ -14,7 +14,6 @@ from app.exports.markdown import (
 )
 
 LOGO_PATH = Path(__file__).parent / "templates" / "assets" / "BI_logo.png"
-QUOTATION_MIN_ITEM_ROWS = 6
 
 
 def _document_bytes(document: Document) -> bytes:
@@ -268,13 +267,29 @@ def generate_report_docx(report_context: dict[str, Any]) -> bytes:
     return _document_bytes(document)
 
 
-def _set_cell_text(cell, text: str, *, bold: bool = False) -> None:
+def _set_cell_text(
+    cell,
+    text: str,
+    *,
+    bold: bool = False,
+    font_size: Pt | None = None,
+) -> None:
     cell.text = text
-    if bold and cell.paragraphs[0].runs:
-        cell.paragraphs[0].runs[0].bold = True
+    if not cell.paragraphs[0].runs:
+        return
+    run = cell.paragraphs[0].runs[0]
+    if bold:
+        run.bold = True
+    if font_size is not None:
+        run.font.size = font_size
 
 
 def generate_quotation_docx(quotation_context: dict[str, Any]) -> bytes:
+    """Backward-compatible alias for unified formal quotation DOCX generation."""
+    return generate_quotation_formal_docx(quotation_context)
+
+
+def generate_quotation_formal_docx(quotation_context: dict[str, Any]) -> bytes:
     labels = quotation_context["labels"]
     company = quotation_context["company"]
     locale = quotation_context["locale"]
@@ -282,139 +297,130 @@ def generate_quotation_docx(quotation_context: dict[str, Any]) -> bytes:
 
     document = Document()
 
-    header_table = document.add_table(rows=1, cols=2)
-    header_table.autofit = True
-    left_cell = header_table.rows[0].cells[0]
-    right_cell = header_table.rows[0].cells[1]
-    title = left_cell.paragraphs[0].add_run(labels["title"])
+    header = document.add_table(rows=3, cols=2)
+    header.autofit = True
+
+    title_cell = header.rows[0].cells[0]
+    right_cell = header.rows[0].cells[1]
+    title = title_cell.paragraphs[0].add_run(labels["title"])
     title.bold = True
     title.font.size = Pt(18)
 
-    meta = right_cell.add_table(rows=3, cols=2)
-    meta.style = "Table Grid"
-    meta_rows = [
-        (f"{labels['issue_date']}{colon}", quotation_context["issue_date"]),
-        (f"{labels['quote_number']}{colon}", ""),
-        (f"{labels['registration_number']}{colon}", ""),
-    ]
-    for index, (label, value) in enumerate(meta_rows):
-        _set_cell_text(meta.rows[index].cells[0], label, bold=True)
-        _set_cell_text(meta.rows[index].cells[1], value)
-
-    document.add_paragraph()
-
-    parties = document.add_table(rows=1, cols=2)
-    parties.autofit = True
-    left = parties.rows[0].cells[0]
-    right = parties.rows[0].cells[1]
-
-    client_table = left.add_table(rows=2, cols=2)
-    client_table.style = "Table Grid"
-    client_rows = [
-        (f"{labels['project_name']}{colon}", quotation_context["project_name"]),
-        (f"{labels['client']}{colon}", quotation_context["client_name"]),
-    ]
-    for index, (label, value) in enumerate(client_rows):
-        _set_cell_text(client_table.rows[index].cells[0], label, bold=True)
-        _set_cell_text(client_table.rows[index].cells[1], value)
-    left.add_paragraph(quotation_context["intro"])
-
-    if LOGO_PATH.exists():
-        logo_paragraph = right.paragraphs[0]
-        logo_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    date_paragraph = right_cell.paragraphs[0]
+    date_paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    date_run = date_paragraph.add_run(quotation_context["issue_date"])
+    date_run.bold = True
+    date_run.font.size = Pt(12)
+    right_cell.add_paragraph()
+    right_cell.add_paragraph(
+        f"{labels['quote_number']}{colon}{quotation_context['quote_number']}"
+    )
+    right_cell.add_paragraph(
+        f"{labels['registration_number']}{colon}{quotation_context['registration_number']}"
+    )
+    logo_bytes = quotation_context.get("logo_bytes")
+    logo_ext = (quotation_context.get("logo_ext") or "").lower()
+    if logo_bytes and logo_ext in {"png", "jpg", "jpeg", "webp"}:
+        logo_paragraph = right_cell.add_paragraph()
+        logo_paragraph.add_run().add_picture(BytesIO(logo_bytes), width=Inches(1.6))
+    elif LOGO_PATH.exists():
+        logo_paragraph = right_cell.add_paragraph()
         logo_paragraph.add_run().add_picture(str(LOGO_PATH), width=Inches(1.6))
     contact_person = company.get("contact_person") or ""
-    right.add_paragraph(f"{labels['contact_person']}{colon}{contact_person}")
-    right.add_paragraph(company["contact_block"])
+    right_cell.add_paragraph(f"{labels['contact_person']}{colon}{contact_person}")
+    right_cell.add_paragraph()
+    postal_prefix = "〒" if locale == "ja" else "Postal code "
+    right_cell.add_paragraph(f"{postal_prefix}{company['postal_code']}")
+    for line in company["address_lines"]:
+        right_cell.add_paragraph(line)
+    right_cell.add_paragraph()
+    right_cell.add_paragraph(f"{labels['tel']}{colon}{company['tel']}")
+    mail_sep = "：" if locale == "ja" else ": "
+    right_cell.add_paragraph(f"{labels['mail']}{mail_sep}{company['email']}")
+    right_cell.add_paragraph()
+
+    right_cell.merge(header.rows[1].cells[1])
+    right_cell.merge(header.rows[2].cells[1])
+
+    client_cell = header.rows[1].cells[0]
+    client_name_paragraph = client_cell.paragraphs[0]
+    client_name_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    client_name_paragraph.paragraph_format.space_before = Pt(28)
+    client_name_run = client_name_paragraph.add_run(quotation_context["client_name"])
+    client_name_run.bold = True
+    client_name_run.font.size = Pt(14)
+
+    intro_cell = header.rows[2].cells[0]
+    intro_cell.paragraphs[0].add_run(quotation_context["intro"])
 
     document.add_paragraph()
 
-    pricing = quotation_context.get("pricing_summary") or {}
-    if pricing.get("has_discount"):
-        pricing_labels = pricing.get("labels") or {}
-        _add_key_value_table(
-            document,
-            [
-                (
-                    pricing_labels.get("development_cost", "Development Cost"),
-                    format_currency(pricing["nrc_original_total_jpy"]),
-                ),
-                (
-                    pricing_labels.get("limited_time_discount", "Limited-Time Discount"),
-                    pricing["discount_display"],
-                ),
-                (
-                    pricing_labels.get("special_price", "Special Price"),
-                    f"{format_currency(pricing['nrc_discounted_total_jpy'])} {pricing_labels.get('excluding_tax', '')}",
-                ),
-            ],
-        )
-
-        campaign_terms = pricing.get("campaign_terms")
-        if campaign_terms:
-            document.add_paragraph(f"*{pricing.get('campaign_terms_title', 'Campaign Terms')}")
-            document.add_paragraph(campaign_terms)
-
-    total_label = f"［{labels['total_amount_label']}］" if locale == "ja" else f"[{labels['total_amount_label']}]"
-    total_paragraph = document.add_paragraph()
-    total_paragraph.add_run(total_label).bold = True
-    amount_run = document.add_paragraph(format_currency(quotation_context["grand_total_jpy"]))
-    amount_run.runs[0].bold = True
-    amount_run.runs[0].font.size = Pt(14)
+    total_table = document.add_table(rows=1, cols=1)
+    total_table.style = "Table Grid"
+    total_cell = total_table.rows[0].cells[0]
+    total_paragraph = total_cell.paragraphs[0]
+    total_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    amount_run = total_paragraph.add_run(
+        format_currency(quotation_context["grand_total_jpy"])
+    )
+    amount_run.bold = True
+    amount_run.font.size = Pt(14)
 
     document.add_paragraph()
 
     line_items = quotation_context["line_items"]
-    item_count = max(len(line_items), QUOTATION_MIN_ITEM_ROWS)
-    items_table = document.add_table(rows=1 + item_count, cols=4)
+    items_table = document.add_table(rows=1 + len(line_items), cols=4)
     items_table.style = "Table Grid"
     headers = [labels["item"], labels["unit"], labels["unit_price"], labels["subtotal_col"]]
     for index, header in enumerate(headers):
         _set_cell_text(items_table.rows[0].cells[index], header, bold=True)
 
-    for row_index in range(item_count):
-        row = line_items[row_index] if row_index < len(line_items) else None
+    for row_index, row in enumerate(line_items):
         cells = items_table.rows[row_index + 1].cells
-        if row:
-            cells[0].text = row["name"]
-            cells[1].text = row["unit"]
-            cells[2].text = format_currency(row["unit_price_jpy"])
-            cells[3].text = format_currency(row["subtotal_jpy"])
+        name_text = row["name"]
+        if row.get("description"):
+            name_text = f"{name_text}\n{row['description']}"
+        cells[0].text = name_text
+        cells[1].text = str(row["quantity"]) if row.get("display_quantity") else ""
+        if row.get("kind") == "discount":
+            cells[2].text = ""
+            cells[3].text = row.get("discount_display", "")
         else:
-            cells[0].text = " "
+            cells[2].text = f"({format_currency(row['unit_price_jpy'])})"
+            cells[3].text = f"({format_currency(row['subtotal_jpy'])})"
 
     document.add_paragraph()
 
-    summary = document.add_table(rows=1, cols=2)
-    summary.autofit = True
-    notes_cell = summary.rows[0].cells[0]
-    totals_cell = summary.rows[0].cells[1]
+    totals_layout = document.add_table(rows=1, cols=2)
+    totals_layout.autofit = True
 
-    notes_cell.paragraphs[0].add_run(labels["notes_heading"]).bold = True
-    notes_cell.add_paragraph(quotation_context["remarks"])
+    notes_cell = totals_layout.rows[0].cells[0]
+    notes_heading = notes_cell.paragraphs[0].add_run(labels["notes_heading"])
+    notes_heading.bold = True
+    for item in quotation_context.get("remarks_items") or []:
+        notes_cell.add_paragraph(f"・{item}")
 
-    totals = totals_cell.add_table(rows=3, cols=2)
+    totals = totals_layout.rows[0].cells[1].add_table(rows=3, cols=2)
     totals.style = "Table Grid"
     totals_rows = [
-        (f"{labels['subtotal']}{colon}", format_currency(quotation_context["subtotal_jpy"])),
-        (f"{quotation_context['tax_with_rate_label']}{colon}", format_currency(quotation_context["tax_jpy"])),
-        (f"{labels['grand_total']}{colon}", format_currency(quotation_context["grand_total_jpy"])),
+        (labels["subtotal"], f"{quotation_context['subtotal_jpy']:,}"),
+        (
+            quotation_context["tax_with_rate_label"],
+            f"{quotation_context['tax_jpy']:,}",
+        ),
+        (
+            labels["grand_total"],
+            f"{quotation_context['grand_total_jpy']:,}",
+        ),
     ]
     for index, (label, value) in enumerate(totals_rows):
-        _set_cell_text(totals.rows[index].cells[0], label, bold=True)
-        _set_cell_text(totals.rows[index].cells[1], value)
+        _set_cell_text(totals.rows[index].cells[0], label, bold=True, font_size=Pt(11))
+        _set_cell_text(totals.rows[index].cells[1], value, font_size=Pt(11))
 
     document.add_paragraph()
-
-    payment = document.add_table(rows=2, cols=1)
-    payment.style = "Table Grid"
-    payment_header = payment.rows[0].cells[0].add_table(rows=1, cols=2)
-    _set_cell_text(payment_header.rows[0].cells[0], labels["bank_details"], bold=True)
-    _set_cell_text(
-        payment_header.rows[0].cells[1],
-        f"{labels['payment_due']} {quotation_context['payment_terms']}",
-        bold=True,
-    )
-    payment.rows[1].cells[0].text = quotation_context["bank_details"]
+    document.add_paragraph(labels["bank_details"]).runs[0].bold = True
+    bank_paragraph = document.add_paragraph()
+    bank_run = bank_paragraph.add_run(quotation_context["bank_details"])
+    bank_run.font.size = Pt(11)
 
     return _document_bytes(document)

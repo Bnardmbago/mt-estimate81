@@ -42,6 +42,10 @@ from app.rate_cards.generation import (
     should_tune_rate_card_on_extract,
 )
 from app.estimates.form_fields import fill_complexity_from_profile
+from app.estimates.nrc_rc_assumptions import (
+    assumptions_from_rate_card_settings,
+    derive_nrc_rc_assumptions,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -342,6 +346,7 @@ async def run_extraction(
     await db.execute(delete(FeatureItem).where(FeatureItem.estimate_id == estimate_id))
     estimate.extracted_data = None
     estimate.maintenance_assumptions = preserved_flags
+    estimate.nrc_rc_assumptions = {}
     estimate.calculation_result = None
     estimate.rate_card_version_id = None
     await db.commit()
@@ -467,6 +472,14 @@ async def run_extraction(
             locale,
             extracted_payload,
         )
+        from app.estimates.nrc_rc_assumptions import estimate_labor_jpy
+
+        estimate.nrc_rc_assumptions = derive_nrc_rc_assumptions(
+            complexity_profile=complexity_profile.model_dump(),
+            form_data=form_data,
+            extracted_data=extracted_payload,
+            labor_jpy=estimate_labor_jpy(feature_items_for_score),
+        )
         maintenance_assumptions = ai_result.maintenance_assumptions.model_dump()
         prior_maintenance = estimate.maintenance_assumptions or {}
         if RATE_CARD_AUTO_TUNE_KEY in prior_maintenance:
@@ -509,6 +522,15 @@ async def run_extraction(
                         estimate.rate_card_id,
                         user,
                         locale=locale,
+                    )
+                from app.rate_cards.service import get_latest_version_for_card
+
+                version = await get_latest_version_for_card(db, estimate.rate_card_id)
+                if version and version.settings:
+                    estimate.nrc_rc_assumptions = assumptions_from_rate_card_settings(
+                        dict(version.settings),
+                        source="rate_card_tune",
+                        complexity_level=complexity_profile.level,
                     )
             except Exception as exc:
                 await log_change(

@@ -23,6 +23,11 @@ from app.estimates.access import can_access_estimate, require_estimate_access
 from app.estimates.form_fields import normalize_form_data, prune_form_data_to_schema, snapshot_fields
 from app.estimates.budget_comparison import build_budget_comparison
 from app.estimates.delivery_schedule import build_delivery_schedule_advisory
+from app.estimates.nrc_rc_assumptions import (
+    NrcRcAssumptions,
+    apply_nrc_rc_assumptions_to_settings,
+    resolve_nrc_rc_assumptions,
+)
 from app.estimates.questionnaire_validation import missing_questionnaire_fields_for_calculation
 from app.form_templates.service import get_template_or_404, resolve_template
 from app.fx import get_fx_service
@@ -63,6 +68,7 @@ from app.schemas.estimate import (
     ExtractedDataUpdate,
     FeatureItemResponse,
     FeatureItemsUpdate,
+    NrcRcAssumptionsUpdate,
 )
 
 
@@ -522,6 +528,48 @@ async def update_extracted_data(
     return await get_estimate(db, estimate_id)
 
 
+async def update_nrc_rc_assumptions(
+    db: AsyncSession,
+    user: User,
+    estimate_id: uuid.UUID,
+    data: NrcRcAssumptionsUpdate,
+) -> Estimate:
+    estimate = await get_estimate_for_user(db, estimate_id, user)
+
+    if estimate.status not in (
+        EstimateStatus.REVIEW.value,
+        EstimateStatus.CALCULATED.value,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "NRC/RC assumptions can only be edited during review or after calculation",
+                "code": "INVALID_STATUS",
+            },
+        )
+
+    assumptions = NrcRcAssumptions(
+        setup_cost_items=data.setup_cost_items,
+        monthly_rc_items=data.monthly_rc_items,
+        source="manual",
+        complexity_level=data.complexity_level,
+    )
+    estimate.nrc_rc_assumptions = assumptions.model_dump()
+
+    await log_change(
+        db,
+        estimate_id=estimate.id,
+        user_id=user.id,
+        action="nrc_rc_assumptions_updated",
+        changes={
+            "setup_item_count": len(data.setup_cost_items),
+            "monthly_item_count": len(data.monthly_rc_items),
+        },
+    )
+    await db.commit()
+    return await get_estimate(db, estimate_id)
+
+
 async def _get_active_rate_card_version(db: AsyncSession, user: User) -> RateCardVersion:
     rate_card = await get_active_rate_card(db, user)
     if not rate_card:
@@ -751,13 +799,34 @@ async def run_calculation(
     source_currency = rate_settings.currency
     source_region = rate_settings.region
     jpy_settings, fx_snapshot = await rate_card_settings_to_jpy(rate_settings, get_fx_service())
+    feature_dicts = [
+        {
+            "name": item.name,
+            "hours": float(item.hours),
+            "phase": item.phase,
+            "role": item.role,
+        }
+        for item in estimate.feature_items
+    ]
     maintenance = dict(estimate.maintenance_assumptions or {})
     extracted = (
         resolve_localized_dict(estimate.extracted_data, estimate.locale, estimate.locale)
         if estimate.extracted_data
         else {}
     )
-    cost_drivers = extracted.get("cost_drivers") or []
+    resolved_nrc_rc = resolve_nrc_rc_assumptions(
+        estimate,
+        feature_items=feature_dicts,
+        form_data=form_data,
+        extracted_data=extracted if isinstance(extracted, dict) else {},
+        rate_card_settings=jpy_settings.model_dump(),
+    )
+    jpy_settings = RateCardSettings.model_validate(
+        normalize_settings_dict(
+            apply_nrc_rc_assumptions_to_settings(jpy_settings.model_dump(), resolved_nrc_rc)
+        )
+    )
+    cost_drivers = extracted.get("cost_drivers") or [] if isinstance(extracted, dict) else []
     resolved_start = _resolve_project_start_date(estimate, project_start_date)
     if project_start_date is not None or estimate.project_start_date is None:
         estimate.project_start_date = resolved_start
@@ -807,6 +876,8 @@ async def run_calculation(
     result_payload["source_region"] = source_region
     if form_development_approach_applied:
         result_payload["form_development_approach_applied"] = True
+    result_payload["nrc_rc_assumptions"] = resolved_nrc_rc
+    result_payload["nrc_rc_source"] = resolved_nrc_rc.get("source", "derived")
 
     gantt = result_payload.get("gantt") or {}
     total_working_days = int(gantt.get("total_working_days") or 0)

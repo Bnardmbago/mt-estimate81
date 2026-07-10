@@ -67,18 +67,6 @@ FORM_FIELD_KEYS = [
 ]
 
 SELECT_OPTIONS: dict[str, tuple[str, ...]] = {
-    "desired_system": (
-        "corporate_website",
-        "web_application",
-        "mobile_app",
-        "api_backend",
-        "admin_portal",
-        "ecommerce",
-        "saas",
-        "internal_tool",
-        "other",
-        "undecided",
-    ),
     "target_users": (
         "internal_staff",
         "external_customers",
@@ -91,7 +79,8 @@ SELECT_OPTIONS: dict[str, tuple[str, ...]] = {
         "web_browser",
         "iphone_app",
         "android_app",
-        "both_mobile",
+        "cross_platform",
+        "mobile_only",
         "undecided",
     ),
     "admin_screen_needed": ("yes", "no", "undecided"),
@@ -177,6 +166,7 @@ NUMBER_FIELD_KEYS = {"expected_user_count", "concurrent_users", "integration_cou
 CURRENCY_FIELD_KEYS = {"client_budget"}
 
 TEXT_FIELD_KEYS = {
+    "desired_system",
     "system_type",
     "budget",
 }
@@ -268,9 +258,11 @@ FORM_FIELD_LABELS: dict[str, dict[str, str]] = {
 }
 
 OPTION_LABELS: dict[str, dict[str, str]] = {
-    "web_browser": {"en": "Web browser", "ja": "Webブラウザ"},
-    "iphone_app": {"en": "iPhone app", "ja": "iPhoneアプリ"},
+    "web_browser": {"en": "Web Browser", "ja": "Webブラウザ"},
+    "iphone_app": {"en": "iOS (iPhone app)", "ja": "iOS（iPhoneアプリ）"},
     "android_app": {"en": "Android app", "ja": "Androidアプリ"},
+    "cross_platform": {"en": "Cross Platform", "ja": "クロスプラットフォーム"},
+    "mobile_only": {"en": "Mobile Only", "ja": "モバイルのみ"},
     "both_mobile": {"en": "iPhone and Android", "ja": "iPhone・Android両方"},
     "undecided": {"en": "Undecided", "ja": "未定"},
     "yes": {"en": "Yes", "ja": "はい"},
@@ -352,19 +344,15 @@ FIELD_OPTION_LABEL_OVERRIDES: dict[str, dict[str, dict[str, str]]] = {
 
 # Maps legacy / AI free-text answers to select slugs (keys are casefolded).
 SELECT_VALUE_ALIASES: dict[str, dict[str, str]] = {
-    "desired_system": {
-        "website": "corporate_website",
-        "corporate website": "corporate_website",
-        "web app": "web_application",
-        "web application": "web_application",
-        "mobile application": "mobile_app",
-        "mobile app": "mobile_app",
-        "e-commerce": "ecommerce",
-        "e commerce": "ecommerce",
-        "api": "api_backend",
-        "backend": "api_backend",
-        "customer portal": "web_application",
-        "portal": "web_application",
+    "usage_platform": {
+        "web browser": "web_browser",
+        "ios": "iphone_app",
+        "ios (iphone app)": "iphone_app",
+        "iphone app": "iphone_app",
+        "both_mobile": "cross_platform",
+        "iphone and android": "cross_platform",
+        "cross platform": "cross_platform",
+        "mobile only": "mobile_only",
     },
     "target_users": {
         "internal": "internal_staff",
@@ -443,6 +431,10 @@ SELECT_VALUE_ALIASES: dict[str, dict[str, str]] = {
 }
 
 FIELD_PLACEHOLDERS: dict[str, dict[str, str]] = {
+    "desired_system": {
+        "en": "e.g. Customer portal, internal dashboard, mobile ordering app",
+        "ja": "例: 顧客ポータル、社内ダッシュボード、モバイル注文アプリ",
+    },
     "expected_user_count": {"en": "e.g. 1000", "ja": "例: 1000"},
     "concurrent_users": {"en": "e.g. 100", "ja": "例: 100"},
     "client_budget": {"en": "e.g. 5000000", "ja": "例: 5000000"},
@@ -493,7 +485,8 @@ FIELD_PLACEHOLDERS: dict[str, dict[str, str]] = {
 }
 
 KNOWN_FIELD_TYPE_PATCHES: dict[str, str] = {
-    "desired_system": "select",
+    "desired_system": "text",
+    "usage_platform": "select",
     "target_users": "select",
     "payment_needed": "select",
     "expected_user_count": "number",

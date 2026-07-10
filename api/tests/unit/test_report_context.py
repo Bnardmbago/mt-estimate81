@@ -234,7 +234,7 @@ def test_report_context_resolves_i18n_form_data():
     ja_values = {field["label"]: field["value"] for field in header_ja["fields"]}
     assert en_values["What kind of system do you want to build?"] == "Customer portal"
     assert ja_values["どのようなシステムを作りたいですか？"] == "顧客ポータル"
-    assert en_values["Where will it be used?"] == "Web browser"
+    assert en_values["Where will it be used?"] == "Web Browser"
 
 
 def test_report_context_resolves_i18n_extracted_data():

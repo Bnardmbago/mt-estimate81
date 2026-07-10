@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
+from datetime import date
+
+from sqlalchemy import Boolean, BigInteger, Date, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -26,4 +28,17 @@ class SystemConfig(Base):
     quotation_special_notes_title_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     quotation_special_notes_body_ja: Mapped[str | None] = mapped_column(Text, nullable=True)
     quotation_special_notes_body_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_invoice_registration_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    quotation_contact_person: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    quotation_company_postal_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    quotation_company_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_company_tel: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    quotation_company_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    quotation_bank_details_ja: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_bank_details_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quotation_logo_storage_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    registration_number_sequence: Mapped[int] = mapped_column(BigInteger, default=9010001234561)
+    quotation_number_prefix: Mapped[str] = mapped_column(String(10), default="BAI")
+    quotation_number_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    quotation_number_sequence: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

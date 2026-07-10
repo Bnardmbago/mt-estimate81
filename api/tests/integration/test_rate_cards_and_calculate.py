@@ -1009,3 +1009,82 @@ async def test_apply_regional_standard_updates_role_rates(
     assert len(payload["settings"]["roles"]) == 4
     assert roles["Tech Lead"]["hourly_rate"] > 2000
     assert roles["Engineer"]["hourly_rate"] > 1500
+
+
+@pytest.mark.asyncio
+async def test_calculate_uses_estimate_nrc_rc_assumptions_for_low_complexity(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    db_session: AsyncSession,
+    active_rate_card: RateCardVersion,
+):
+    from app.estimates.nrc_rc_assumptions import derive_nrc_rc_assumptions
+    from app.rate_cards.complexity import score_project_complexity
+
+    user = client.test_user  # type: ignore[attr-defined]
+    feature_items = [
+        {"name": "Login", "hours": 16, "phase": "development", "role": "developer"},
+        {"name": "Dashboard", "hours": 24, "phase": "development", "role": "developer"},
+    ]
+    extracted_data = {
+        "external_systems": [],
+        "non_functional_requirements": [],
+        "modules": ["Auth"],
+        "risks": [],
+        "gaps": [],
+        "cost_drivers": [],
+    }
+    profile = score_project_complexity(
+        feature_items=feature_items,
+        extracted_data=extracted_data,
+        form_data={"data_complexity": "low", "ui_complexity": "low"},
+    )
+    assumptions = derive_nrc_rc_assumptions(
+        complexity_profile=profile.model_dump(),
+        form_data={"data_complexity": "low", "ui_complexity": "low"},
+        extracted_data=extracted_data,
+        labor_jpy=40 * 8000,
+    )
+
+    estimate = Estimate(
+        project_name="Small project",
+        client_name="ACME",
+        locale="en",
+        status=EstimateStatus.REVIEW.value,
+        created_by=user.id,
+        rate_card_id=active_rate_card.rate_card_id,
+        form_data={
+            "data_complexity": "low",
+            "ui_complexity": "low",
+            "scope_boundaries": "Login and dashboard only",
+        },
+        extracted_data={"complexity_profile": profile.model_dump()},
+        nrc_rc_assumptions=assumptions,
+        maintenance_assumptions={"monthly_support_hours": 0, "support_role": "developer"},
+    )
+    db_session.add(estimate)
+    await db_session.flush()
+    for index, item in enumerate(feature_items):
+        db_session.add(
+            FeatureItem(
+                estimate_id=estimate.id,
+                sort_order=index,
+                name=item["name"],
+                description="",
+                hours=item["hours"],
+                phase=item["phase"],
+                role=item["role"],
+                is_ai_generated=False,
+            )
+        )
+    await db_session.commit()
+
+    response = await client.post(
+        f"/estimates/{estimate.id}/calculate",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    calc = response.json()["calculation_result"]
+    assert calc["nrc"]["setup_jpy"] < 100_000
+    assert calc["rc"]["monthly_total_jpy"] < 15_000
+    assert calc["nrc_rc_source"] in {"derived", "manual", "rate_card_tune"}

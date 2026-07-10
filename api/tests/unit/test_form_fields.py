@@ -25,8 +25,16 @@ def test_header_questionnaire_field_types():
     fields = build_default_template_fields()
     by_key = {field["key"]: field for field in fields}
 
-    assert by_key["desired_system"]["type"] == "select"
-    assert by_key["target_users"]["type"] == "select"
+    assert by_key["desired_system"]["type"] == "text"
+    assert by_key["usage_platform"]["type"] == "select"
+    assert [option["value"] for option in by_key["usage_platform"]["options"]] == [
+        "web_browser",
+        "iphone_app",
+        "android_app",
+        "cross_platform",
+        "mobile_only",
+        "undecided",
+    ]
     assert by_key["payment_needed"]["type"] == "select"
     assert by_key["client_budget"]["type"] == "currency"
     assert by_key["expected_user_count"]["type"] == "number"
@@ -88,8 +96,19 @@ def test_normalize_form_data_maps_legacy_select_aliases():
     assert normalized["nature_of_work"] == "new_build"
     assert normalized["development_approach"] == "hybrid"
     assert normalized["payment_needed"] == "both"
-    assert normalized["desired_system"] == "web_application"
+    assert normalized["desired_system"] == "Customer portal"
     assert normalized["business_domain"] == "retail"
+
+
+def test_normalize_form_data_maps_legacy_usage_platform_aliases():
+    schema = build_default_template_fields()
+    normalized = normalize_form_data(
+        schema,
+        {
+            "usage_platform": "both_mobile",
+        },
+    )
+    assert normalized["usage_platform"] == "cross_platform"
 
 
 def test_development_approach_hybrid_label_not_location_label():

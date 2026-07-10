@@ -34,8 +34,17 @@ def _render_template(template_name: str, *, show_watermark: bool = False, **cont
 
 
 def generate_quotation_pdf(quotation_context: dict[str, Any], *, show_watermark: bool = False) -> bytes:
+    """Backward-compatible alias for unified formal quotation PDF generation."""
+    return generate_quotation_formal_pdf(quotation_context, show_watermark=show_watermark)
+
+
+def generate_quotation_formal_pdf(
+    quotation_context: dict[str, Any],
+    *,
+    show_watermark: bool = False,
+) -> bytes:
     return _render_template(
-        "estimate_quotation.html.j2",
+        "estimate_quotation_formal.html.j2",
         show_watermark=show_watermark,
         ctx=quotation_context,
         format_currency=format_currency,

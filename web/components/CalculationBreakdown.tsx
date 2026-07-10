@@ -83,6 +83,8 @@ export type CalculationResult = {
     target_working_days?: number | null;
     actual_working_days?: number;
   };
+  nrc_rc_assumptions?: Record<string, unknown>;
+  nrc_rc_source?: "derived" | "rate_card_tune" | "manual" | "rate_card";
 };
 
 type CalculationBreakdownProps = {
@@ -278,6 +280,9 @@ export default function CalculationBreakdown({
           {t("nrcTitle")}
           <Tooltip text={t("nrcFormula")} />
         </h3>
+        {result.nrc_rc_source === "derived" ? (
+          <p className="mb-2 text-xs text-gray-500">{t("nrcRcScaledNote")}</p>
+        ) : null}
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <tbody className="divide-y divide-gray-200 bg-white">

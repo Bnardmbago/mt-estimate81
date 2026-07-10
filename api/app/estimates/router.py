@@ -24,6 +24,7 @@ from app.schemas.estimate import (
     FeatureItemsUpdate,
     GenerateRateCardResponse,
     GanttTimelineResponse,
+    NrcRcAssumptionsUpdate,
 )
 
 router = APIRouter(prefix="/estimates", tags=["estimates"])
@@ -215,6 +216,18 @@ async def update_extracted_data(
         body,
         content_locale=content_locale,
     )
+    return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
+
+
+@router.patch("/{estimate_id}/nrc-rc-assumptions", response_model=EstimateDetail)
+async def update_nrc_rc_assumptions(
+    estimate_id: uuid.UUID,
+    body: NrcRcAssumptionsUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+    display_locale: str | None = Depends(get_display_locale),
+):
+    estimate = await service.update_nrc_rc_assumptions(db, user, estimate_id, body)
     return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
 
 

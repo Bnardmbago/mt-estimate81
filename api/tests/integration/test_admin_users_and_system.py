@@ -433,8 +433,106 @@ async def test_get_quotation_settings_defaults(client: AsyncClient, admin_header
     data = response.json()
     assert data["special_notes_title_ja"] == "特記事項"
     assert data["special_notes_title_en"] == "Special Notes"
-    assert "{issue_date}" in data["special_notes_body_ja"]
+    assert "{discount_percent}" in data["special_notes_body_ja"]
     assert "{special_price}" in data["special_notes_body_en"]
+    assert "invoice_registration_number" in data
+    assert "contact_person" in data
+    assert data["company_postal_code"]
+    assert data["company_address"]
+    assert data["company_tel"]
+    assert data["company_email"]
+    assert "株式会社Beyond AI" in data["bank_details_ja"]
+    assert data["has_custom_logo"] is False
+    assert data["logo_url"] == "/admin/quotation-settings/logo"
+
+
+@pytest.mark.asyncio
+async def test_update_quotation_settings_company_and_bank(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+):
+    response = await client.patch(
+        "/admin/quotation-settings",
+        headers=admin_headers,
+        json={
+            "company_postal_code": "100-0001",
+            "company_address": "東京都千代田区1-1\nテストビル 2階",
+            "company_tel": "03-1111-2222",
+            "company_email": "quote@example.com",
+            "bank_details_ja": "テスト銀行\n普通 1234567",
+            "bank_details_en": "Test Bank\nOrdinary 1234567",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["company_postal_code"] == "100-0001"
+    assert "テストビル" in data["company_address"]
+    assert data["company_tel"] == "03-1111-2222"
+    assert data["company_email"] == "quote@example.com"
+    assert data["bank_details_ja"] == "テスト銀行\n普通 1234567"
+    assert data["bank_details_en"] == "Test Bank\nOrdinary 1234567"
+
+    get_response = await client.get("/admin/quotation-settings", headers=admin_headers)
+    assert get_response.json()["company_tel"] == "03-1111-2222"
+
+
+@pytest.mark.asyncio
+async def test_upload_and_reset_quotation_logo(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+):
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f"
+        b"\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    response = await client.post(
+        "/admin/quotation-settings/logo",
+        headers=admin_headers,
+        files={"file": ("logo.png", png_bytes, "image/png")},
+    )
+    assert response.status_code == 200
+    assert response.json()["has_custom_logo"] is True
+
+    logo_response = await client.get("/admin/quotation-settings/logo", headers=admin_headers)
+    assert logo_response.status_code == 200
+    assert logo_response.headers["content-type"].startswith("image/")
+    assert logo_response.content.startswith(b"\x89PNG")
+
+    reset = await client.delete("/admin/quotation-settings/logo", headers=admin_headers)
+    assert reset.status_code == 200
+    assert reset.json()["has_custom_logo"] is False
+
+
+@pytest.mark.asyncio
+async def test_update_quotation_settings_contact_person(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+):
+    response = await client.patch(
+        "/admin/quotation-settings",
+        headers=admin_headers,
+        json={"contact_person": "Tanaka Taro"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["contact_person"] == "Tanaka Taro"
+
+
+@pytest.mark.asyncio
+async def test_update_quotation_settings_registration_number(
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+):
+    response = await client.patch(
+        "/admin/quotation-settings",
+        headers=admin_headers,
+        json={"invoice_registration_number": "T9010001234999"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["invoice_registration_number"] == "T9010001234999"
 
 
 @pytest.mark.asyncio

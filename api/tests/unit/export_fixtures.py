@@ -3,7 +3,7 @@ from datetime import datetime
 from types import SimpleNamespace
 
 from app.admin.quotation_notes_config import default_quotation_notes_config
-from app.exports.quotation_context import build_quotation_context
+from app.exports.quotation_context import build_formal_quotation_context, build_quotation_context
 from app.exports.report_context import build_report_context
 from app.i18n.localized_content import store_localized_dict
 
@@ -211,4 +211,35 @@ def sample_quotation_context(
         export_revision=export_revision,
         tax_rate=tax_rate,
         quotation_notes_config=default_quotation_notes_config(),
+    )
+
+
+def sample_formal_quotation_context(
+    estimate=None,
+    *,
+    locale: str = "en",
+    generated_at: datetime | None = None,
+    rate_card_name: str | None = "Rate Card Default",
+    rate_card_version_number: int | None = 2,
+    rate_card_effective_date: datetime | None = None,
+    export_revision: int = 1,
+    tax_rate: float = 0.10,
+    quotation_number: str = "BAI-20260629-001",
+    registration_number: str = "T9010001234562",
+    contact_person: str = "Tanaka Taro",
+):
+    estimate = estimate or sample_estimate_with_calculation()
+    return build_formal_quotation_context(
+        estimate,
+        locale,
+        generated_at=generated_at or datetime(2026, 6, 29),
+        rate_card_name=rate_card_name,
+        rate_card_version_number=rate_card_version_number,
+        rate_card_effective_date=rate_card_effective_date or datetime(2026, 1, 1),
+        export_revision=export_revision,
+        tax_rate=tax_rate,
+        quotation_notes_config=default_quotation_notes_config(),
+        quotation_number=quotation_number,
+        registration_number=registration_number,
+        contact_person=contact_person,
     )

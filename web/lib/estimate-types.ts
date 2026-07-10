@@ -45,6 +45,20 @@ export type ComplexityProfile = {
   non_functional_count?: number;
 };
 
+export type NrcRcLineItem = {
+  name: string;
+  amount: number;
+  category?: string | null;
+  service_description?: string | null;
+};
+
+export type NrcRcAssumptions = {
+  setup_cost_items: NrcRcLineItem[];
+  monthly_rc_items: NrcRcLineItem[];
+  source?: "derived" | "rate_card_tune" | "manual" | "rate_card";
+  complexity_level?: "low" | "medium" | "high" | null;
+};
+
 export type GanttData = {
   project_start_date: string;
   project_end_date: string;
@@ -124,6 +138,8 @@ export type CalculationResult = {
     target_working_days?: number | null;
     actual_working_days?: number;
   };
+  nrc_rc_assumptions?: NrcRcAssumptions;
+  nrc_rc_source?: "derived" | "rate_card_tune" | "manual" | "rate_card";
 };
 
 export type ExportRecord = {
@@ -132,6 +148,8 @@ export type ExportRecord = {
   format: string;
   storage_path: string;
   locale: string;
+  quotation_number?: string | null;
+  registration_number?: string | null;
   generated_at: string;
   generated_by: string;
 };
@@ -171,6 +189,7 @@ export type EstimateDetail = {
   form_schema_snapshot: FormFieldSchema[];
   extracted_data: ExtractedData | null;
   maintenance_assumptions: Record<string, unknown>;
+  nrc_rc_assumptions: NrcRcAssumptions;
   calculation_result: CalculationResult | null;
   rate_card_id: string | null;
   rate_card_name: string | null;

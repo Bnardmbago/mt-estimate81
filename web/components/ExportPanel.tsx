@@ -482,6 +482,12 @@ export default function ExportPanel({
                     <span className="font-medium">{exportFormatLabel(record.format, t)}</span>
                     <span className="mx-2 text-gray-400">·</span>
                     <span>{record.locale.toUpperCase()}</span>
+                    {record.quotation_number ? (
+                      <>
+                        <span className="mx-2 text-gray-400">·</span>
+                        <span className="text-gray-500">{record.quotation_number}</span>
+                      </>
+                    ) : null}
                     <span className="mx-2 text-gray-400">·</span>
                     <span className="text-gray-500">
                       {formatLocalTimestamp(record.generated_at, locale)}

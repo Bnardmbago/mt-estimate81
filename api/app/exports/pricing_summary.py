@@ -35,12 +35,29 @@ PRICING_LABELS: dict[str, dict[str, str]] = {
 DEFAULT_QUOTATION_SPECIAL_NOTES: dict[str, dict[str, str]] = {
     "ja": {
         "title": "特記事項",
-        "body": PRICING_LABELS["ja"]["campaign_terms_body"],
+        "body": (
+            "本見積書発行日より1か月以内にご発注いただいた場合、"
+            "{discount_percent}％OFFの特別価格 {special_price}を適用いたします。"
+        ),
     },
     "en": {
         "title": "Special Notes",
-        "body": PRICING_LABELS["en"]["campaign_terms_body"],
+        "body": (
+            "If you place your order within one month from the date this quotation is issued, "
+            "the special discounted price of {special_price} will apply ({discount_percent}% OFF)."
+        ),
     },
+}
+
+DEFAULT_DEV_LINE_DESCRIPTION: dict[str, str] = {
+    "ja": (
+        "要件定義・設計、システム開発、外部サービス連携、\n"
+        "インフラ構築、テスト・品質確認"
+    ),
+    "en": (
+        "Requirements definition and design, system development, external service integration, "
+        "infrastructure setup, testing and quality assurance"
+    ),
 }
 
 _PLACEHOLDER_PATTERN = re.compile(r"\{([a-z_]+)\}")
@@ -67,10 +84,15 @@ def build_special_notes_variables(
     pricing_summary: dict[str, Any],
     locale: str,
     issue_date: str,
+    *,
+    include_tax_label: bool = True,
 ) -> dict[str, str]:
     labels = PRICING_LABELS[locale]
     nrc_discounted = int(pricing_summary["nrc_discounted_total_jpy"])
-    special_price = f"{format_currency(nrc_discounted)} {labels['excluding_tax']}"
+    if include_tax_label:
+        special_price = f"{format_currency(nrc_discounted)} {labels['excluding_tax']}"
+    else:
+        special_price = format_currency(nrc_discounted)
     original = int(pricing_summary.get("nrc_original_total_jpy") or nrc_discounted)
     amount = int(pricing_summary.get("discount_amount_jpy") or max(original - nrc_discounted, 0))
     percent = int(pricing_summary.get("discount_percent_display") or 0)
@@ -102,6 +124,105 @@ def apply_quotation_special_notes(
     updated["campaign_terms_title"] = title
     updated["campaign_terms"] = body
     return updated
+
+
+_BULLET_PREFIX_PATTERN = re.compile(r"^[\s・•\*\-–—]+")
+
+
+def _strip_bullet_prefix(text: str) -> str:
+    cleaned = text.strip()
+    while cleaned:
+        updated = _BULLET_PREFIX_PATTERN.sub("", cleaned).strip()
+        if updated == cleaned:
+            break
+        cleaned = updated
+    return cleaned
+
+
+def _split_remark_lines(text: str) -> list[str]:
+    lines: list[str] = []
+    for raw_line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        cleaned = _strip_bullet_prefix(raw_line)
+        if cleaned:
+            lines.append(cleaned)
+    return lines
+
+
+def build_formal_campaign_bullet(
+    pricing_summary: dict[str, Any],
+    locale: str,
+    issue_date: str,
+    notes_config: Any | None,
+) -> str | None:
+    if not pricing_summary.get("has_discount"):
+        return None
+
+    if notes_config is not None:
+        body_template = notes_config.body_ja if locale == "ja" else notes_config.body_en
+    else:
+        body_template = DEFAULT_QUOTATION_SPECIAL_NOTES[locale]["body"]
+
+    variables = build_special_notes_variables(
+        pricing_summary,
+        locale,
+        issue_date,
+        include_tax_label=False,
+    )
+    return render_special_notes(body_template, variables)
+
+
+def build_formal_remarks_items(
+    pricing_summary: dict[str, Any],
+    locale: str,
+    issue_date: str,
+    *,
+    notes_config: Any | None = None,
+    static_remarks: str | None = None,
+) -> list[str]:
+    """Return cleaned 【備考】 bullets from Admin Quotation Body text only."""
+    bullets: list[str] = []
+    campaign_bullet = build_formal_campaign_bullet(
+        pricing_summary,
+        locale,
+        issue_date,
+        notes_config,
+    )
+    if campaign_bullet:
+        bullets.extend(_split_remark_lines(campaign_bullet))
+
+    # Optional override for tests / callers; never fall back to hardcoded static bullets.
+    if static_remarks and static_remarks.strip():
+        bullets.extend(_split_remark_lines(static_remarks))
+
+    unique: list[str] = []
+    seen: set[str] = set()
+    for bullet in bullets:
+        cleaned = _strip_bullet_prefix(bullet)
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        unique.append(cleaned)
+    return unique
+
+
+def build_formal_remarks(
+    pricing_summary: dict[str, Any],
+    locale: str,
+    issue_date: str,
+    *,
+    notes_config: Any | None = None,
+    static_remarks: str | None = None,
+) -> str:
+    bullets = build_formal_remarks_items(
+        pricing_summary,
+        locale,
+        issue_date,
+        notes_config=notes_config,
+        static_remarks=static_remarks,
+    )
+    # Prefer Japanese middle-dot lists; never use ASCII '*'.
+    prefix = "・" if locale == "ja" else "・"
+    return "\n".join(f"{prefix}{bullet}" for bullet in bullets)
 
 
 def build_pricing_summary(

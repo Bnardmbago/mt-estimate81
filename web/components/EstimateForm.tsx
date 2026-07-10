@@ -373,12 +373,9 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
 
   const completeClientGuidanceStep = useCallback(() => {
     setGuidanceStep(null);
-    if (isContactUser) {
-      return;
-    }
     setSpecExpanded(true);
     scrollToSection(SECTION_ID_TECHNICAL_SPECIFICATION);
-  }, [isContactUser]);
+  }, []);
 
   const startPostApplyGuidance = useCallback(() => {
     setGuidanceStep("client");
@@ -641,7 +638,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
 
         {children}
 
-        {specificationFields.length > 0 && !isContactUser ? (
+        {specificationFields.length > 0 ? (
           <CollapsibleFormSection
             id={SECTION_ID_TECHNICAL_SPECIFICATION}
             title={tForm("specificationDetails")}

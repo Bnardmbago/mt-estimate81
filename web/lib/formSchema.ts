@@ -31,16 +31,12 @@ const DELIVERY_SCHEDULE_OPTIONS: SelectOptionSchema[] = [
   { value: "flexible", label: { en: "Flexible", ja: "未定・相談したい" } },
 ];
 
-const DESIRED_SYSTEM_OPTIONS: SelectOptionSchema[] = [
-  { value: "corporate_website", label: { en: "Corporate website", ja: "コーポレートサイト" } },
-  { value: "web_application", label: { en: "Web application", ja: "Webアプリケーション" } },
-  { value: "mobile_app", label: { en: "Mobile app", ja: "モバイルアプリ" } },
-  { value: "api_backend", label: { en: "API / backend service", ja: "API / バックエンド" } },
-  { value: "admin_portal", label: { en: "Admin portal", ja: "管理ポータル" } },
-  { value: "ecommerce", label: { en: "E-commerce", ja: "ECサイト" } },
-  { value: "saas", label: { en: "SaaS product", ja: "SaaSプロダクト" } },
-  { value: "internal_tool", label: { en: "Internal tool", ja: "社内ツール" } },
-  { value: "other", label: { en: "Other", ja: "その他" } },
+const USAGE_PLATFORM_OPTIONS: SelectOptionSchema[] = [
+  { value: "web_browser", label: { en: "Web Browser", ja: "Webブラウザ" } },
+  { value: "iphone_app", label: { en: "iOS (iPhone app)", ja: "iOS（iPhoneアプリ）" } },
+  { value: "android_app", label: { en: "Android app", ja: "Androidアプリ" } },
+  { value: "cross_platform", label: { en: "Cross Platform", ja: "クロスプラットフォーム" } },
+  { value: "mobile_only", label: { en: "Mobile Only", ja: "モバイルのみ" } },
   { value: "undecided", label: { en: "Undecided", ja: "未定" } },
 ];
 
@@ -144,7 +140,7 @@ const COMPLEXITY_OPTIONS: SelectOptionSchema[] = [
 
 const SELECT_FIELD_OPTIONS: Partial<Record<string, SelectOptionSchema[]>> = {
   delivery_schedule: DELIVERY_SCHEDULE_OPTIONS,
-  desired_system: DESIRED_SYSTEM_OPTIONS,
+  usage_platform: USAGE_PLATFORM_OPTIONS,
   target_users: TARGET_USERS_OPTIONS,
   payment_needed: PAYMENT_NEEDED_OPTIONS,
   nature_of_work: NATURE_OF_WORK_OPTIONS,
@@ -160,7 +156,8 @@ const SELECT_FIELD_OPTIONS: Partial<Record<string, SelectOptionSchema[]>> = {
 };
 
 const KNOWN_FIELD_TYPE_PATCHES: Partial<Record<string, FormFieldSchema["type"]>> = {
-  desired_system: "select",
+  desired_system: "text",
+  usage_platform: "select",
   target_users: "select",
   payment_needed: "select",
   expected_user_count: "number",
@@ -181,6 +178,10 @@ const KNOWN_FIELD_TYPE_PATCHES: Partial<Record<string, FormFieldSchema["type"]>>
 };
 
 const FIELD_PLACEHOLDERS: Partial<Record<string, LocalizedText>> = {
+  desired_system: {
+    en: "e.g. Customer portal, internal dashboard, mobile ordering app",
+    ja: "例: 顧客ポータル、社内ダッシュボード、モバイル注文アプリ",
+  },
   expected_user_count: { en: "e.g. 1000", ja: "例: 1000" },
   concurrent_users: { en: "e.g. 100", ja: "例: 100" },
   client_budget: { en: "e.g. 5000000", ja: "例: 5000000" },

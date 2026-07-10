@@ -96,6 +96,19 @@ class ExtractedDataUpdate(BaseModel):
     confidence_notes: str | None = None
 
 
+class NrcRcLineItemInput(BaseModel):
+    name: str = Field(min_length=1)
+    amount: int = Field(default=0, ge=0)
+    category: str | None = None
+    service_description: str | None = None
+
+
+class NrcRcAssumptionsUpdate(BaseModel):
+    setup_cost_items: list[NrcRcLineItemInput] = Field(default_factory=list)
+    monthly_rc_items: list[NrcRcLineItemInput] = Field(default_factory=list)
+    complexity_level: Literal["low", "medium", "high"] | None = None
+
+
 class EstimateStatusResponse(BaseModel):
     status: str
     extraction_progress: dict[str, Any] | None = None
@@ -109,6 +122,7 @@ class EstimateDetail(EstimateSummary):
     form_schema_snapshot: list[dict[str, Any]] = Field(default_factory=list)
     extracted_data: dict[str, Any] | None
     maintenance_assumptions: dict[str, Any]
+    nrc_rc_assumptions: dict[str, Any] = Field(default_factory=dict)
     calculation_result: dict[str, Any] | None
     rate_card_id: uuid.UUID | None
     rate_card_name: str | None = None

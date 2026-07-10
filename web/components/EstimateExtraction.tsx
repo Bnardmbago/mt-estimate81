@@ -7,6 +7,7 @@ import { apiFetch, apiJson } from "@/lib/api";
 import type { EstimateDetail, ExtractedData, GanttData, CalculationResult } from "@/lib/estimate";
 import type { EstimateFormHandle } from "@/components/EstimateForm";
 import EstimateCalculation from "@/components/EstimateCalculation";
+import EstimateNrcRcPanel from "@/components/EstimateNrcRcPanel";
 import EstimateRateCardPanel from "@/components/EstimateRateCardPanel";
 import ExportPanel from "@/components/ExportPanel";
 import ActualsForm from "@/components/ActualsForm";
@@ -375,6 +376,13 @@ export default function EstimateExtraction({
             deliveryScheduleAdvisory as DeliveryScheduleAdvisory | null
           }
         />
+        <EstimateNrcRcPanel
+          estimateId={estimate.id}
+          estimateUpdatedAt={estimate.updated_at}
+          initialAssumptions={estimate.nrc_rc_assumptions ?? { setup_cost_items: [], monthly_rc_items: [] }}
+          complexityLevel={estimate.complexity_profile?.level ?? null}
+          editable={!isContactUser && (status === "review" || status === "calculated")}
+        />
         <EstimateCalculation
           estimate={estimate}
           projectStartDate={projectStartDate}
@@ -388,7 +396,7 @@ export default function EstimateExtraction({
             isContactUser={isContactUser}
           />
         )}
-        {estimate.calculation_result && (
+        {estimate.calculation_result && !isContactUser && (
           <ActualsForm
             estimateId={estimate.id}
             status={status}

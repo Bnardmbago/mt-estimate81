@@ -5,7 +5,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ExportRequest(BaseModel):
-    format: str = Field(pattern=r"^(md|xlsx|pdf|pdf_quotation|docx|docx_quotation)$")
+    format: str = Field(
+        pattern=r"^(md|xlsx|pdf|pdf_quotation|docx|docx_quotation)$"
+    )
     locale: str | None = Field(default=None, pattern=r"^(ja|en)$")
 
 
@@ -29,5 +31,7 @@ class ExportResponse(BaseModel):
     format: str
     storage_path: str
     locale: str
+    quotation_number: str | None = None
+    registration_number: str | None = None
     generated_at: datetime
     generated_by: uuid.UUID

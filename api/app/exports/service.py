@@ -1,13 +1,19 @@
 import logging
 import uuid
 from datetime import datetime
+from typing import Any
 
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.admin.quotation_company_config import (
+    get_quotation_company_config,
+    resolve_logo_for_export,
+)
 from app.admin.quotation_notes_config import QuotationNotesConfig, get_quotation_notes_config
+from app.admin.smtp_config import get_smtp_config, smtp_runtime_config
 from app.estimates.access import require_estimate_access
 from app.estimates.service import get_estimate_for_user
 from app.audit.service import log_change
@@ -15,7 +21,8 @@ from app.email.smtp import EmailAttachment, send_email_with_attachments
 from app.exceptions import AppError
 from app.exports.excel import generate_excel
 from app.exports.markdown import generate_markdown
-from app.exports.quotation_context import build_quotation_context
+from app.exports.quotation_context import build_formal_quotation_context
+from app.exports.quotation_number import allocate_quotation_export_fields
 from app.exports.report_context import build_report_context
 from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 from app.models.estimate import Estimate, EstimateStatus, Export, ExportFormat
@@ -50,6 +57,13 @@ CONTENT_TYPES = {
     ),
     "pdf_preliminary": "application/pdf",
 }
+
+QUOTATION_FORMATS = frozenset(
+    {
+        ExportFormat.PDF_QUOTATION.value,
+        ExportFormat.DOCX_QUOTATION.value,
+    }
+)
 
 
 async def _get_rate_card_version(
@@ -106,6 +120,13 @@ def _generate_content(
     show_watermark: bool = False,
     export_user_display_name: str | None = None,
     quotation_notes_config: QuotationNotesConfig | None = None,
+    company_config: Any | None = None,
+    logo_src: str | None = None,
+    logo_bytes: bytes | None = None,
+    logo_ext: str | None = None,
+    quotation_number: str | None = None,
+    registration_number: str | None = None,
+    contact_person: str | None = None,
 ) -> bytes:
     report_context = build_report_context(
         estimate,
@@ -131,9 +152,15 @@ def _generate_content(
         return generate_report_pdf(report_context, show_watermark=show_watermark)
 
     if export_format == ExportFormat.PDF_QUOTATION.value:
-        from app.exports.pdf import generate_quotation_pdf
+        from app.exports.pdf import generate_quotation_formal_pdf
 
-        quotation_context = build_quotation_context(
+        if not quotation_number:
+            raise AppError(
+                "Quotation export requires a quotation number",
+                "QUOTATION_NUMBER_REQUIRED",
+                status_code=500,
+            )
+        quotation_context = build_formal_quotation_context(
             estimate,
             locale,
             generated_at=generated_at,
@@ -143,8 +170,15 @@ def _generate_content(
             export_revision=export_revision,
             tax_rate=tax_rate,
             quotation_notes_config=quotation_notes_config,
+            company_config=company_config,
+            logo_src=logo_src,
+            logo_bytes=logo_bytes,
+            logo_ext=logo_ext,
+            quotation_number=quotation_number,
+            registration_number=registration_number or "",
+            contact_person=contact_person,
         )
-        return generate_quotation_pdf(quotation_context, show_watermark=show_watermark)
+        return generate_quotation_formal_pdf(quotation_context, show_watermark=show_watermark)
 
     if export_format == ExportFormat.DOCX.value:
         from app.exports.docx import generate_report_docx
@@ -152,9 +186,15 @@ def _generate_content(
         return generate_report_docx(report_context)
 
     if export_format == ExportFormat.DOCX_QUOTATION.value:
-        from app.exports.docx import generate_quotation_docx
+        from app.exports.docx import generate_quotation_formal_docx
 
-        quotation_context = build_quotation_context(
+        if not quotation_number:
+            raise AppError(
+                "Quotation export requires a quotation number",
+                "QUOTATION_NUMBER_REQUIRED",
+                status_code=500,
+            )
+        quotation_context = build_formal_quotation_context(
             estimate,
             locale,
             generated_at=generated_at,
@@ -164,8 +204,15 @@ def _generate_content(
             export_revision=export_revision,
             tax_rate=tax_rate,
             quotation_notes_config=quotation_notes_config,
+            company_config=company_config,
+            logo_src=logo_src,
+            logo_bytes=logo_bytes,
+            logo_ext=logo_ext,
+            quotation_number=quotation_number,
+            registration_number=registration_number or "",
+            contact_person=contact_person,
         )
-        return generate_quotation_docx(quotation_context)
+        return generate_quotation_formal_docx(quotation_context)
 
     raise AppError(
         f"Export format '{export_format}' is not yet implemented",
@@ -278,8 +325,28 @@ async def export_estimate(
     export_user_display_name = user.display_name.strip() or user.email
 
     quotation_notes_config = None
-    if export_format in (ExportFormat.PDF_QUOTATION.value, ExportFormat.DOCX_QUOTATION.value):
+    company_config = None
+    logo_src = None
+    logo_bytes = None
+    logo_ext = None
+    if export_format in QUOTATION_FORMATS:
         quotation_notes_config = await get_quotation_notes_config(db)
+        company_config = await get_quotation_company_config(db)
+        logo_info = await resolve_logo_for_export(db)
+        logo_src = logo_info.get("logo_src")
+        logo_bytes = logo_info.get("logo_bytes")
+        logo_ext = logo_info.get("logo_ext")
+
+    quotation_number: str | None = None
+    registration_number: str | None = None
+    contact_person: str | None = None
+    if export_format in QUOTATION_FORMATS:
+        quotation_number, registration_number, contact_person = (
+            await allocate_quotation_export_fields(
+                db,
+                generated_at=generated_at,
+            )
+        )
 
     try:
         content = _generate_content(
@@ -295,6 +362,13 @@ async def export_estimate(
             show_watermark=show_watermark,
             export_user_display_name=export_user_display_name,
             quotation_notes_config=quotation_notes_config,
+            company_config=company_config,
+            logo_src=logo_src,
+            logo_bytes=logo_bytes,
+            logo_ext=logo_ext,
+            quotation_number=quotation_number,
+            registration_number=registration_number,
+            contact_person=contact_person,
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)
@@ -310,6 +384,8 @@ async def export_estimate(
         format=export_format,
         storage_path=storage_path,
         locale=resolved_locale,
+        quotation_number=quotation_number,
+        registration_number=registration_number,
         generated_at=generated_at,
         generated_by=user.id,
     )
@@ -331,7 +407,13 @@ async def export_estimate(
     )
 
     if is_contact_user(user):
-        await _auto_email_single_export(db, estimate, export_record, user.email, user)
+        try:
+            await _auto_email_single_export(db, estimate, export_record, user.email, user)
+        except Exception:
+            logger.exception(
+                "Auto-email failed for contact export on estimate %s",
+                estimate_id,
+            )
 
     await db.commit()
     await db.refresh(export_record)

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="{{ ctx.locale }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ ctx.labels.title }}</title>
+  <style>
+    {% include '_export_theme.css.j2' %}
+
+    @page {
+      size: A4;
+      margin: 14mm 12mm 16mm 12mm;
+    }
+
+    @font-face {
+      font-family: "Noto Sans JP";
+      src: local("Noto Sans CJK JP"), local("Noto Sans JP");
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: "Noto Sans JP", "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      color: var(--export-text);
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .num { text-align: right; white-space: nowrap; }
+
+    .quotation-header { margin-bottom: 10pt; }
+
+    .header-layout {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .header-layout td {
+      vertical-align: top;
+      padding: 0;
+      border: none;
+    }
+
+    .col-left {
+      width: 48%;
+      padding-right: 12pt;
+      vertical-align: top;
+    }
+
+    .col-right {
+      width: 52%;
+      text-align: right;
+      vertical-align: top;
+    }
+
+    .title-wrap {
+      border-left: 5pt solid var(--export-primary);
+      padding: 0 0 0 6pt;
+      margin: 0;
+    }
+
+    .doc-title {
+      font-size: 22pt;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.1;
+      color: var(--export-text);
+    }
+
+    .issue-date-line {
+      font-size: 12pt;
+      font-weight: 600;
+      margin: 0 0 10pt;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .right-info-block {
+      display: inline-block;
+      text-align: left;
+      max-width: 100%;
+      font-size: 8pt;
+      line-height: 1.5;
+    }
+
+    .meta-lines {
+      display: block;
+      text-align: left;
+      font-size: 8pt;
+      margin: 0 0 8pt;
+      line-height: 1.5;
+    }
+
+    .meta-line { margin: 0; white-space: nowrap; }
+
+    .meta-label { font-weight: 600; }
+
+    .client-name {
+      font-size: 14pt;
+      font-weight: 700;
+      margin: 0;
+      padding: 64pt 0 18pt;
+      text-align: center;
+    }
+
+    .intro-line {
+      font-size: 8.5pt;
+      margin: 0;
+      padding: 0 0 2pt;
+      text-align: left;
+    }
+
+    .company-block {
+      display: block;
+      text-align: left;
+      max-width: 100%;
+    }
+
+    .brand-logo-img {
+      height: 24pt;
+      width: auto;
+      display: block;
+      margin-bottom: 4pt;
+    }
+
+    .company-detail {
+      font-size: 8pt;
+      line-height: 1.5;
+    }
+
+    .contact-person-line { margin: 0 0 8pt; }
+    .company-postal { margin: 0; }
+    .company-address-lines { margin: 0 0 8pt; white-space: pre-line; }
+    .company-tel-mail { margin: 0 0 10pt; }
+
+    .company-divider {
+      border: none;
+      border-bottom: 2pt solid var(--export-primary);
+      margin: 0;
+      width: 100%;
+    }
+
+    .grand-total-row {
+      margin: 8pt 0 8pt;
+      text-align: left;
+    }
+
+    .grand-total-box {
+      display: inline-block;
+      width: 210pt;
+      border: 0.75pt solid var(--export-text);
+      padding: 10pt 12pt;
+      margin: 0;
+      text-align: center;
+      background: #fff;
+    }
+
+    .grand-total-amount {
+      font-size: 16pt;
+      font-weight: 700;
+      color: var(--export-text);
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .items-wrap {
+      border: none;
+      margin-bottom: 6pt;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+      font-size: 8pt;
+    }
+
+    .items-table thead th {
+      background: #fff;
+      color: var(--export-text);
+      font-weight: 600;
+      padding: 4pt 6pt;
+      border: none;
+      border-top: 0.75pt solid var(--export-text);
+      border-bottom: 0.75pt solid var(--export-text);
+      text-align: left;
+      font-size: 8pt;
+    }
+
+    .items-table thead th.col-qty,
+    .items-table thead th.col-price,
+    .items-table thead th.col-sub { text-align: center; }
+    .items-table thead th.col-price,
+    .items-table thead th.col-sub { text-align: right; }
+
+    .items-table tbody td {
+      padding: 4pt 6pt;
+      border: none;
+      border-bottom: 0.5pt solid var(--export-border);
+      vertical-align: top;
+    }
+
+    .items-table tbody tr:nth-child(odd) td { background: var(--export-surface); }
+    .items-table tbody tr:nth-child(even) td { background: #fff; }
+
+    .items-table .col-item { text-align: left; width: 46%; }
+    .items-table .col-qty { text-align: center; width: 12%; }
+    .items-table .col-price { text-align: right; width: 21%; }
+    .items-table .col-sub { text-align: right; width: 21%; }
+
+    .item-description {
+      font-size: 7.5pt;
+      color: var(--export-text-muted, #555);
+      margin-top: 2pt;
+      white-space: pre-line;
+    }
+
+    .discount-amount { color: var(--export-text); }
+
+    .totals-layout {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8pt 0 10pt;
+    }
+
+    .totals-layout td {
+      vertical-align: top;
+      padding: 0;
+      border: none;
+    }
+
+    .summary-notes {
+      width: 100%;
+      padding-right: 12pt;
+    }
+
+    .notes-heading {
+      font-size: 8.5pt;
+      font-weight: 700;
+      margin: 0 0 4pt;
+      color: var(--export-text);
+      line-height: 1.35;
+    }
+
+    .remarks-list {
+      margin: 0;
+      padding: 0 0 0 1.1em;
+      list-style-type: none;
+      line-height: 1.45;
+      font-size: 8pt;
+    }
+
+    .remarks-list li {
+      margin: 0 0 2pt;
+      padding: 0;
+      position: relative;
+    }
+
+    .remarks-list li::before {
+      content: "・";
+      position: absolute;
+      left: -1em;
+    }
+
+    .totals-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11pt;
+    }
+
+    .totals-table th {
+      font-weight: 600;
+      padding: 3pt 6pt 3pt 0;
+      text-align: left;
+      border: none;
+      border-bottom: 0.5pt solid var(--export-border);
+      background: transparent;
+      color: var(--export-text);
+      white-space: nowrap;
+    }
+
+    .totals-table td {
+      padding: 3pt 0 3pt 6pt;
+      text-align: right;
+      border: none;
+      border-bottom: 0.5pt solid var(--export-border);
+      background: transparent;
+      white-space: nowrap;
+    }
+
+    .totals-table tr.grand-total th,
+    .totals-table tr.grand-total td {
+      font-weight: 700;
+      border-bottom: 2pt solid var(--export-primary);
+      background: transparent !important;
+      color: var(--export-text);
+    }
+
+    .bank-box {
+      border: 0.75pt solid var(--export-border);
+      padding: 6pt 10pt;
+      margin: 0;
+      font-size: 10.5pt;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      background: #fff;
+    }
+
+    .bank-label {
+      font-weight: 600;
+      margin-bottom: 4pt;
+      font-size: 8pt;
+    }
+
+    {% if show_watermark %}
+    {% include '_watermark.css.j2' %}
+    {% endif %}
+  </style>
+</head>
+<body>
+  {% if show_watermark %}
+  <div class="contact-watermark">{{ watermark_text }}</div>
+  {% endif %}
+
+  <div class="quotation-header">
+    <table class="header-layout">
+      <tr>
+        <td class="col-left">
+          <div class="title-wrap">
+            <h1 class="doc-title">{{ ctx.labels.title }}</h1>
+          </div>
+        </td>
+        <td class="col-right" rowspan="3">
+          <p class="issue-date-line">{{ ctx.issue_date }}</p>
+          <div class="right-info-block">
+            <div class="meta-lines">
+              <p class="meta-line">
+                <span class="meta-label">{{ ctx.labels.quote_number }}：</span>{{ ctx.quote_number }}
+              </p>
+              <p class="meta-line">
+                <span class="meta-label">{{ ctx.labels.registration_number }}：</span>{{ ctx.registration_number }}
+              </p>
+            </div>
+            <div class="company-block">
+              <img class="brand-logo-img" src="{{ ctx.logo_src }}" alt="{{ ctx.company.brand }}">
+              <div class="company-detail">
+                <p class="contact-person-line">
+                  {{ ctx.labels.contact_person }}：{% if ctx.company.contact_person %}{{ ctx.company.contact_person }}{% endif %}
+                </p>
+                <p class="company-postal">
+                  {% if ctx.locale == 'ja' %}〒{% else %}Postal code {% endif %}{{ ctx.company.postal_code }}
+                </p>
+                <p class="company-address-lines">{{ ctx.company.address_lines | join('\n') }}</p>
+                <p class="company-tel-mail">
+                  {{ ctx.labels.tel }}：{{ ctx.company.tel }}<br>
+                  {{ ctx.labels.mail }} ：{{ ctx.company.email }}
+                </p>
+                <hr class="company-divider">
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-left">
+          <p class="client-name">{{ ctx.client_name }}</p>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-left" style="vertical-align: bottom;">
+          <p class="intro-line">{{ ctx.intro }}</p>
+        </td>
+      </tr>
+    </table>
+    <div class="grand-total-row">
+      <div class="grand-total-box">
+        <div class="grand-total-amount">{{ format_currency(ctx.grand_total_jpy) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="items-wrap">
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="col-item">{{ ctx.labels.item }}</th>
+          <th class="col-qty">{{ ctx.labels.unit }}</th>
+          <th class="col-price">{{ ctx.labels.unit_price }}</th>
+          <th class="col-sub">{{ ctx.labels.subtotal_col }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in ctx.line_items %}
+          <tr>
+            <td class="col-item">
+              {{ row.name }}
+              {% if row.description %}
+                <div class="item-description">{{ row.description }}</div>
+              {% endif %}
+            </td>
+            <td class="col-qty">
+              {% if row.display_quantity %}{{ row.quantity }}{% endif %}
+            </td>
+            <td class="col-price num">
+              {% if row.kind == 'discount' %}
+              {% elif row.display_unit_price %}
+                ({{ format_currency(row.unit_price_jpy) }})
+              {% endif %}
+            </td>
+            <td class="col-sub num">
+              {% if row.kind == 'discount' %}
+                <span class="discount-amount">{{ row.discount_display }}</span>
+              {% else %}
+                ({{ format_currency(row.subtotal_jpy) }})
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <table class="totals-layout">
+    <tr>
+      <td style="width: 58%;">
+        <div class="summary-notes">
+          <div class="notes-heading">{{ ctx.labels.notes_heading }}</div>
+          <ul class="remarks-list">
+            {% for item in ctx.remarks_items %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </td>
+      <td style="width: 42%;">
+        <table class="totals-table">
+          <tr>
+            <th>{{ ctx.labels.subtotal }}</th>
+            <td>{{ "{:,}".format(ctx.subtotal_jpy) }}</td>
+          </tr>
+          <tr>
+            <th>{{ ctx.tax_with_rate_label }}</th>
+            <td>{{ "{:,}".format(ctx.tax_jpy) }}</td>
+          </tr>
+          <tr class="grand-total">
+            <th>{{ ctx.labels.grand_total }}</th>
+            <td>{{ "{:,}".format(ctx.grand_total_jpy) }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <div class="bank-label">{{ ctx.labels.bank_details }}</div>
+  <div class="bank-box">{{ ctx.bank_details }}</div>
+</body>
+</html>

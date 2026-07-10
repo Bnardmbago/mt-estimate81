@@ -2,9 +2,14 @@ from io import BytesIO
 
 from docx import Document
 
-from app.exports.docx import generate_quotation_docx, generate_report_docx
+from app.exports.docx import (
+    generate_quotation_docx,
+    generate_quotation_formal_docx,
+    generate_report_docx,
+)
 from tests.unit.export_fixtures import (
     sample_estimate_with_discount,
+    sample_formal_quotation_context,
     sample_quotation_context,
     sample_report_context,
 )
@@ -85,15 +90,24 @@ def test_quotation_docx_contains_title_client_and_totals():
     text = _docx_text(content)
     assert "QUOTATION" in text
     assert "ACME Corp" in text
-    assert "Portal Redesign" in text
+    assert "Development" in text
+    assert "Infrastructure Setup" in text
     assert "¥770,000" in text
 
 
-def test_quotation_docx_quote_number_cell_blank():
-    content = generate_quotation_docx(sample_quotation_context())
+def test_quotation_docx_contains_quote_number_when_populated():
+    content = generate_quotation_docx(
+        sample_formal_quotation_context(
+            quotation_number="BAI-20260629-001",
+            registration_number="T9010001234562",
+            contact_person="Tanaka Taro",
+        )
+    )
     text = _docx_text(content)
     assert "Quotation No." in text
-    assert "Q003" not in text
+    assert "BAI-20260629-001" in text
+    assert "T9010001234562" in text
+    assert "Tanaka Taro" in text
 
 
 def test_quotation_docx_ja_locale():
@@ -101,7 +115,35 @@ def test_quotation_docx_ja_locale():
     text = _docx_text(content)
     assert "見積書" in text
     assert "御中" in text
-    assert "式" in text
+    assert "開発" in text
+    assert "インフラセットアップ" in text
+
+
+def test_formal_quotation_docx_contains_populated_numbers():
+    content = generate_quotation_formal_docx(
+        sample_formal_quotation_context(estimate=sample_estimate_with_discount())
+    )
+    text = _docx_text(content)
+    assert "BAI-20260629-001" in text
+    assert "T9010001234562" in text
+    assert "Development" in text
+    assert "Special Discount" in text
+    assert "[Notes]" in text
+    assert "Campaign Terms" not in text
+    assert "*Special Notes" not in text
+
+
+def test_formal_quotation_docx_ja_discount_row():
+    content = generate_quotation_formal_docx(
+        sample_formal_quotation_context(
+            estimate=sample_estimate_with_discount(),
+            locale="ja",
+        )
+    )
+    text = _docx_text(content)
+    assert "開発" in text
+    assert "特別割引" in text
+    assert "【備考】" in text
 
 
 def test_report_docx_includes_discount_pricing_when_present():
@@ -129,11 +171,13 @@ def test_report_docx_rc_breakdown_includes_monthly_and_annual_totals():
     assert "Maintenance and Support" in text
 
 
-def test_quotation_docx_includes_discount_pricing_when_present():
+def test_quotation_docx_includes_discount_as_line_item_when_present():
     content = generate_quotation_docx(
         sample_quotation_context(estimate=sample_estimate_with_discount(), locale="en")
     )
     text = _docx_text(content)
-    assert "Development Cost" in text
-    assert "Limited-Time Discount" in text
-    assert "Special Price" in text
+    assert "Development" in text
+    assert "Special Discount" in text
+    assert "[Notes]" in text
+    assert "Limited-Time Discount" not in text
+    assert "Campaign Terms" not in text

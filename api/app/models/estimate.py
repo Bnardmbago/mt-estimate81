@@ -59,6 +59,7 @@ class Estimate(Base):
     form_schema_snapshot: Mapped[list] = mapped_column(JSONB, default=list)
     extracted_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     maintenance_assumptions: Mapped[dict] = mapped_column(JSONB, default=dict)
+    nrc_rc_assumptions: Mapped[dict] = mapped_column(JSONB, default=dict)
     calculation_result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     project_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -141,9 +142,11 @@ class Export(Base):
     estimate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("estimates.id", ondelete="CASCADE")
     )
-    format: Mapped[str] = mapped_column(String(20))
+    format: Mapped[str] = mapped_column(String(32))
     storage_path: Mapped[str] = mapped_column(String(1024))
     locale: Mapped[str] = mapped_column(String(2))
+    quotation_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    registration_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
     generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     generated_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 

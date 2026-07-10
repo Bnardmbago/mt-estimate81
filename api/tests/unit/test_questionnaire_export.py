@@ -17,7 +17,7 @@ def _select_field(key: str) -> dict:
 
 def test_format_field_value_select_from_schema_options():
     field = _select_field("usage_platform")
-    assert format_field_value(field, "web_browser", "en") == "Web browser"
+    assert format_field_value(field, "web_browser", "en") == "Web Browser"
     assert format_field_value(field, "web_browser", "ja") == "Webブラウザ"
 
 
@@ -59,7 +59,7 @@ def test_build_questionnaire_sections_omits_empty_sections():
 def test_build_flat_form_fields_formats_select_values():
     form_data = {"usage_platform": "web_browser"}
     fields = build_flat_form_fields(form_data, None, "en")
-    assert fields[0]["value"] == "Web browser"
+    assert fields[0]["value"] == "Web Browser"
 
 
 def test_build_questionnaire_sections_legacy_flat_form_data():

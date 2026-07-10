@@ -50,7 +50,7 @@ def test_quotation_template_includes_readability_styles():
         format_currency=format_currency,
     )
     assert "--export-border: #E2E8F0" in html
-    assert "下記の通りお見積りいたします。" in html
+    assert "下記の通りお見積もりいたします。" in html
     assert "items-table" in html
     assert "col-item" in html
     assert "col-unit" in html

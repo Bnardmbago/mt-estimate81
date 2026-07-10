@@ -67,6 +67,60 @@ NRC_RC_GUIDANCE: dict[ComplexityLevel, dict[str, Any]] = {
     },
 }
 
+NRC_RC_TIER_BASE_AMOUNTS: dict[ComplexityLevel, dict[str, Any]] = {
+    "low": {
+        "setup_cost_items": [
+            {"name": "Infrastructure", "amount": 30000},
+            {"name": "Tooling", "amount": 10000},
+            {"name": "Third party", "amount": 0},
+        ],
+        "monthly_rc_items": {
+            "cloud_infrastructure": 5000,
+            "system_monitoring": 0,
+            "maintenance_support": 0,
+            "security": 0,
+            "backup": 0,
+        },
+        "hint_setup_increment": 40000,
+        "hint_monthly_increment": 5000,
+        "labor_setup_cap_ratio": 0.5,
+    },
+    "medium": {
+        "setup_cost_items": [
+            {"name": "Infrastructure", "amount": 150000},
+            {"name": "Tooling", "amount": 50000},
+            {"name": "Third party", "amount": 0},
+        ],
+        "monthly_rc_items": {
+            "cloud_infrastructure": 25000,
+            "system_monitoring": 0,
+            "maintenance_support": 0,
+            "security": 0,
+            "backup": 0,
+        },
+        "hint_setup_increment": 80000,
+        "hint_monthly_increment": 15000,
+        "labor_setup_cap_ratio": None,
+    },
+    "high": {
+        "setup_cost_items": [
+            {"name": "Infrastructure", "amount": 300000},
+            {"name": "Tooling", "amount": 100000},
+            {"name": "Third party", "amount": 0},
+        ],
+        "monthly_rc_items": {
+            "cloud_infrastructure": 50000,
+            "system_monitoring": 0,
+            "maintenance_support": 0,
+            "security": 0,
+            "backup": 0,
+        },
+        "hint_setup_increment": 120000,
+        "hint_monthly_increment": 25000,
+        "labor_setup_cap_ratio": None,
+    },
+}
+
 
 class ProjectComplexityProfile(BaseModel):
     overall_score: float = Field(ge=0, le=100)
