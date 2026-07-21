@@ -9,13 +9,14 @@ from app.rate_cards.normalize import line_item_amount
 
 
 def _role_nrc_category(role: str) -> str:
+    """Map role labor into client-facing NRC categories for quotations."""
     normalized = role.strip().lower()
     if normalized in {"pm", "project manager"} or "pm" in normalized or "project" in normalized:
         return "Project Management"
     if "business" in normalized or normalized in {"ba", "analyst"}:
         return "Business Analysis"
-    if "qa" in normalized or "test" in normalized or "quality" in normalized:
-        return "QA"
+    # Fold QA/testing into Development — client quotations highlight delivery work,
+    # not a separate QA line item.
     if "devops" in normalized or "sre" in normalized or "infra" in normalized:
         return "DevOps"
     return "Development"
@@ -29,7 +30,12 @@ def _setup_nrc_category(name: str) -> str:
         return "Software Setup"
     if "data" in normalized and "migr" in normalized:
         return "Data Migration"
-    if "train" in normalized:
+    # Only dedicated training/enablement — not "AI Model Training Setup".
+    if normalized in {"training", "training setup", "user training", "研修"} or (
+        "training" in normalized
+        and "model" not in normalized
+        and "ai" not in normalized
+    ):
         return "Training"
     return "Infrastructure Setup"
 

@@ -87,3 +87,39 @@ def test_build_detailed_rc_breakdown_flexible_mode_one_row_per_item():
     maintenance = next(row for row in breakdown["line_items"] if row.get("is_maintenance"))
     assert maintenance["monthly_jpy"] == 120000
     assert breakdown["monthly_total_jpy"] == 190000
+
+
+def test_flexible_rc_hosting_and_maintenance_is_not_maintenance_row():
+    """Names containing 'Maintenance' must not steal the dedicated maintenance bucket."""
+    calc = {
+        "cost_breakdown_mode": "flexible",
+        "rc": {
+            "monthly_items": [
+                {
+                    "name": "Cloud Hosting and Maintenance",
+                    "amount_jpy": 100_000,
+                    "service_description": "Monthly cloud hosting and maintenance costs.",
+                },
+                {"name": "AI API Usage", "amount_jpy": 50_000},
+            ],
+            "maintenance_jpy": 200_000,
+            "monthly_total_jpy": 350_000,
+            "annual_total_jpy": 4_200_000,
+        },
+    }
+    breakdown = build_detailed_rc_breakdown(
+        calc,
+        locale="en",
+        markup_rate=0.30,
+        cost_breakdown_mode="flexible",
+    )
+
+    by_name = {row["category"]: row for row in breakdown["line_items"]}
+    hosting = by_name["Cloud Hosting and Maintenance"]
+    assert hosting["is_maintenance"] is False
+    assert hosting["monthly_jpy_at_cost"] == 100_000
+    assert by_name["AI API Usage"]["monthly_jpy_at_cost"] == 50_000
+    maintenance = next(row for row in breakdown["line_items"] if row.get("is_maintenance"))
+    assert maintenance["monthly_jpy_at_cost"] == 200_000
+    assert breakdown["monthly_total_jpy"] == 455_000  # 350_000 * 1.3
+    assert breakdown["monthly_total_at_cost_jpy"] == 350_000

@@ -49,13 +49,23 @@ def resolve_localized_dict(
     return legacy
 
 
+def has_localized_locale(data: dict[str, Any] | None, locale: str) -> bool:
+    """True when ``data`` already stores an explicit ``_i18n[locale]`` payload."""
+    locale = normalize_locale(locale)
+    _, i18n = _split_localized_payload(data)
+    return locale in i18n
+
+
 def store_localized_dict(
     existing: dict[str, Any] | None,
     content_locale: str,
     content: dict[str, Any],
 ) -> dict[str, Any]:
     content_locale = normalize_locale(content_locale)
-    _, i18n = _split_localized_payload(existing)
+    # Migrate legacy flat payloads into _i18n before writing so sibling locales
+    # (and the prior flat values) are not dropped when first localizing.
+    migrated = ensure_localized_dict(existing, content_locale)
+    _, i18n = _split_localized_payload(migrated)
     updated_i18n = dict(i18n)
     updated_i18n[content_locale] = dict(content)
     return {I18N_KEY: updated_i18n}

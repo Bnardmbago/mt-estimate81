@@ -1,8 +1,7 @@
 from app.i18n.localized_content import (
-    normalize_locale,
+    has_localized_locale,
     resolve_feature_item_fields,
     resolve_localized_dict,
-    store_feature_item_localization,
     store_localized_dict,
 )
 
@@ -18,6 +17,28 @@ def test_store_and_resolve_localized_dict():
     stored = store_localized_dict(stored, "en", {"main_functional_needs": "Login"})
     assert resolve_localized_dict(stored, "ja", "en")["main_functional_needs"] == "ログイン"
     assert resolve_localized_dict(stored, "en", "ja")["main_functional_needs"] == "Login"
+    assert has_localized_locale(stored, "ja") is True
+    assert has_localized_locale(stored, "en") is True
+    assert has_localized_locale({"main_functional_needs": "Login"}, "ja") is False
+
+
+def test_store_localized_dict_preserves_legacy_flat_when_localizing():
+    legacy = {
+        "desired_system": "Portal",
+        "delivery_schedule": "within_3_6_months",
+        "nature_of_work": "new_build",
+    }
+    stored = store_localized_dict(
+        legacy,
+        "en",
+        {**legacy, "data_complexity": "low"},
+    )
+    assert "_i18n" in stored
+    resolved = resolve_localized_dict(stored, "en", "ja")
+    assert resolved["desired_system"] == "Portal"
+    assert resolved["delivery_schedule"] == "within_3_6_months"
+    assert resolved["nature_of_work"] == "new_build"
+    assert resolved["data_complexity"] == "low"
 
 
 def test_resolve_feature_item_localizations():
@@ -54,6 +75,6 @@ def test_resolve_feature_item_localizations():
             }
         },
         display_locale="en",
-        fallback_locale="ja",
+        fallback_locale="en",
     )
     assert english["name"] == "Auth"

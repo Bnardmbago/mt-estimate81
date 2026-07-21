@@ -8,6 +8,8 @@ from app.ai.instruction_resolver import ResolvedInstructions, merge_user_message
 from app.ai.rate_limit_retry import with_rate_limit_retry
 from app.ai.openai_schema import build_form_fields_suggestion_schema
 from app.ai.prompts import (
+    build_export_translation_system_prompt,
+    build_export_translation_user_prompt,
     build_form_fields_system_prompt,
     build_form_fields_user_prompt,
     build_rate_card_section_system_prompt,
@@ -19,6 +21,7 @@ from app.ai.prompts import (
 )
 from app.ai.schemas import (
     EstimateFormFieldsSuggestion,
+    ExportNarrativeTranslation,
     ExtractedRequirements,
     GeneratedRateCardSuggestion,
 )
@@ -281,3 +284,37 @@ class AnthropicProvider:
             payload = json.loads(payload)
 
         return EstimateFormFieldsSuggestion.model_validate(payload)
+
+    async def translate_export_narrative(
+        self,
+        *,
+        source_locale: Literal["ja", "en"],
+        target_locale: Literal["ja", "en"],
+        payload: dict[str, Any],
+    ) -> ExportNarrativeTranslation:
+        system = build_export_translation_system_prompt(target_locale)
+        user_content = build_export_translation_user_prompt(payload)
+        response = await self._create_message(
+            model=self.model,
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
+            tools=[
+                {
+                    "name": "translate_export_narrative",
+                    "description": "Translate estimate narrative content for export.",
+                    "input_schema": ExportNarrativeTranslation.model_json_schema(),
+                }
+            ],
+            tool_choice={"type": "tool", "name": "translate_export_narrative"},
+            **anthropic_completion_kwargs(None),
+        )
+        tool_block = next(
+            (block for block in response.content if block.type == "tool_use"),
+            None,
+        )
+        if tool_block is None:
+            raise ValueError("Anthropic returned no tool_use block for translation")
+        tool_payload = tool_block.input
+        if isinstance(tool_payload, str):
+            tool_payload = json.loads(tool_payload)
+        return ExportNarrativeTranslation.model_validate(tool_payload)

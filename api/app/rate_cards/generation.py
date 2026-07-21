@@ -30,6 +30,7 @@ from app.rate_cards.normalize import normalize_settings_dict
 from app.rate_cards.maintenance import apply_default_maintenance_to_settings
 from app.rate_cards.regional_profiles import patch_roles_to_regional_standard
 from app.rate_cards.service import create_rate_card_with_settings, get_latest_version_for_card
+from app.rate_cards.standard_rates import ensure_standard_roles
 
 HOURS_PER_DAY = 8
 DEFAULT_PHASES = DEFAULT_RATE_CARD_SETTINGS["phases"]
@@ -213,27 +214,29 @@ def _suggestion_to_settings_dict(suggestion: GeneratedRateCardSuggestion) -> dic
         if item.name.strip()
     ]
 
-    return normalize_settings_dict(
-        {
-            "cost_breakdown_mode": "flexible",
-            "development_approach": suggestion.development_approach,
-            "roles": roles,
-            "phases": _normalize_phase_percentages(
-                [{"name": phase.name, "percentage": phase.percentage} for phase in suggestion.phases]
-            ),
-            "contingency_rate": float(suggestion.contingency_rate),
-            "overhead_rate": float(suggestion.overhead_rate),
-            "tax_rate": float(suggestion.tax_rate),
-            "productivity": {
-                "hours_per_feature_default": int(suggestion.productivity.hours_per_feature_default),
-            },
-            "setup_cost_items": [
-                _line_item_from_suggestion(item)
-                for item in suggestion.setup_cost_items
-                if item.name.strip()
-            ],
-            "monthly_rc_items": monthly_items,
-        }
+    return ensure_standard_roles(
+        normalize_settings_dict(
+            {
+                "cost_breakdown_mode": "flexible",
+                "development_approach": suggestion.development_approach,
+                "roles": roles,
+                "phases": _normalize_phase_percentages(
+                    [{"name": phase.name, "percentage": phase.percentage} for phase in suggestion.phases]
+                ),
+                "contingency_rate": float(suggestion.contingency_rate),
+                "overhead_rate": float(suggestion.overhead_rate),
+                "tax_rate": float(suggestion.tax_rate),
+                "productivity": {
+                    "hours_per_feature_default": int(suggestion.productivity.hours_per_feature_default),
+                },
+                "setup_cost_items": [
+                    _line_item_from_suggestion(item)
+                    for item in suggestion.setup_cost_items
+                    if item.name.strip()
+                ],
+                "monthly_rc_items": monthly_items,
+            }
+        )
     )
 
 

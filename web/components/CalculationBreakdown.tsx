@@ -2,7 +2,6 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useDisplayLabels } from "@/lib/displayI18n";
-import { filterActiveRoleBreakdown } from "@/lib/calculation";
 import { roleDevelopersCount } from "@/lib/datetime";
 
 type LineItemAmount = {
@@ -17,11 +16,12 @@ function lineItemAmountJpy(item: LineItemAmount): number {
   return item.amount ?? 0;
 }
 
-function rcRowKey(row: { category_key?: string; category: string }): string {
-  if (row.category_key) {
-    return row.category_key;
+/** Reverse admin NRC discount so line items match the Setup costs panel. */
+function amountBeforeDiscount(value: number, discountRate: number | null | undefined): number {
+  if (discountRate == null || discountRate <= 0 || discountRate >= 1) {
+    return value;
   }
-  return row.category.trim().toLowerCase().replace(/\s+/g, "_");
+  return Math.round(value / (1 - discountRate));
 }
 
 export type CalculationResult = {
@@ -83,7 +83,11 @@ export type CalculationResult = {
     target_working_days?: number | null;
     actual_working_days?: number;
   };
-  nrc_rc_assumptions?: Record<string, unknown>;
+  nrc_rc_assumptions?: {
+    setup_cost_items?: Array<{ name: string; amount?: number | null }>;
+    monthly_rc_items?: Array<{ name: string; amount?: number | null }>;
+    source?: string;
+  } | null;
   nrc_rc_source?: "derived" | "rate_card_tune" | "manual" | "rate_card";
 };
 
@@ -146,11 +150,43 @@ export default function CalculationBreakdown({
       ? tRateCards(`developmentApproachOptions.${approachKey}.label`)
       : null;
 
-  const activeRoleBreakdown = filterActiveRoleBreakdown(
-    result.role_breakdown,
-    result.estimated_duration_days,
-    result.total_effort_days,
+  // Show every rate-card role (including 0h) so the breakdown matches the card.
+  const roleBreakdown = result.role_breakdown;
+  const discountRate = result.discount_rate_applied;
+  const showDiscount = hasPricingDiscount(result);
+  const setupFromAssumptions = result.nrc_rc_assumptions?.setup_cost_items ?? [];
+  const setupRows =
+    setupFromAssumptions.length > 0
+      ? setupFromAssumptions.map((item) => ({
+          name: item.name,
+          amount: item.amount ?? 0,
+        }))
+      : (result.nrc.setup_items ?? []).map((item) => ({
+          name: item.name,
+          amount: amountBeforeDiscount(lineItemAmountJpy(item), discountRate),
+        }));
+  const setupTotal = setupRows.reduce((sum, item) => sum + item.amount, 0);
+  const laborBeforeDiscount = amountBeforeDiscount(result.nrc.labor_jpy, discountRate);
+  const contingencyBeforeDiscount = amountBeforeDiscount(
+    result.nrc.contingency_jpy,
+    discountRate,
   );
+  const overheadBeforeDiscount = amountBeforeDiscount(result.nrc.overhead_jpy, discountRate);
+
+  const rcFromAssumptions = result.nrc_rc_assumptions?.monthly_rc_items ?? [];
+  const rcMonthlyRows =
+    rcFromAssumptions.length > 0
+      ? rcFromAssumptions.map((item) => ({
+          name: item.name,
+          amount: item.amount ?? 0,
+        }))
+      : (result.rc.monthly_items ?? []).map((item) => ({
+          name: item.name,
+          amount: lineItemAmountJpy(item),
+        }));
+  const maintenanceJpy = result.rc.maintenance_jpy ?? 0;
+  const rcMonthlyTotal =
+    rcMonthlyRows.reduce((sum, item) => sum + item.amount, 0) + maintenanceJpy;
 
   return (
     <section
@@ -250,20 +286,20 @@ export default function CalculationBreakdown({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {activeRoleBreakdown.map((row) => (
+              {roleBreakdown.map((row) => (
                 <tr key={row.role}>
                   <td className="px-3 py-2">{translateRole(row.role)}</td>
                   <td className="px-3 py-2 text-right">
-                    {row.hours > 0
-                      ? formatNumber(
-                          roleDevelopersCount(
+                    {formatNumber(
+                      row.hours > 0
+                        ? roleDevelopersCount(
                             row.hours,
                             row.personnel_count,
                             result.estimated_duration_days,
                             result.total_effort_days,
-                          ),
-                        )
-                      : "—"}
+                          )
+                        : Math.max(1, row.personnel_count ?? 1),
+                    )}
                   </td>
                   <td className="px-3 py-2 text-right">{formatNumber(row.hours)}</td>
                   <td className="px-3 py-2 text-right">{formatJpy(row.rate_jpy)}</td>
@@ -288,28 +324,28 @@ export default function CalculationBreakdown({
             <tbody className="divide-y divide-gray-200 bg-white">
               <tr>
                 <td className="px-3 py-2">{t("labor")}</td>
-                <td className="px-3 py-2 text-right">{formatJpy(result.nrc.labor_jpy)}</td>
+                <td className="px-3 py-2 text-right">{formatJpy(laborBeforeDiscount)}</td>
               </tr>
-              {(result.nrc.setup_items ?? []).map((item) => (
+              {setupRows.map((item) => (
                 <tr key={item.name}>
                   <td className="px-3 py-2 pl-6 text-gray-600">
                     {t("setup")}: {translateSetupItem(item.name)}
                   </td>
-                  <td className="px-3 py-2 text-right">{formatJpy(lineItemAmountJpy(item))}</td>
+                  <td className="px-3 py-2 text-right">{formatJpy(item.amount)}</td>
                 </tr>
               ))}
-              {(!result.nrc.setup_items || result.nrc.setup_items.length === 0) && (
+              {setupRows.length === 0 && (
                 <tr>
                   <td className="px-3 py-2">{t("setup")}</td>
-                  <td className="px-3 py-2 text-right">{formatJpy(result.nrc.setup_jpy)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {formatJpy(amountBeforeDiscount(result.nrc.setup_jpy, discountRate))}
+                  </td>
                 </tr>
               )}
-              {(result.nrc.setup_items?.length ?? 0) > 0 && (
+              {setupRows.length > 0 && (
                 <tr className="bg-gray-50">
                   <td className="px-3 py-2 font-medium">{t("setupTotal")}</td>
-                  <td className="px-3 py-2 text-right font-medium">
-                    {formatJpy(result.nrc.setup_jpy)}
-                  </td>
+                  <td className="px-3 py-2 text-right font-medium">{formatJpy(setupTotal)}</td>
                 </tr>
               )}
               <tr>
@@ -317,15 +353,45 @@ export default function CalculationBreakdown({
                   {t("contingency")}
                   <Tooltip text={t("contingencyFormula")} />
                 </td>
-                <td className="px-3 py-2 text-right">{formatJpy(result.nrc.contingency_jpy)}</td>
+                <td className="px-3 py-2 text-right">{formatJpy(contingencyBeforeDiscount)}</td>
               </tr>
               <tr>
                 <td className="px-3 py-2">
                   {t("overhead")}
                   <Tooltip text={t("overheadFormula")} />
                 </td>
-                <td className="px-3 py-2 text-right">{formatJpy(result.nrc.overhead_jpy)}</td>
+                <td className="px-3 py-2 text-right">{formatJpy(overheadBeforeDiscount)}</td>
               </tr>
+              {showDiscount && (
+                <>
+                  <tr className="bg-gray-50">
+                    <td className="px-3 py-2 font-medium">{t("nrcSubtotal")}</td>
+                    <td className="px-3 py-2 text-right font-medium">
+                      {formatJpy(
+                        result.nrc_original_total_jpy ??
+                          laborBeforeDiscount +
+                            setupTotal +
+                            contingencyBeforeDiscount +
+                            overheadBeforeDiscount,
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 text-emerald-700">
+                      {t("nrcDiscount", {
+                        percent: Math.round((discountRate ?? 0) * 100),
+                      })}
+                    </td>
+                    <td className="px-3 py-2 text-right text-emerald-700">
+                      -
+                      {formatJpy(
+                        result.discount_amount_jpy ??
+                          (result.nrc_original_total_jpy ?? 0) - result.nrc.total_jpy,
+                      )}
+                    </td>
+                  </tr>
+                </>
+              )}
               <tr className="bg-gray-50 font-semibold">
                 <td className="px-3 py-2">{t("nrcTotal")}</td>
                 <td className="px-3 py-2 text-right">{formatJpy(result.nrc.total_jpy)}</td>
@@ -345,38 +411,35 @@ export default function CalculationBreakdown({
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-700">{t("rcCategory")}</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-700">
-                  {t("rcServiceDescription")}
-                </th>
                 <th className="px-3 py-2 text-right font-medium text-gray-700">{t("cost")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {(result.rc_detailed_breakdown?.line_items ?? []).map((row) => (
-                <tr key={rcRowKey(row)}>
-                  <td className="px-3 py-2">{row.category}</td>
-                  <td className="px-3 py-2">{row.service_description}</td>
-                  <td className="px-3 py-2 text-right">{formatJpy(row.monthly_jpy)}</td>
+              {rcMonthlyRows.map((row) => (
+                <tr key={row.name}>
+                  <td className="px-3 py-2">{translateSetupItem(row.name)}</td>
+                  <td className="px-3 py-2 text-right">{formatJpy(row.amount)}</td>
                 </tr>
               ))}
+              {maintenanceJpy > 0 && (
+                <tr>
+                  <td className="px-3 py-2">
+                    {t("maintenance")}
+                    <Tooltip text={t("maintenanceFormula")} />
+                  </td>
+                  <td className="px-3 py-2 text-right">{formatJpy(maintenanceJpy)}</td>
+                </tr>
+              )}
               <tr className="bg-gray-50">
-                <td className="px-3 py-2 font-medium" colSpan={2}>
-                  {t("monthlyTotal")}
-                </td>
+                <td className="px-3 py-2 font-medium">{t("monthlyTotal")}</td>
                 <td className="px-3 py-2 text-right font-medium">
-                  {formatJpy(
-                    result.rc_detailed_breakdown?.monthly_total_jpy ?? result.rc.monthly_total_jpy,
-                  )}
+                  {formatJpy(result.rc.monthly_total_jpy || rcMonthlyTotal)}
                 </td>
               </tr>
               <tr className="bg-gray-50 font-semibold">
-                <td className="px-3 py-2" colSpan={2}>
-                  {t("annualTotal")}
-                </td>
+                <td className="px-3 py-2">{t("annualTotal")}</td>
                 <td className="px-3 py-2 text-right">
-                  {formatJpy(
-                    result.rc_detailed_breakdown?.annual_total_jpy ?? result.rc.annual_total_jpy,
-                  )}
+                  {formatJpy(result.rc.annual_total_jpy || rcMonthlyTotal * 12)}
                 </td>
               </tr>
             </tbody>

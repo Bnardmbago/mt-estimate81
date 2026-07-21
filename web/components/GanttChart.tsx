@@ -31,6 +31,8 @@ export type GanttData = {
   total_working_days: number;
   phases: GanttPhase[];
   tasks: GanttTask[];
+  staffing_mode?: "natural" | "match_schedule";
+  target_working_days?: number | null;
 };
 
 export type DeliveryScheduleAdvisory = {
@@ -45,6 +47,8 @@ type GanttChartProps = {
   initialStartDate: string | null;
   initialGantt: GanttData | null;
   hasFeatureItems: boolean;
+  /** Bumps after extract/feature edits so the live /gantt fetch re-runs. */
+  estimateUpdatedAt?: string | null;
   onStartDateChange?: (value: string) => void;
   deliveryScheduleAdvisory?: DeliveryScheduleAdvisory | null;
 };
@@ -112,6 +116,7 @@ export default function GanttChart({
   initialStartDate,
   initialGantt,
   hasFeatureItems,
+  estimateUpdatedAt = null,
   onStartDateChange,
   deliveryScheduleAdvisory = null,
 }: GanttChartProps) {
@@ -137,7 +142,10 @@ export default function GanttChart({
         );
         setGantt(response.gantt);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : t("loadError"));
+        const message = loadError instanceof Error ? loadError.message : t("loadError");
+        // Keep any hydrated timeline visible if a transient /gantt call fails
+        // (e.g. mid-extraction feature wipe).
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -146,18 +154,30 @@ export default function GanttChart({
   );
 
   useEffect(() => {
-    if (initialGantt) {
+    if (initialGantt?.tasks?.length) {
       setGantt(initialGantt);
       if (initialGantt.project_start_date) {
         setStartDate(initialGantt.project_start_date);
       }
     }
 
-    if (hasFeatureItems) {
+    // Load whenever features exist OR parent already hydrated a timeline.
+    // Do not key this effect on initialGantt identity — that remounts/refetches
+    // on every parent render and races post-extract refresh.
+    if (hasFeatureItems || (initialGantt?.tasks?.length ?? 0) > 0) {
       void loadGantt(initialStartDate ?? startDate);
+    } else {
+      setGantt(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estimateId, hasFeatureItems, initialGantt, locale]);
+  }, [estimateId, hasFeatureItems, locale, estimateUpdatedAt]);
+
+  // Prefer parent-provided gantt (post-extract hydrate) without wiping on refetch errors.
+  useEffect(() => {
+    if (initialGantt && initialGantt.tasks.length > 0) {
+      setGantt(initialGantt);
+    }
+  }, [initialGantt]);
 
   useEffect(() => {
     if (initialStartDate) {
@@ -171,19 +191,45 @@ export default function GanttChart({
     }
     const start = parseDate(gantt.project_start_date);
     const end = parseDate(gantt.project_end_date);
+    const spanDays = Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / 86400000) + 1,
+    );
+    // Weekly ticks get unreadable on multi-month match-schedule spans.
+    const stepDays = spanDays > 120 ? 28 : spanDays > 60 ? 14 : 7;
     const labels: string[] = [];
     const cursor = new Date(start);
     while (cursor <= end) {
       if (cursor.getDay() > 0 && cursor.getDay() < 6) {
-        labels.push(cursor.toISOString().slice(0, 10));
+        labels.push(
+          `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
+        );
       }
-      cursor.setDate(cursor.getDate() + 7);
+      cursor.setDate(cursor.getDate() + stepDays);
     }
     if (labels[labels.length - 1] !== gantt.project_end_date) {
       labels.push(gantt.project_end_date);
     }
     return labels;
   }, [gantt]);
+
+  const resolvedAdvisory = useMemo<DeliveryScheduleAdvisory | null>(() => {
+    if (deliveryScheduleAdvisory) {
+      return deliveryScheduleAdvisory;
+    }
+    if (!gantt || gantt.target_working_days == null) {
+      return null;
+    }
+    const target = gantt.target_working_days;
+    const actual = gantt.total_working_days;
+    return {
+      delivery_schedule_status: actual <= target ? "within_band" : "over_band",
+      delivery_schedule_message_key:
+        actual <= target ? "deliverySchedule.withinBand" : "deliverySchedule.overBand",
+      target_working_days: target,
+      actual_working_days: actual,
+    };
+  }, [deliveryScheduleAdvisory, gantt]);
 
   async function handleSaveStartDate() {
     setSaving(true);
@@ -214,8 +260,13 @@ export default function GanttChart({
     onStartDateChange?.(value);
   }
 
-  if (!hasFeatureItems) {
-    return null;
+  if (!hasFeatureItems && !(initialGantt?.tasks?.length)) {
+    return (
+      <section className="mt-8 border-t border-gray-200 pt-8">
+        <h2 className="text-lg font-semibold">{t("title")}</h2>
+        <p className="mt-2 text-sm text-gray-500">{t("empty")}</p>
+      </section>
+    );
   }
 
   return (
@@ -263,26 +314,26 @@ export default function GanttChart({
         </p>
       )}
 
-      {deliveryScheduleAdvisory && (
+      {resolvedAdvisory && (
         <div
           className={`mb-4 rounded-lg border p-4 text-sm ${
-            deliveryScheduleAdvisory.delivery_schedule_status === "over_band"
+            resolvedAdvisory.delivery_schedule_status === "over_band"
               ? "border-amber-300 bg-amber-50 text-amber-900"
-              : deliveryScheduleAdvisory.delivery_schedule_status === "within_band"
+              : resolvedAdvisory.delivery_schedule_status === "within_band"
                 ? "border-emerald-300 bg-emerald-50 text-emerald-900"
                 : "border-gray-200 bg-gray-50 text-gray-700"
           }`}
           role="status"
         >
-          {deliveryScheduleAdvisory.delivery_schedule_status === "unknown"
+          {resolvedAdvisory.delivery_schedule_status === "unknown"
             ? tCalc("deliverySchedule.unknown")
             : tCalc(
-                deliveryScheduleAdvisory.delivery_schedule_status === "within_band"
+                resolvedAdvisory.delivery_schedule_status === "within_band"
                   ? "deliverySchedule.withinBand"
                   : "deliverySchedule.overBand",
                 {
-                  actualDays: deliveryScheduleAdvisory.actual_working_days ?? 0,
-                  targetDays: deliveryScheduleAdvisory.target_working_days ?? 0,
+                  actualDays: resolvedAdvisory.actual_working_days ?? 0,
+                  targetDays: resolvedAdvisory.target_working_days ?? 0,
                 },
               )}
         </div>
@@ -292,7 +343,13 @@ export default function GanttChart({
 
       {gantt && gantt.tasks.length > 0 && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div
+            className={`grid gap-3 ${
+              resolvedAdvisory?.target_working_days != null
+                ? "sm:grid-cols-2 lg:grid-cols-4"
+                : "sm:grid-cols-3"
+            }`}
+          >
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
               <p className="text-gray-500">{t("projectStart")}</p>
               <p className="font-medium">{formatDisplayDate(gantt.project_start_date, locale)}</p>
@@ -305,6 +362,12 @@ export default function GanttChart({
               <p className="text-gray-500">{t("totalWorkingDays")}</p>
               <p className="font-medium">{gantt.total_working_days}</p>
             </div>
+            {resolvedAdvisory?.target_working_days != null && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+                <p className="text-gray-500">{t("clientTargetWorkingDays")}</p>
+                <p className="font-medium">{resolvedAdvisory.target_working_days}</p>
+              </div>
+            )}
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-gray-200">

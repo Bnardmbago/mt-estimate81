@@ -57,6 +57,7 @@ from app.estimates.extraction_constraints import (
 from app.estimates.nrc_rc_assumptions import (
     assumptions_from_rate_card_settings,
     derive_nrc_rc_assumptions,
+    prefer_rate_card_nrc_rc_after_extract,
 )
 
 logger = logging.getLogger(__name__)
@@ -360,14 +361,15 @@ async def _finalize_extraction(
         for key in ("data_complexity", "ui_complexity")
         if not str(form_data.get(key, "") or "").strip() and filled_form_data.get(key)
     }
-    if complexity_updates:
-        merged_form_data = {**form_data, **complexity_updates}
-        estimate.form_data = store_localized_dict(
-            estimate.form_data,
-            locale,
-            merged_form_data,
-        )
-        form_data = merged_form_data
+    # Always re-persist questionnaire + technical specification answers so
+    # extraction never leaves form_data unset/stale for the active locale.
+    merged_form_data = {**form_data, **complexity_updates}
+    estimate.form_data = store_localized_dict(
+        estimate.form_data,
+        locale,
+        merged_form_data,
+    )
+    form_data = merged_form_data
     estimate.extracted_data = store_localized_dict(
         estimate.extracted_data,
         locale,
@@ -448,6 +450,27 @@ async def _finalize_extraction(
         maintenance_assumptions = mark_rate_card_tune_recommended(
             maintenance_assumptions,
             recommended=rate_card_tune_recommended,
+        )
+
+    # Re-extract / manual rate-card edits: prefer the card's NRC/RC over derived tiers.
+    if estimate.rate_card_id and not rate_card_auto_tuned:
+        from app.rate_cards.service import get_latest_version_for_card
+
+        version = await get_latest_version_for_card(db, estimate.rate_card_id)
+        if version and version.settings:
+            estimate.nrc_rc_assumptions = prefer_rate_card_nrc_rc_after_extract(
+                derived=dict(estimate.nrc_rc_assumptions or {}),
+                rate_card_settings=dict(version.settings),
+                complexity_level=complexity_profile.level,
+            )
+        from app.estimates.feature_roles import align_feature_items_to_rate_card
+
+        await align_feature_items_to_rate_card(
+            db,
+            estimate_id,
+            estimate.rate_card_id,
+            user,
+            locale=locale,
         )
 
     rate_card_fingerprint = None

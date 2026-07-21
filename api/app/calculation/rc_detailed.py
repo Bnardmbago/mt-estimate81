@@ -162,13 +162,23 @@ def _slugify_category_key(name: str) -> str:
 
 
 def _is_maintenance_item(item: dict[str, Any]) -> bool:
-    name = str(item.get("name") or "").lower()
-    category = str(item.get("category") or "").lower()
-    return (
-        "maintenance" in name
-        or "support" in name
-        or category == "maintenance_support"
-    )
+    """True only for dedicated maintenance rows — not 'Hosting and Maintenance'."""
+    category = str(item.get("category") or "").strip().lower().replace(" ", "_")
+    if category in {"maintenance_support", "maintenance"}:
+        return True
+    name = str(item.get("name") or "").strip().lower()
+    if not name:
+        return False
+    exact = {
+        "maintenance",
+        "maintenance support",
+        "maintenance and support",
+        "support",
+        "保守",
+        "保守サポート",
+        "保守・サポート",
+    }
+    return name in exact
 
 
 def _build_flexible_rc_breakdown(
@@ -221,13 +231,12 @@ def _build_flexible_rc_breakdown(
     target_total = _scale_jpy(monthly_total_at_cost, multiplier)
     line_items: list[dict[str, Any]] = []
     for row in rows_at_cost:
+        at_cost = int(row["monthly_jpy_at_cost"])
         if subtotal_at_cost > 0:
-            share = row["monthly_jpy_at_cost"] / subtotal_at_cost
+            share = at_cost / subtotal_at_cost
             monthly_jpy = int(round(target_total * share))
-            monthly_at_cost = int(round(row["monthly_jpy_at_cost"] * multiplier))
         else:
             monthly_jpy = 0
-            monthly_at_cost = 0
         line_items.append(
             {
                 "category_key": row["category_key"],
@@ -235,7 +244,7 @@ def _build_flexible_rc_breakdown(
                 "service_description": row["service_description"],
                 "item": row["category"],
                 "monthly_jpy": monthly_jpy,
-                "monthly_jpy_at_cost": monthly_at_cost,
+                "monthly_jpy_at_cost": at_cost,
                 "annual_jpy": monthly_jpy * 12,
                 "is_maintenance": row["is_maintenance"],
             }

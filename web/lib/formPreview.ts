@@ -1,5 +1,19 @@
 import type { FormFieldSchema } from "@/lib/formSchema";
-import { getFieldLabel, splitSchemaBySection } from "@/lib/formSchema";
+import { getFieldLabel, getOptionLabel, splitSchemaBySection } from "@/lib/formSchema";
+
+function formatFieldDisplayValue(
+  field: FormFieldSchema,
+  value: string,
+  locale: string,
+): string {
+  if (field.type === "select") {
+    const option = (field.options ?? []).find((candidate) => candidate.value === value);
+    if (option) {
+      return getOptionLabel(option, locale);
+    }
+  }
+  return value;
+}
 
 export function formatFormDataPreview(
   formData: Record<string, string>,
@@ -14,7 +28,7 @@ export function formatFormDataPreview(
     if (!value) {
       continue;
     }
-    lines.push(`${getFieldLabel(field, locale)}\n${value}`);
+    lines.push(`${getFieldLabel(field, locale)}\n${formatFieldDisplayValue(field, value, locale)}`);
   }
 
   return lines.join("\n\n");

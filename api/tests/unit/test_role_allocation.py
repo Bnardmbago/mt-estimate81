@@ -28,6 +28,66 @@ SAMPLE_RATE_CARD = RateCardSettings(
 )
 
 
+def test_allocate_testing_hours_to_qa_specialist_before_senior_engineer():
+    """Regression: 'engineer' must not steal testing hours from 'QA Specialist'."""
+    rate_card = RateCardSettings(
+        roles=[
+            {"name": "Tech Lead", "hourly_rate_jpy": 7350},
+            {"name": "Senior Engineer", "hourly_rate_jpy": 7000},
+            {"name": "Full Stack Engineer", "hourly_rate_jpy": 6300},
+            {"name": "AI Specialist", "hourly_rate_jpy": 8400},
+            {"name": "Mobile Developer", "hourly_rate_jpy": 6650},
+            {"name": "QA Specialist", "hourly_rate_jpy": 5950},
+        ],
+        phases=SAMPLE_RATE_CARD.phases,
+        development_approach="traditional",
+        contingency_rate=0.15,
+        overhead_rate=0.10,
+        monthly_rc_items=[{"name": "hosting", "amount_jpy": 50000}],
+        setup_costs={"infrastructure_jpy": 300000, "tooling_jpy": 100000, "third_party_jpy": 0},
+        productivity={"hours_per_feature_default": 40},
+        tax_rate=0.10,
+    )
+    items = [
+        FeatureItemInput(
+            name="Auth",
+            hours=40,
+            phase="development",
+            role="Full Stack Engineer",
+        ),
+        FeatureItemInput(
+            name="AI",
+            hours=80,
+            phase="development",
+            role="AI Specialist",
+        ),
+        FeatureItemInput(
+            name="Mobile",
+            hours=60,
+            phase="development",
+            role="Mobile Developer",
+        ),
+        FeatureItemInput(
+            name="Inspection",
+            hours=70,
+            phase="development",
+            role="Full Stack Engineer",
+        ),
+        FeatureItemInput(
+            name="Dashboard",
+            hours=50,
+            phase="development",
+            role="Full Stack Engineer",
+        ),
+    ]
+    result = calculate_estimate(items, rate_card, {}, rate_card_version_id="v1")
+    by_role = {row["role"]: row["hours"] for row in result.role_breakdown}
+
+    assert by_role["QA Specialist"] == 75.0  # 25% of 300h testing phase
+    assert by_role["Tech Lead"] == 30.0  # 10% requirement
+    assert by_role["Senior Engineer"] == 45.0  # 15% design — separate from QA
+
+
 def test_allocate_pm_hours_from_requirement_phase():
     items = [
         FeatureItemInput(name="Dev", hours=390, phase="development", role="developer"),
@@ -137,13 +197,13 @@ def test_calculate_estimate_mtc_site_roles():
         FeatureItemInput(name="UI", hours=60, phase="development", role="Full Stack Engineer"),
     ]
     result = calculate_estimate(items, rate_card, {}, rate_card_version_id="v1")
-    roles = {row["role"] for row in result.role_breakdown}
+    roles = {row["role"] for row in result.role_breakdown if row["hours"] > 0}
     assert "Senior Engineer" in roles
-    assert "Engineer" in roles
+    assert "Developer" in roles
     assert "Full Stack Engineer" in roles
 
 
-def test_calculate_estimate_adds_missing_qa_role_from_normalize():
+def test_calculate_estimate_maps_qa_label_to_rate_card_qa_role():
     from app.calculation.schemas import RateCardSettings
     from app.rate_cards.normalize import normalize_settings_dict
 
@@ -171,5 +231,5 @@ def test_calculate_estimate_adds_missing_qa_role_from_normalize():
 
     testing_rows = [row for row in result.role_breakdown if row["hours"] > 0]
     assert len(testing_rows) == 1
-    assert testing_rows[0]["role"] == "Engineer"
+    assert testing_rows[0]["role"] == "QA Engineer"
     assert testing_rows[0]["hours"] == 60.0

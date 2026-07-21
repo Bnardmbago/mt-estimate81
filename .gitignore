@@ -1,4 +1,5 @@
 .env
+LOCAL_OPS.md
 node_modules/
 __pycache__/
 *.pyc

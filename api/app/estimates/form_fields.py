@@ -17,6 +17,7 @@ HEADER_FIELD_KEYS = [
     "expected_user_count",
     "concurrent_users",
     "delivery_schedule",
+    "timeline_planning",
     "client_budget",
 ]
 
@@ -98,6 +99,10 @@ SELECT_OPTIONS: dict[str, tuple[str, ...]] = {
         "within_6_12_months",
         "over_12_months",
         "flexible",
+    ),
+    "timeline_planning": (
+        "match_schedule",
+        "fastest_parallel",
     ),
     "nature_of_work": (
         "new_build",
@@ -222,6 +227,10 @@ HEADER_FIELD_LABELS: dict[str, dict[str, str]] = {
         "en": "What is your desired delivery schedule?",
         "ja": "希望の納期・スケジュールはいつですか？",
     },
+    "timeline_planning": {
+        "en": "How should we plan the timeline?",
+        "ja": "タイムラインの計画方法",
+    },
     "client_budget": {
         "en": "What is your budget?",
         "ja": "予算を教えてください。",
@@ -280,6 +289,14 @@ OPTION_LABELS: dict[str, dict[str, str]] = {
     "within_6_12_months": {"en": "Within 6–12 months", "ja": "6〜12か月以内"},
     "over_12_months": {"en": "Over 12 months", "ja": "12か月以上"},
     "flexible": {"en": "Flexible", "ja": "未定・相談したい"},
+    "match_schedule": {
+        "en": "Match desired schedule",
+        "ja": "希望納期に合わせる",
+    },
+    "fastest_parallel": {
+        "en": "Fastest parallel plan",
+        "ja": "最短（役割並行）",
+    },
     "corporate_website": {"en": "Corporate website", "ja": "コーポレートサイト"},
     "web_application": {"en": "Web application", "ja": "Webアプリケーション"},
     "mobile_app": {"en": "Mobile app", "ja": "モバイルアプリ"},
@@ -492,6 +509,7 @@ KNOWN_FIELD_TYPE_PATCHES: dict[str, str] = {
     "expected_user_count": "number",
     "concurrent_users": "number",
     "delivery_schedule": "select",
+    "timeline_planning": "select",
     "client_budget": "currency",
     "nature_of_work": "select",
     "business_domain": "select",
@@ -517,6 +535,10 @@ HEADER_FIELD_DESCRIPTIONS: dict[str, str] = {
     "expected_user_count": "Client-facing: total expected users",
     "concurrent_users": "Client-facing: expected concurrent users",
     "delivery_schedule": "Client-facing: desired timeline",
+    "timeline_planning": (
+        "Client-facing: whether Gantt should match the desired schedule "
+        "or use the fastest parallel staffing plan"
+    ),
     "client_budget": "Client-facing: budget range",
 }
 
@@ -743,11 +765,58 @@ def patch_known_field_types(fields: list[dict[str, Any]]) -> list[dict[str, Any]
     return patched
 
 
+# Keys inserted into older estimate/template schemas when missing (additive UX fixes).
+ENSURE_HEADER_FIELD_KEYS: tuple[str, ...] = ("timeline_planning",)
+
+
+def ensure_known_header_fields(fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Insert missing known header keys (e.g. timeline_planning) into older schemas."""
+    result = copy.deepcopy(fields)
+    by_key = {str(field.get("key", "")): field for field in result}
+    missing = [key for key in ENSURE_HEADER_FIELD_KEYS if key not in by_key]
+    if not missing:
+        return result
+
+    for key in missing:
+        if key not in HEADER_FIELD_KEYS:
+            continue
+        index = HEADER_FIELD_KEYS.index(key)
+        prev_order: int | None = None
+        for prev in reversed(HEADER_FIELD_KEYS[:index]):
+            if prev in by_key:
+                prev_order = int(by_key[prev].get("sort_order", 0))
+                break
+        next_order: int | None = None
+        for nxt in HEADER_FIELD_KEYS[index + 1 :]:
+            if nxt in by_key:
+                next_order = int(by_key[nxt].get("sort_order", 0))
+                break
+
+        if prev_order is not None and next_order is not None and next_order > prev_order:
+            sort_order = prev_order + max(1, (next_order - prev_order) // 2)
+        elif prev_order is not None:
+            sort_order = prev_order + 5
+        elif next_order is not None:
+            sort_order = max(0, next_order - 5)
+        else:
+            sort_order = index * 10
+
+        field = _build_field(key, section="header", sort_order=sort_order, required=False)
+        result.append(field)
+        by_key[key] = field
+
+    result.sort(key=lambda item: int(item.get("sort_order", 0)))
+    return result
+
+
 def snapshot_fields(schema: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     if not schema:
         return copy.deepcopy(DEFAULT_TEMPLATE_FIELDS)
-    return copy.deepcopy(validate_template_fields(patch_known_field_types(schema)))
-
+    return copy.deepcopy(
+        validate_template_fields(
+            ensure_known_header_fields(patch_known_field_types(schema))
+        )
+    )
 
 def header_schema(schema: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [field for field in snapshot_fields(schema) if field.get("section") == "header"]
@@ -916,7 +985,10 @@ def prune_form_data_to_schema(
 
 
 def empty_form_data_for_schema(schema: list[dict[str, Any]]) -> dict[str, str]:
-    return {key: "" for key in schema_field_keys(schema)}
+    values = {key: "" for key in schema_field_keys(schema)}
+    if "timeline_planning" in values:
+        values["timeline_planning"] = "match_schedule"
+    return values
 
 
 # Backward-compatible helpers

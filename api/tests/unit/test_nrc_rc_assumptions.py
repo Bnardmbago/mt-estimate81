@@ -1,6 +1,7 @@
 from app.estimates.nrc_rc_assumptions import (
     derive_nrc_rc_assumptions,
     estimate_labor_jpy,
+    prefer_rate_card_nrc_rc_after_extract,
     resolve_nrc_rc_assumptions,
 )
 from app.rate_cards.complexity import score_project_complexity
@@ -111,3 +112,51 @@ def test_resolve_prefers_stored_assumptions():
     resolved = resolve_nrc_rc_assumptions(estimate)
     assert resolved["source"] == "manual"
     assert resolved["setup_cost_items"][0]["amount"] == 12345
+
+
+def test_prefer_rate_card_nrc_rc_after_extract_uses_card_over_derived():
+    """Re-extract must pick up rate-card NRC/RC edits, not keep complexity tiers."""
+    derived = derive_nrc_rc_assumptions(
+        complexity_profile=_low_complexity_profile(),
+        form_data={"data_complexity": "low"},
+        extracted_data={"external_systems": []},
+        labor_jpy=50_000,
+    )
+    rate_card_settings = {
+        "setup_cost_items": [
+            {"name": "SharePoint Integration", "amount": 1_000_000},
+            {"name": "AI Model Training", "amount": 1_200_000},
+        ],
+        "monthly_rc_items": [
+            {"name": "Cloud Hosting", "amount": 100_000, "category": "cloud_infrastructure"},
+            {"name": "AI API Usage", "amount": 50_000},
+        ],
+    }
+    preferred = prefer_rate_card_nrc_rc_after_extract(
+        derived=derived,
+        rate_card_settings=rate_card_settings,
+        complexity_level="medium",
+    )
+    assert preferred["source"] == "rate_card"
+    assert preferred["complexity_level"] == "medium"
+    assert [item["name"] for item in preferred["setup_cost_items"]] == [
+        "SharePoint Integration",
+        "AI Model Training",
+    ]
+    assert preferred["setup_cost_items"][0]["amount"] == 1_000_000
+    assert preferred["monthly_rc_items"][0]["amount"] == 100_000
+
+
+def test_prefer_rate_card_nrc_rc_keeps_derived_when_card_has_no_cost_items():
+    derived = derive_nrc_rc_assumptions(
+        complexity_profile=_low_complexity_profile(),
+        form_data={"data_complexity": "low"},
+        extracted_data={"external_systems": []},
+    )
+    preferred = prefer_rate_card_nrc_rc_after_extract(
+        derived=derived,
+        rate_card_settings={"roles": [{"name": "Engineer", "hourly_rate": 8000}], "setup_cost_items": [], "monthly_rc_items": []},
+        complexity_level="low",
+    )
+    assert preferred is derived
+    assert preferred["source"] == "derived"

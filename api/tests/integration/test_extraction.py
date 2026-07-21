@@ -466,7 +466,18 @@ async def test_extraction_populates_feature_items(
 
     await client.patch(
         f"/estimates/{estimate_id}",
-        json={"form_data": {"main_functional_needs": "User login and dashboard"}},
+        json={
+            "form_data": {
+                "desired_system": "Customer portal",
+                "delivery_schedule": "within_3_6_months",
+                "timeline_planning": "match_schedule",
+                "required_features": "Login and dashboard",
+                "nature_of_work": "new_build",
+                "scope_boundaries": "MVP auth and dashboard only",
+                "data_complexity": "medium",
+                "ui_complexity": "low",
+            }
+        },
         headers=auth_headers,
     )
     await assign_rate_card(client, estimate_id, active_rate_card, auth_headers)
@@ -485,6 +496,16 @@ async def test_extraction_populates_feature_items(
     assert len(payload["feature_items"]) >= 1
     assert payload["extracted_data"]["functional_requirements"]
     assert payload["maintenance_assumptions"]["monthly_support_hours"] == 20
+    # Questionnaire + technical specification answers must remain after extract.
+    form_data = payload["form_data"]
+    assert form_data["desired_system"] == "Customer portal"
+    assert form_data["delivery_schedule"] == "within_3_6_months"
+    assert form_data["timeline_planning"] == "match_schedule"
+    assert form_data["required_features"] == "Login and dashboard"
+    assert form_data["nature_of_work"] == "new_build"
+    assert form_data["scope_boundaries"] == "MVP auth and dashboard only"
+    assert form_data["data_complexity"] == "medium"
+    assert form_data["ui_complexity"] == "low"
 
     audit = await client.get(f"/estimates/{estimate_id}/audit", headers=auth_headers)
     actions = [entry["action"] for entry in audit.json()]

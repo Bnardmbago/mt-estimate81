@@ -107,9 +107,10 @@ def build_gantt_svg(gantt: dict[str, Any]) -> str:
         end_offset = max((task_end - project_start).days, start_offset)
         bar_left = chart_left + (start_offset / total_days) * chart_width
         bar_width = max(((end_offset - start_offset + 1) / (total_days + 1)) * chart_width, 6)
-        phase = str(task.get("phase") or "")
+        phase = str(task.get("phase_key") or task.get("phase") or "")
         color = _phase_color(phase)
-        phases_seen.setdefault(phase.lower(), color)
+        display_phase = str(task.get("phase") or phase)
+        phases_seen.setdefault(display_phase, color)
         parts.append(
             f'<rect x="{bar_left:.1f}" y="{y + 5}" width="{bar_width:.1f}" height="{row_height - 10}" '
             f'rx="4" fill="{color}"/>'
@@ -117,15 +118,15 @@ def build_gantt_svg(gantt: dict[str, Any]) -> str:
 
     legend_y = chart_top + chart_rows_height + 8
     legend_x = padding
-    for phase_key, color in sorted(phases_seen.items()):
-        if not phase_key:
+    for phase_label, color in sorted(phases_seen.items()):
+        if not phase_label:
             continue
         parts.append(
             f'<rect x="{legend_x}" y="{legend_y}" width="10" height="10" fill="{color}" rx="2"/>'
         )
         parts.append(
             f'<text x="{legend_x + 14}" y="{legend_y + 9}" font-size="7.5" fill="#64748B">'
-            f"{escape(phase_key)}</text>"
+            f"{escape(phase_label)}</text>"
         )
         legend_x += 80
 

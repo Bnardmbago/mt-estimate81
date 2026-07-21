@@ -2,7 +2,11 @@ import math
 from datetime import date
 
 from app.calculation.development_approach import coerce_development_approach, get_approach_factors
-from app.calculation.gantt import GanttFeatureItem, build_gantt_timeline_two_pass
+from app.calculation.gantt import (
+    GanttFeatureItem,
+    build_gantt_timeline_two_pass,
+    headcount_from_gantt_tasks,
+)
 from app.calculation.line_items import (
     build_nrc_line_items,
     build_rc_line_items,
@@ -75,6 +79,8 @@ def calculate_estimate(
     project_start_date: date | None = None,
     gantt_feature_items: list[GanttFeatureItemInput] | None = None,
     discount_rate: float = 0.0,
+    target_working_days: int | None = None,
+    staffing_mode: str = "natural",
 ) -> CalculationResult:
     approach = coerce_development_approach(rate_card.development_approach)
     approach_factors = get_approach_factors(approach)
@@ -147,18 +153,34 @@ def calculate_estimate(
             ],
             [phase.name for phase in rate_card.phases],
             project_start_date,
+            target_working_days=target_working_days,
+            staffing_mode="match_schedule" if staffing_mode == "match_schedule" else "natural",
         )
         if gantt["total_working_days"] > 0:
             estimated_duration_days = float(gantt["total_working_days"])
+
+    gantt_headcount = headcount_from_gantt_tasks(gantt) if gantt else {}
+
+    def _personnel_for_role(role_name: str, hours: float) -> int:
+        if role_name in gantt_headcount:
+            return gantt_headcount[role_name]
+        lowered = role_name.lower()
+        for key, count in gantt_headcount.items():
+            if key.lower() == lowered:
+                return count
+        return role_personnel_count(
+            hours,
+            estimated_duration_days=estimated_duration_days,
+            total_days=total_days,
+        )
 
     role_breakdown = [
         {
             "role": role.name,
             "hours": role_hours.get(role.name, 0.0),
-            "personnel_count": role_personnel_count(
+            "personnel_count": _personnel_for_role(
+                role.name,
                 role_hours.get(role.name, 0.0),
-                estimated_duration_days=estimated_duration_days,
-                total_days=total_days,
             ),
             "rate_jpy": role_rates[role.name],
             "cost_jpy": int(role_hours.get(role.name, 0.0) * role_rates[role.name]),

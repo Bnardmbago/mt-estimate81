@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from types import SimpleNamespace
 
 import pytest
 
@@ -334,3 +335,71 @@ def test_report_context_rc_breakdown_matches_calculation_rc():
     assert cloud["monthly_jpy"] == 50000
     assert cloud["service_description"] == "Server & database usage"
     assert maintenance["is_maintenance"] is True
+
+
+def test_report_context_uses_feature_item_localizations_for_locale():
+    estimate = sample_estimate_with_calculation()
+    estimate.feature_items = [
+        SimpleNamespace(
+            sort_order=0,
+            name="User login & auth",
+            description="OAuth and session management",
+            phase="development",
+            role="Full Stack Engineer",
+            hours=40,
+            localizations={
+                "en": {
+                    "name": "User login & auth",
+                    "description": "OAuth and session management",
+                    "phase": "development",
+                    "role": "Full Stack Engineer",
+                },
+                "ja": {
+                    "name": "ユーザー認証",
+                    "description": "OAuthとセッション管理",
+                    "phase": "development",
+                    "role": "Full Stack Engineer",
+                },
+            },
+        )
+    ]
+
+    ctx_ja = build_report_context(
+        estimate,
+        "ja",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="RC",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+    )
+
+    feature = ctx_ja["feature_items"][0]
+    assert feature["name"] == "ユーザー認証"
+    assert feature["description"] == "OAuthとセッション管理"
+    assert feature["phase"] == "実装"
+    assert feature["role"] == "フルスタックエンジニア"
+
+
+def test_report_context_skips_detail_level_estimate_type_for_system_type():
+    estimate = sample_estimate_with_calculation()
+    estimate.extracted_data = {
+        "functional_requirements": ["Login"],
+        "confidence_score": 80,
+        "accuracy_level": "high",
+        "estimate_type": "detailed",
+    }
+    estimate.form_data = {"nature_of_work": "enhancement"}
+    estimate.form_schema_snapshot = []
+
+    ctx_ja = build_report_context(
+        estimate,
+        "ja",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="RC",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+    )
+
+    assert ctx_ja["project_summary"]["estimate_type"] == "機能追加・改修"

@@ -8,6 +8,8 @@ from app.ai.instruction_resolver import ResolvedInstructions, merge_user_message
 from app.ai.rate_limit_retry import with_rate_limit_retry
 from app.ai.openai_schema import build_form_fields_suggestion_schema, build_openai_strict_schema
 from app.ai.prompts import (
+    build_export_translation_system_prompt,
+    build_export_translation_user_prompt,
     build_form_fields_system_prompt,
     build_form_fields_user_prompt,
     build_rate_card_section_system_prompt,
@@ -21,6 +23,7 @@ from app.estimates.form_fields import field_metadata_for_prompt, schema_field_ke
 from app.estimates.extraction_constraints import ExtractionConstraints
 from app.ai.schemas import (
     EstimateFormFieldsSuggestion,
+    ExportNarrativeTranslation,
     ExtractedRequirements,
     GeneratedRateCardSuggestion,
 )
@@ -265,3 +268,33 @@ class OpenAIProvider:
 
         payload = json.loads(content)
         return EstimateFormFieldsSuggestion.model_validate(payload)
+
+    async def translate_export_narrative(
+        self,
+        *,
+        source_locale: Literal["ja", "en"],
+        target_locale: Literal["ja", "en"],
+        payload: dict[str, Any],
+    ) -> ExportNarrativeTranslation:
+        system = build_export_translation_system_prompt(target_locale)
+        user_content = build_export_translation_user_prompt(payload)
+        response = await self._create_completion(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "export_narrative_translation",
+                    "schema": build_openai_strict_schema(ExportNarrativeTranslation),
+                    "strict": True,
+                },
+            },
+            **completion_kwargs(None),
+        )
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("OpenAI returned an empty translation response")
+        return ExportNarrativeTranslation.model_validate(json.loads(content))

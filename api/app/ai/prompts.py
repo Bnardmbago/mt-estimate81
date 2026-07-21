@@ -453,3 +453,40 @@ def build_rate_card_user_prompt(
         sections.extend(["## Truncation Notice", truncation_note])
 
     return "\n\n".join(sections)
+
+
+def build_export_translation_system_prompt(target_locale: Literal["ja", "en"]) -> str:
+    language = "Japanese" if target_locale == "ja" else "English"
+    return (
+        "You are a professional technical translator for software project estimates. "
+        f"Translate the provided estimate narrative content into {language}. "
+        "Rules:\n"
+        "- Translate meaning faithfully; do not add, remove, or invent requirements.\n"
+        "- Do not change IDs, numbers, dates, currency amounts, or select-option slugs.\n"
+        "- Keep product/brand names and common technical terms when natural.\n"
+        "- Preserve list length and feature IDs exactly.\n"
+        "- Return only the structured translation fields requested."
+    )
+
+
+def build_export_translation_user_prompt(payload: dict[str, Any]) -> str:
+    source = payload.get("source_locale", "en")
+    target = payload.get("target_locale", "ja")
+    body = {
+        "form_fields": payload.get("form_fields") or {},
+        "functional_requirements": payload.get("functional_requirements") or [],
+        "non_functional_requirements": payload.get("non_functional_requirements") or [],
+        "user_roles": payload.get("user_roles") or [],
+        "modules": payload.get("modules") or [],
+        "external_systems": payload.get("external_systems") or [],
+        "estimate_exclusions": payload.get("estimate_exclusions") or [],
+        "estimate_type": payload.get("estimate_type") or "",
+        "features": payload.get("features") or [],
+    }
+    return (
+        f"Translate the following estimate narrative from {source} to {target}.\n"
+        "Return the same structure with translated strings.\n"
+        "For form_fields, return a list of {key, value} objects for each provided key.\n"
+        "For features, keep each feature id unchanged and translate name/description.\n\n"
+        f"{json.dumps(body, ensure_ascii=False, indent=2)}"
+    )

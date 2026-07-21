@@ -117,10 +117,11 @@ def normalize_settings_dict(raw: dict[str, Any]) -> dict[str, Any]:
         )
 
     from app.rate_cards.regional_profiles import patch_jpy_specialist_role_floors
-    from app.rate_cards.standard_rates import ensure_standard_roles
 
     settings, _ = patch_jpy_specialist_role_floors(settings)
-    settings = ensure_standard_roles(settings)
+    # Do not call ensure_standard_roles here — that collapses cards to the
+    # standard four and drops user-added roles on save. AI generation applies
+    # consolidation explicitly where needed.
 
     return settings
 

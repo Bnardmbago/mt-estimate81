@@ -14,6 +14,16 @@ PHASE_DEFAULT_ROLE_HINTS: dict[str, tuple[str, ...]] = {
         "tech_lead",
         "technical lead",
     ),
+    # Prefer design/architecture roles — do not fall back to generic "developer"
+    # so PM/QA phase transfers on simple cards stay intact.
+    "design": (
+        "designer",
+        "ux designer",
+        "ui designer",
+        "senior engineer",
+        "senior developer",
+        "architect",
+    ),
     "testing": ("qa", "qa engineer", "tester", "engineer", "senior engineer"),
 }
 
@@ -86,14 +96,15 @@ def _looks_like_role_alias(role: str) -> bool:
 
 
 def resolve_rate_card_role(role_rates: dict[str, int], hints: tuple[str, ...]) -> str | None:
+    """Pick a rate-card role using hints in priority order (exact, then substring)."""
     normalized_map = {_normalize_key(name): name for name in role_rates}
     for hint in hints:
         key = _normalize_key(hint)
         if key in normalized_map:
             return normalized_map[key]
-    for role_name in role_rates:
-        if _role_matches_hint(role_name, hints):
-            return role_name
+        for role_name in role_rates:
+            if _role_matches_hint(role_name, (hint,)):
+                return role_name
     return None
 
 
@@ -197,7 +208,10 @@ def _fallback_standard_role(role: str, role_rates: dict[str, int]) -> str | None
         return resolve_rate_card_role(role_rates, ("tech lead", "senior engineer"))
 
     if keys & frozenset({"qa", "tester", "test", "quality_assurance"}):
-        return resolve_rate_card_role(role_rates, ("engineer", "full stack engineer"))
+        return resolve_rate_card_role(
+            role_rates,
+            QA_ROLE_RESOLUTION_HINTS,
+        ) or resolve_rate_card_role(role_rates, ("engineer", "full stack engineer"))
 
     if keys & frozenset({"devops", "devops_engineer"}):
         return resolve_rate_card_role(role_rates, ("engineer", "full stack engineer"))

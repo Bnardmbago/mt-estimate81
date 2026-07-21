@@ -392,16 +392,33 @@ def _build_form_fields(
     return build_flat_form_fields(form_data, schema, locale)
 
 
-def _build_feature_rows(estimate: Estimate) -> list[dict[str, Any]]:
+def _build_feature_rows(
+    estimate: Estimate,
+    locale: str | None = None,
+) -> list[dict[str, Any]]:
+    from app.i18n.localized_content import resolve_feature_item_fields
+
     rows = []
+    fallback_locale = getattr(estimate, "locale", None) or "ja"
+    display_locale = locale or fallback_locale
     for item in sorted(estimate.feature_items, key=lambda fi: fi.sort_order):
         hours = float(item.hours)
+        fields = resolve_feature_item_fields(
+            name=item.name,
+            description=item.description,
+            phase=item.phase,
+            role=item.role,
+            localizations=getattr(item, "localizations", None),
+            display_locale=display_locale,
+            fallback_locale=fallback_locale,
+        )
         rows.append(
             {
-                "name": item.name,
-                "description": item.description,
-                "phase": item.phase,
-                "role": item.role,
+                "id": getattr(item, "id", None),
+                "name": fields["name"],
+                "description": fields["description"],
+                "phase": fields["phase"],
+                "role": fields["role"],
                 "hours": hours,
                 "days": hours / HOURS_PER_EFFORT_DAY,
             }

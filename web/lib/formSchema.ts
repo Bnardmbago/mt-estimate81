@@ -31,6 +31,17 @@ const DELIVERY_SCHEDULE_OPTIONS: SelectOptionSchema[] = [
   { value: "flexible", label: { en: "Flexible", ja: "未定・相談したい" } },
 ];
 
+const TIMELINE_PLANNING_OPTIONS: SelectOptionSchema[] = [
+  {
+    value: "match_schedule",
+    label: { en: "Match desired schedule", ja: "希望納期に合わせる" },
+  },
+  {
+    value: "fastest_parallel",
+    label: { en: "Fastest parallel plan", ja: "最短（役割並行）" },
+  },
+];
+
 const USAGE_PLATFORM_OPTIONS: SelectOptionSchema[] = [
   { value: "web_browser", label: { en: "Web Browser", ja: "Webブラウザ" } },
   { value: "iphone_app", label: { en: "iOS (iPhone app)", ja: "iOS（iPhoneアプリ）" } },
@@ -140,6 +151,7 @@ const COMPLEXITY_OPTIONS: SelectOptionSchema[] = [
 
 const SELECT_FIELD_OPTIONS: Partial<Record<string, SelectOptionSchema[]>> = {
   delivery_schedule: DELIVERY_SCHEDULE_OPTIONS,
+  timeline_planning: TIMELINE_PLANNING_OPTIONS,
   usage_platform: USAGE_PLATFORM_OPTIONS,
   target_users: TARGET_USERS_OPTIONS,
   payment_needed: PAYMENT_NEEDED_OPTIONS,
@@ -163,6 +175,7 @@ const KNOWN_FIELD_TYPE_PATCHES: Partial<Record<string, FormFieldSchema["type"]>>
   expected_user_count: "number",
   concurrent_users: "number",
   delivery_schedule: "select",
+  timeline_planning: "select",
   client_budget: "currency",
   nature_of_work: "select",
   business_domain: "select",
@@ -263,7 +276,74 @@ const LEGACY_LABELS: Record<string, LocalizedText> = {
   maintenance_support: { en: "Maintenance and support", ja: "保守・サポート" },
   risks_unknowns: { en: "Risks and unknowns", ja: "リスク・不明点" },
   budget: { en: "Budget", ja: "予算" },
+  delivery_schedule: {
+    en: "What is your desired delivery schedule?",
+    ja: "希望の納期・スケジュールはいつですか？",
+  },
+  timeline_planning: {
+    en: "How should we plan the timeline?",
+    ja: "タイムラインの計画方法",
+  },
+  client_budget: { en: "What is your budget?", ja: "予算を教えてください。" },
 };
+
+/** Header keys that must appear even on older estimate schema snapshots. */
+const ENSURE_HEADER_FIELD_KEYS = ["timeline_planning"] as const;
+
+function buildEnsuredHeaderField(
+  key: (typeof ENSURE_HEADER_FIELD_KEYS)[number],
+  sortOrder: number,
+): FormFieldSchema {
+  return {
+    key,
+    type: "select",
+    required: false,
+    sort_order: sortOrder,
+    section: "header",
+    label: LEGACY_LABELS[key] ?? { en: key, ja: key },
+    description: { en: "", ja: "" },
+    placeholder: { en: "", ja: "" },
+    options: SELECT_FIELD_OPTIONS[key] ?? [],
+  };
+}
+
+export function ensureKnownHeaderFields(schema: FormFieldSchema[]): FormFieldSchema[] {
+  const byKey = new Map(schema.map((field) => [field.key, field]));
+  const missing = ENSURE_HEADER_FIELD_KEYS.filter((key) => !byKey.has(key));
+  if (missing.length === 0) {
+    return schema;
+  }
+
+  const result = [...schema];
+  for (const key of missing) {
+    const delivery = byKey.get("delivery_schedule");
+    const clientBudget = byKey.get("client_budget");
+    let sortOrder = 95;
+    if (delivery && clientBudget && clientBudget.sort_order > delivery.sort_order) {
+      sortOrder =
+        delivery.sort_order + Math.max(1, Math.floor((clientBudget.sort_order - delivery.sort_order) / 2));
+    } else if (delivery) {
+      sortOrder = delivery.sort_order + 5;
+    } else if (clientBudget) {
+      sortOrder = Math.max(0, clientBudget.sort_order - 5);
+    }
+    const field = buildEnsuredHeaderField(key, sortOrder);
+    result.push(field);
+    byKey.set(key, field);
+  }
+  return result.sort((a, b) => a.sort_order - b.sort_order);
+}
+
+export function resolveFormSchema(
+  snapshot: FormFieldSchema[] | null | undefined,
+): FormFieldSchema[] {
+  if (!snapshot || snapshot.length === 0) {
+    return legacyFormFieldsToSchema();
+  }
+  return ensureKnownHeaderFields(
+    patchKnownFieldTypes([...snapshot].sort((a, b) => a.sort_order - b.sort_order)),
+  );
+}
 
 const OPTION_LABELS: Record<string, LocalizedText> = {
   low: { en: "Low / Simple", ja: "低 / シンプル" },
@@ -385,15 +465,6 @@ export function patchKnownFieldTypes(schema: FormFieldSchema[]): FormFieldSchema
   });
 }
 
-export function resolveFormSchema(
-  snapshot: FormFieldSchema[] | null | undefined,
-): FormFieldSchema[] {
-  if (!snapshot || snapshot.length === 0) {
-    return legacyFormFieldsToSchema();
-  }
-  return patchKnownFieldTypes([...snapshot].sort((a, b) => a.sort_order - b.sort_order));
-}
-
 export function splitSchemaBySection(schema: FormFieldSchema[]): {
   headerFields: FormFieldSchema[];
   specificationFields: FormFieldSchema[];
@@ -462,6 +533,8 @@ export function emptyFormValuesForSchema(schema: FormFieldSchema[]): FormFieldVa
   for (const field of schema) {
     if (field.key === "data_complexity" || field.key === "ui_complexity") {
       values[field.key] = "low";
+    } else if (field.key === "timeline_planning") {
+      values[field.key] = "match_schedule";
     } else {
       values[field.key] = "";
     }
@@ -481,12 +554,22 @@ export function formValuesFromSchema(
   if (formData) {
     for (const field of schema) {
       const raw = formData[field.key];
+      let asString: string | null = null;
       if (typeof raw === "string") {
+        asString = raw;
+      } else if (typeof raw === "number" || typeof raw === "boolean") {
+        asString = String(raw);
+      }
+
+      if (asString !== null) {
         if (field.key === "data_complexity" || field.key === "ui_complexity") {
-          values[field.key] = resolveComplexityValueForSchema(field, raw);
+          values[field.key] = resolveComplexityValueForSchema(field, asString);
         } else {
-          values[field.key] = raw;
+          values[field.key] = asString;
         }
+      } else if (field.key === "timeline_planning") {
+        // Existing estimates without the field keep fastest (blank → natural at calc).
+        values[field.key] = "";
       }
     }
   }

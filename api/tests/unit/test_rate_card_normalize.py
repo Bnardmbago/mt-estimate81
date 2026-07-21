@@ -5,7 +5,7 @@ from app.rate_cards.normalize import normalize_settings_dict
 
 def test_normalize_settings_applies_daily_rates():
     raw = {
-        "roles": [{"name": "developer", "hourly_rate_jpy": 6000}],
+        "roles": [{"name": "Engineer", "hourly_rate_jpy": 6000}],
         "setup_costs": {"infrastructure_jpy": 100000, "tooling_jpy": 0, "third_party_jpy": 0},
     }
     normalized = normalize_settings_dict(raw)
@@ -20,12 +20,12 @@ def test_normalize_settings_applies_daily_rates():
 
 def test_normalize_settings_preserves_custom_daily_rate():
     raw = {
-        "roles": [{"name": "developer", "hourly_rate": 6000, "daily_rate": 55000}],
+        "roles": [{"name": "Engineer", "hourly_rate": 6000, "daily_rate": 55000}],
     }
     normalized = normalize_settings_dict(raw)
     engineer = next(role for role in normalized["roles"] if role["name"] == "Engineer")
     assert engineer["hourly_rate"] == 6000
-    assert engineer["daily_rate"] == 48000
+    assert engineer["daily_rate"] == 55000
 
 
 def test_normalize_settings_preserves_setup_cost_items():
@@ -84,7 +84,36 @@ def test_normalize_settings_default_maintenance_monthly_jpy():
     assert normalized["default_maintenance_monthly_jpy"] == 120000
 
 
-def test_normalize_settings_consolidates_ai_roles_to_standard_four():
+def test_normalize_settings_preserves_user_added_roles():
+    """Editor saves must keep custom roles — not collapse to the standard four."""
+    raw = {
+        "region": "japan",
+        "currency": "JPY",
+        "roles": [
+            {"name": "Tech Lead", "hourly_rate": 13000, "daily_rate": 104000},
+            {"name": "Senior Engineer", "hourly_rate": 10000, "daily_rate": 80000},
+            {"name": "Full Stack Engineer", "hourly_rate": 9000, "daily_rate": 72000},
+            {"name": "Engineer", "hourly_rate": 8000, "daily_rate": 64000},
+            {"name": "QA Specialist", "hourly_rate": 7000, "daily_rate": 56000},
+        ],
+    }
+    normalized = normalize_settings_dict(raw)
+    names = [role["name"] for role in normalized["roles"]]
+    assert names == [
+        "Tech Lead",
+        "Senior Engineer",
+        "Full Stack Engineer",
+        "Engineer",
+        "QA Specialist",
+    ]
+    qa = next(role for role in normalized["roles"] if role["name"] == "QA Specialist")
+    assert qa["hourly_rate"] == 7000
+    assert qa["daily_rate"] == 56000
+
+
+def test_ensure_standard_roles_consolidates_ai_roles_to_standard_four():
+    from app.rate_cards.standard_rates import ensure_standard_roles
+
     raw = {
         "region": "japan",
         "currency": "JPY",
@@ -99,17 +128,19 @@ def test_normalize_settings_consolidates_ai_roles_to_standard_four():
             {"name": "Full Stack Engineer", "hourly_rate": 9000, "daily_rate": 72000},
         ],
     }
-    normalized = normalize_settings_dict(raw)
-    assert len(normalized["roles"]) == 4
-    names = [role["name"] for role in normalized["roles"]]
+    consolidated = ensure_standard_roles(normalize_settings_dict(raw))
+    assert len(consolidated["roles"]) == 4
+    names = [role["name"] for role in consolidated["roles"]]
     assert names == ["Tech Lead", "Senior Engineer", "Full Stack Engineer", "Engineer"]
-    tech_lead = next(role for role in normalized["roles"] if role["name"] == "Tech Lead")
-    engineer = next(role for role in normalized["roles"] if role["name"] == "Engineer")
+    tech_lead = next(role for role in consolidated["roles"] if role["name"] == "Tech Lead")
+    engineer = next(role for role in consolidated["roles"] if role["name"] == "Engineer")
     assert tech_lead["hourly_rate"] == 12000
     assert engineer["hourly_rate"] == 9500
 
 
 def test_normalize_settings_raises_jpy_frontend_backend_from_php_conversion():
+    from app.rate_cards.standard_rates import ensure_standard_roles
+
     raw = {
         "region": "philippines",
         "currency": "JPY",
@@ -119,7 +150,7 @@ def test_normalize_settings_raises_jpy_frontend_backend_from_php_conversion():
             {"name": "Project Manager", "hourly_rate": 12000, "daily_rate": 96000},
         ],
     }
-    normalized = normalize_settings_dict(raw)
+    normalized = ensure_standard_roles(normalize_settings_dict(raw))
     assert len(normalized["roles"]) == 4
     tech_lead = next(role for role in normalized["roles"] if role["name"] == "Tech Lead")
     full_stack = next(role for role in normalized["roles"] if role["name"] == "Full Stack Engineer")

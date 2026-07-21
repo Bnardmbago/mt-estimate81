@@ -20,14 +20,27 @@ ROLE_LABELS_JA: dict[str, str] = {
     "project manager": "プロジェクトマネージャー",
     "project_manager": "プロジェクトマネージャー",
     "qa": "QA",
+    "qa engineer": "QAエンジニア",
     "tester": "テスター",
     "ba": "ビジネスアナリスト",
     "analyst": "アナリスト",
     "business analyst": "ビジネスアナリスト",
     "devops": "DevOps",
     "designer": "デザイナー",
+    "ui designer": "UIデザイナー",
+    "ux designer": "UXデザイナー",
     "architect": "アーキテクト",
     "support": "サポート",
+    "full stack engineer": "フルスタックエンジニア",
+    "full stack developer": "フルスタックエンジニア",
+    "fullstack engineer": "フルスタックエンジニア",
+    "fullstack developer": "フルスタックエンジニア",
+    "mobile developer": "モバイル開発者",
+    "mobile engineer": "モバイルエンジニア",
+    "frontend developer": "フロントエンド開発者",
+    "backend developer": "バックエンド開発者",
+    "senior developer": "シニア開発者",
+    "tech lead": "テックリード",
 }
 
 NRC_CATEGORY_LABELS_JA: dict[str, str] = {
@@ -133,6 +146,7 @@ def localize_gantt(gantt: dict[str, Any] | None, locale: str) -> dict[str, Any]:
     localized["tasks"] = [
         {
             **task,
+            "phase_key": str(task.get("phase_key") or task.get("phase") or ""),
             "phase": localize_phase(str(task.get("phase") or ""), locale),
             "role": localize_role(str(task.get("role") or ""), locale),
         }
@@ -141,11 +155,37 @@ def localize_gantt(gantt: dict[str, Any] | None, locale: str) -> dict[str, Any]:
     localized["phases"] = [
         {
             **phase,
+            "phase_key": str(phase.get("phase_key") or phase.get("phase") or ""),
             "phase": localize_phase(str(phase.get("phase") or ""), locale),
         }
         for phase in gantt.get("phases") or []
     ]
     return localized
+
+
+def apply_feature_names_to_gantt(
+    gantt: dict[str, Any] | None,
+    feature_items: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Overlay localized feature names onto gantt tasks when feature_item_id matches."""
+    if not gantt:
+        return {}
+    by_id = {
+        str(row["id"]): row["name"]
+        for row in feature_items
+        if row.get("id") is not None and row.get("name")
+    }
+    if not by_id:
+        return gantt
+    updated = dict(gantt)
+    updated["tasks"] = [
+        {
+            **task,
+            "name": by_id.get(str(task.get("feature_item_id")), task.get("name")),
+        }
+        for task in gantt.get("tasks") or []
+    ]
+    return updated
 
 
 def localize_calculation_for_export(calculation: dict[str, Any], locale: str) -> dict[str, Any]:

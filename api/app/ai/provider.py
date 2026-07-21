@@ -4,6 +4,7 @@ from app.ai.instruction_resolver import ResolvedInstructions
 from app.estimates.extraction_constraints import ExtractionConstraints
 from app.ai.schemas import (
     EstimateFormFieldsSuggestion,
+    ExportNarrativeTranslation,
     ExtractedRequirements,
     GeneratedRateCardSuggestion,
     RateCardLineItemsSectionSuggestion,
@@ -69,3 +70,11 @@ class AIProvider(Protocol):
         form_schema: list[dict[str, Any]],
         instructions: ResolvedInstructions | None = None,
     ) -> EstimateFormFieldsSuggestion: ...
+
+    async def translate_export_narrative(
+        self,
+        *,
+        source_locale: Literal["ja", "en"],
+        target_locale: Literal["ja", "en"],
+        payload: dict[str, Any],
+    ) -> ExportNarrativeTranslation: ...

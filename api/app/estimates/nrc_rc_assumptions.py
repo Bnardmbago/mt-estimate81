@@ -214,6 +214,30 @@ def assumptions_from_rate_card_settings(
     ).model_dump()
 
 
+def prefer_rate_card_nrc_rc_after_extract(
+    *,
+    derived: dict[str, Any],
+    rate_card_settings: dict[str, Any] | None,
+    complexity_level: ComplexityLevel | None = None,
+) -> dict[str, Any]:
+    """Use the linked rate card's NRC/RC when present (including on re-extract).
+
+    Saving a rate card disables auto-tune, so re-extract previously kept complexity
+    tiers and ignored card edits. Prefer the card whenever it has cost line items.
+    """
+    if not rate_card_settings:
+        return derived
+    setup = rate_card_settings.get("setup_cost_items") or []
+    monthly = rate_card_settings.get("monthly_rc_items") or []
+    if not setup and not monthly:
+        return derived
+    return assumptions_from_rate_card_settings(
+        rate_card_settings,
+        source="rate_card",
+        complexity_level=complexity_level,
+    )
+
+
 def _has_assumption_items(assumptions: dict[str, Any] | None) -> bool:
     if not assumptions:
         return False

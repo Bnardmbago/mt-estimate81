@@ -18,6 +18,9 @@ def test_build_default_template_fields_has_header_and_spec_sections():
     assert len(spec) == len(SPEC_FIELD_KEYS)
     assert all(not field["required"] for field in fields)
     assert header[0]["key"] == "desired_system"
+    assert HEADER_FIELD_KEYS.index("timeline_planning") == HEADER_FIELD_KEYS.index(
+        "delivery_schedule"
+    ) + 1
     assert spec[0]["key"] == "nature_of_work"
 
 
@@ -40,6 +43,11 @@ def test_header_questionnaire_field_types():
     assert by_key["expected_user_count"]["type"] == "number"
     assert by_key["concurrent_users"]["type"] == "number"
     assert by_key["delivery_schedule"]["type"] == "select"
+    assert by_key["timeline_planning"]["type"] == "select"
+    assert [option["value"] for option in by_key["timeline_planning"]["options"]] == [
+        "match_schedule",
+        "fastest_parallel",
+    ]
     assert by_key["problem_to_solve"]["type"] == "textarea"
     assert by_key["required_features"]["type"] == "textarea"
     assert [option["value"] for option in by_key["payment_needed"]["options"]] == [
@@ -174,6 +182,44 @@ def test_normalize_form_data_strips_numeric_formatting():
     assert normalized["client_budget"] == "5000000"
 
 
+def test_snapshot_fields_injects_timeline_planning_into_legacy_header():
+    legacy_schema = [
+        {
+            "key": "delivery_schedule",
+            "type": "select",
+            "required": False,
+            "sort_order": 90,
+            "section": "header",
+            "label": {"en": "Delivery schedule", "ja": "納期"},
+            "description": {"en": "", "ja": ""},
+            "placeholder": {"en": "", "ja": ""},
+            "options": [
+                {"value": "asap", "label": {"en": "ASAP", "ja": "ASAP"}},
+            ],
+        },
+        {
+            "key": "client_budget",
+            "type": "currency",
+            "required": False,
+            "sort_order": 100,
+            "section": "header",
+            "label": {"en": "Budget", "ja": "予算"},
+            "description": {"en": "", "ja": ""},
+            "placeholder": {"en": "", "ja": ""},
+        },
+    ]
+    patched = snapshot_fields(legacy_schema)
+    keys = [field["key"] for field in patched]
+    assert "timeline_planning" in keys
+    assert keys.index("timeline_planning") == keys.index("delivery_schedule") + 1
+    by_key = {field["key"]: field for field in patched}
+    assert by_key["timeline_planning"]["type"] == "select"
+    assert [option["value"] for option in by_key["timeline_planning"]["options"]] == [
+        "match_schedule",
+        "fastest_parallel",
+    ]
+
+
 def test_snapshot_fields_patches_legacy_header_types():
     legacy_schema = [
         {
@@ -202,6 +248,7 @@ def test_snapshot_fields_patches_legacy_header_types():
     assert by_key["client_budget"]["type"] == "currency"
     assert by_key["delivery_schedule"]["type"] == "select"
     assert len(by_key["delivery_schedule"]["options"]) == 6
+    assert "timeline_planning" in by_key
 
 
 def test_normalize_suggested_form_data_excludes_header_fields():

@@ -21,6 +21,7 @@ from app.email.smtp import EmailAttachment, send_email_with_attachments
 from app.exceptions import AppError
 from app.exports.excel import generate_excel
 from app.exports.markdown import generate_markdown
+from app.exports.narrative_translate import ensure_export_narrative_locale
 from app.exports.quotation_context import build_formal_quotation_context
 from app.exports.quotation_number import allocate_quotation_export_fields
 from app.exports.report_context import build_report_context
@@ -62,6 +63,15 @@ QUOTATION_FORMATS = frozenset(
     {
         ExportFormat.PDF_QUOTATION.value,
         ExportFormat.DOCX_QUOTATION.value,
+    }
+)
+
+REPORT_FORMATS = frozenset(
+    {
+        ExportFormat.MD.value,
+        ExportFormat.XLSX.value,
+        ExportFormat.PDF.value,
+        ExportFormat.DOCX.value,
     }
 )
 
@@ -347,6 +357,28 @@ async def export_estimate(
                 generated_at=generated_at,
             )
         )
+
+    if export_format in REPORT_FORMATS:
+        try:
+            translated = await ensure_export_narrative_locale(
+                db, estimate, resolved_locale
+            )
+            if translated:
+                await log_change(
+                    db,
+                    estimate_id=estimate.id,
+                    user_id=user.id,
+                    action="export_narrative_translated",
+                    changes={
+                        "locale": resolved_locale,
+                        "source_locale": estimate.locale,
+                    },
+                )
+        except Exception:
+            logger.exception(
+                "Narrative translation hook failed for estimate %s",
+                estimate_id,
+            )
 
     try:
         content = _generate_content(

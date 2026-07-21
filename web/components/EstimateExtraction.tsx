@@ -15,6 +15,10 @@ import FeatureItemEditor from "@/components/FeatureItemEditor";
 import GanttChart, { type DeliveryScheduleAdvisory } from "@/components/GanttChart";
 import RequirementsReview from "@/components/RequirementsReview";
 import { resolveExtractedData } from "@/lib/resolveLocalizedContent";
+import {
+  resolveFeatureItemsFromServerProps,
+  resolveLiveGanttFromServerProps,
+} from "@/lib/timelineHydration";
 
 type EstimateExtractionProps = {
   estimate: EstimateDetail;
@@ -112,8 +116,20 @@ export default function EstimateExtraction({
   const [constraintConfirmation, setConstraintConfirmation] =
     useState<ConstraintConfirmation | null>(null);
   const [constraintProcessing, setConstraintProcessing] = useState(false);
+  const [featureItems, setFeatureItems] = useState(estimate.feature_items ?? []);
+  const [timelineToken, setTimelineToken] = useState(0);
+  const [liveGantt, setLiveGantt] = useState<GanttData | null>(
+    (estimate.calculation_result?.gantt as GanttData | undefined) ?? null,
+  );
+  const [calculationResult, setCalculationResult] = useState(
+    estimate.calculation_result ?? null,
+  );
 
   useEffect(() => {
+    // Never clobber local extracting/constraint UI with stale server props.
+    if (extracting || extractionPendingRef.current) {
+      return;
+    }
     setStatus(estimate.status);
     if (estimate.status === "constraint_paused") {
       const extracted = resolveExtractedData(
@@ -128,15 +144,65 @@ export default function EstimateExtraction({
         setConstraintConfirmation(confirmation);
       }
     }
-  }, [estimate.status, estimate.extracted_data, estimate.locale, locale]);
+  }, [estimate.status, estimate.extracted_data, estimate.locale, locale, extracting]);
 
   useEffect(() => {
     setProjectStartDate(estimate.project_start_date ?? null);
   }, [estimate.project_start_date]);
 
   useEffect(() => {
+    // Do not depend on `extracting`: when extract finishes, RSC props are often
+    // still mid-extract (empty features / null calc) and would clobber hydrate.
+    if (extracting || extractionPendingRef.current) {
+      return;
+    }
+    setFeatureItems((current) =>
+      resolveFeatureItemsFromServerProps(estimate.feature_items, current),
+    );
+    setCalculationResult(estimate.calculation_result ?? null);
+    setLiveGantt((live) => {
+      const serverItems = estimate.feature_items ?? [];
+      const featureCount =
+        serverItems.length > 0 ? serverItems.length : live?.tasks?.length ? 1 : 0;
+      return resolveLiveGanttFromServerProps(
+        estimate.calculation_result?.gantt as GanttData | undefined,
+        // Prefer server count; if server is empty keep live gantt via count>0 hint.
+        featureCount,
+        live,
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally omit extracting
+  }, [estimate.id, estimate.updated_at]);
+
+  useEffect(() => {
     setRateCardStale(estimate.rate_card_stale ?? false);
   }, [estimate.rate_card_stale]);
+
+  const hydrateAfterExtraction = useCallback(async () => {
+    const latest = await apiJson<EstimateDetail>(`/estimates/${estimate.id}`, {}, locale);
+    const items = latest.feature_items ?? [];
+    setFeatureItems(items);
+    setProjectStartDate(latest.project_start_date ?? null);
+    setRateCardStale(latest.rate_card_stale ?? false);
+    setCalculationResult(latest.calculation_result ?? null);
+
+    if (items.length > 0) {
+      const start =
+        latest.project_start_date ??
+        projectStartDate ??
+        new Date().toISOString().slice(0, 10);
+      const ganttResponse = await apiJson<{ gantt: GanttData }>(
+        `/estimates/${estimate.id}/gantt?start_date=${encodeURIComponent(start)}`,
+        {},
+        locale,
+      );
+      setLiveGantt(ganttResponse.gantt);
+    } else {
+      setLiveGantt(null);
+    }
+    setTimelineToken((token) => token + 1);
+    return latest;
+  }, [estimate.id, locale, projectStartDate]);
 
   const refreshRateCardStale = useCallback(async () => {
     try {
@@ -188,9 +254,16 @@ export default function EstimateExtraction({
 
       if (response.status === "review" || response.status === "calculated" || response.status === "exported") {
         extractionPendingRef.current = false;
-        setExtracting(false);
         setConstraintConfirmation(null);
         setError(null);
+        try {
+          // Hydrate features + gantt BEFORE leaving the extracting screen so
+          // /gantt is never called against a wiped feature set.
+          await hydrateAfterExtraction();
+        } catch {
+          // Fall through to refresh; Gantt will retry from server props.
+        }
+        setExtracting(false);
         router.refresh();
         return;
       }
@@ -209,7 +282,7 @@ export default function EstimateExtraction({
       setExtracting(false);
       setError(pollError instanceof Error ? pollError.message : t("extractError"));
     }
-  }, [estimate.id, locale, router, t]);
+  }, [estimate.id, hydrateAfterExtraction, locale, router, t]);
 
   useEffect(() => {
     if (status !== "extracting" && !extracting) {
@@ -277,6 +350,11 @@ export default function EstimateExtraction({
     extractionPendingRef.current = true;
     setExtracting(true);
     setStatus("extracting");
+    // Extraction deletes features server-side immediately — clear stale timeline
+    // so we never call /gantt against an empty feature set.
+    setFeatureItems([]);
+    setLiveGantt(null);
+    setCalculationResult(null);
 
     try {
       const response = await apiFetch(
@@ -297,6 +375,9 @@ export default function EstimateExtraction({
       extractionPendingRef.current = false;
       setExtracting(false);
       setStatus(estimate.status);
+      setFeatureItems(estimate.feature_items ?? []);
+      setCalculationResult(estimate.calculation_result ?? null);
+      setLiveGantt((estimate.calculation_result?.gantt as GanttData | undefined) ?? null);
       setError(extractError instanceof Error ? extractError.message : t("extractError"));
     }
   }
@@ -326,6 +407,9 @@ export default function EstimateExtraction({
       extractionPendingRef.current = true;
       setExtracting(true);
       setStatus("extracting");
+      setFeatureItems([]);
+      setLiveGantt(null);
+      setCalculationResult(null);
       setConstraintConfirmation(null);
       await pollStatus();
     } catch (decisionError) {
@@ -495,13 +579,15 @@ export default function EstimateExtraction({
     );
     const showExportPanel =
       status === "calculated" || status === "exported" || status === "completed";
-    const storedGantt = (estimate.calculation_result?.gantt as GanttData | undefined) ?? null;
+    const storedGantt =
+      liveGantt ??
+      ((calculationResult?.gantt as GanttData | undefined) ?? null);
     const deliveryScheduleAdvisory =
-      (estimate.calculation_result as { delivery_schedule_advisory?: unknown } | null)
+      (calculationResult as { delivery_schedule_advisory?: unknown } | null)
         ?.delivery_schedule_advisory ?? null;
-    const featureItems = estimate.feature_items ?? [];
     const canReExtract =
       status === "review" || status === "calculated" || status === "exported";
+    const timelineRevision = `${estimate.updated_at}:${timelineToken}:${featureItems.length}`;
 
     return (
       <div>
@@ -570,16 +656,18 @@ export default function EstimateExtraction({
         ) : null}
         <RequirementsReview
           estimateId={estimate.id}
-          estimateUpdatedAt={estimate.updated_at}
+          estimateUpdatedAt={timelineRevision}
           initialData={extractedData}
           fallbackLocale={estimate.locale}
         />
         <FeatureItemEditor estimateId={estimate.id} initialItems={featureItems} />
         <GanttChart
+          key={`gantt-${timelineRevision}`}
           estimateId={estimate.id}
           initialStartDate={projectStartDate}
           initialGantt={storedGantt}
           hasFeatureItems={featureItems.length > 0}
+          estimateUpdatedAt={timelineRevision}
           onStartDateChange={setProjectStartDate}
           deliveryScheduleAdvisory={
             deliveryScheduleAdvisory as DeliveryScheduleAdvisory | null
@@ -593,23 +681,23 @@ export default function EstimateExtraction({
           editable={!isContactUser && (status === "review" || status === "calculated")}
         />
         <EstimateCalculation
-          estimate={estimate}
+          estimate={{ ...estimate, calculation_result: calculationResult }}
           projectStartDate={projectStartDate}
           isContactUser={isContactUser}
         />
-        {showExportPanel && estimate.calculation_result && (
+        {showExportPanel && calculationResult && (
           <ExportPanel
             estimateId={estimate.id}
             estimateUpdatedAt={estimate.updated_at}
-            calculationResult={estimate.calculation_result as CalculationResult}
+            calculationResult={calculationResult as CalculationResult}
             isContactUser={isContactUser}
           />
         )}
-        {estimate.calculation_result && !isContactUser && (
+        {calculationResult && !isContactUser && (
           <ActualsForm
             estimateId={estimate.id}
             status={status}
-            calculationResult={estimate.calculation_result}
+            calculationResult={calculationResult}
             initialActuals={estimate.actuals ?? null}
           />
         )}

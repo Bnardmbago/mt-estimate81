@@ -2,7 +2,7 @@ import heapq
 import math
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 from app.calculation.calendar import (
     add_working_days,
@@ -20,6 +20,8 @@ DEFAULT_PHASE_ORDER = [
     "testing",
     "deployment",
 ]
+
+StaffingMode = Literal["natural", "match_schedule"]
 
 
 @dataclass
@@ -90,11 +92,17 @@ def estimate_role_headcount(
     return headcount
 
 
-def _task_working_days(hours: float, personnel_count: int) -> int:
+def _task_working_days(
+    hours: float,
+    personnel_count: int,
+    *,
+    hours_per_effort_day: float = HOURS_PER_EFFORT_DAY,
+) -> int:
     if hours <= 0:
         return 0
     workers = max(1, personnel_count)
-    return max(1, math.ceil(hours / (workers * HOURS_PER_EFFORT_DAY)))
+    daily = max(float(hours_per_effort_day), 1e-6)
+    return max(1, math.ceil(hours / (workers * daily)))
 
 
 def _resolve_role_headcount(role: str, role_headcount: dict[str, int]) -> int:
@@ -147,15 +155,29 @@ def _build_phase_summary(
     return phases
 
 
+def headcount_from_gantt_tasks(gantt: dict[str, Any]) -> dict[str, int]:
+    """Max personnel_count per role from scheduled tasks."""
+    result: dict[str, int] = {}
+    for task in gantt.get("tasks") or []:
+        role = _normalize_role(str(task.get("role") or ""))
+        if not role:
+            continue
+        count = max(1, int(task.get("personnel_count") or 1))
+        result[role] = max(result.get(role, 0), count)
+    return result
+
+
 def build_gantt_timeline(
     feature_items: list[GanttFeatureItem],
     phase_order: list[str] | None,
     start_date: date,
     *,
     role_headcount: dict[str, int] | None = None,
+    hours_per_effort_day: float = HOURS_PER_EFFORT_DAY,
 ) -> dict[str, Any]:
     ordered_phases = _build_phase_order(phase_order)
     normalized_start = normalize_start_date(start_date)
+    daily_hours = max(float(hours_per_effort_day), 1e-6)
 
     eligible = [
         item
@@ -184,7 +206,11 @@ def build_gantt_timeline(
     for item in sorted_items:
         role_key = _normalize_role(item.role)
         personnel_count = _resolve_role_headcount(item.role, resolved_headcount)
-        duration_days = _task_working_days(float(item.hours), personnel_count)
+        duration_days = _task_working_days(
+            float(item.hours),
+            personnel_count,
+            hours_per_effort_day=daily_hours,
+        )
 
         if role_key not in role_heaps:
             initial_tracks = [normalized_start] * personnel_count
@@ -239,10 +265,127 @@ def build_gantt_timeline(
     }
 
 
+def _annotate_staffing(
+    gantt: dict[str, Any],
+    *,
+    staffing_mode: StaffingMode,
+    target_working_days: int | None,
+) -> dict[str, Any]:
+    gantt["staffing_mode"] = staffing_mode
+    if target_working_days is not None:
+        gantt["target_working_days"] = target_working_days
+    return gantt
+
+
+def _stretch_gantt_toward_target(
+    feature_items: list[GanttFeatureItem],
+    phase_order: list[str] | None,
+    start_date: date,
+    *,
+    role_headcount: dict[str, int],
+    baseline: dict[str, Any],
+    target_working_days: int,
+) -> dict[str, Any]:
+    """Dilute daily capacity so 1/role calendar approaches T without inventing hours."""
+    span_baseline = int(baseline["total_working_days"])
+    if span_baseline <= 0 or span_baseline >= target_working_days:
+        return baseline
+
+    best = baseline
+    # Lower hours/day → longer calendar. Find minimal daily hours with span ≤ T.
+    lo = 1e-3
+    hi = float(HOURS_PER_EFFORT_DAY)
+    for _ in range(28):
+        mid = (lo + hi) / 2.0
+        candidate = build_gantt_timeline(
+            feature_items,
+            phase_order,
+            start_date,
+            role_headcount=role_headcount,
+            hours_per_effort_day=mid,
+        )
+        span = int(candidate["total_working_days"])
+        if span <= target_working_days:
+            best = candidate
+            hi = mid
+        else:
+            lo = mid
+    return best
+
+
+def _build_gantt_match_schedule(
+    feature_items: list[GanttFeatureItem],
+    phase_order: list[str] | None,
+    start_date: date,
+    eligible: list[GanttFeatureItem],
+    target_working_days: int,
+) -> dict[str, Any]:
+    roles = list(_sum_role_hours(eligible).keys())
+    one_per_role = {role: 1 for role in roles}
+    gantt_max = build_gantt_timeline(
+        feature_items,
+        phase_order,
+        start_date,
+        role_headcount=one_per_role,
+    )
+    span_max = int(gantt_max["total_working_days"])
+
+    high_headcount = estimate_role_headcount(eligible, 1.0)
+    gantt_min = build_gantt_timeline(
+        feature_items,
+        phase_order,
+        start_date,
+        role_headcount=high_headcount,
+    )
+    span_min = int(gantt_min["total_working_days"])
+
+    if span_min > target_working_days:
+        return gantt_min
+
+    if span_max < target_working_days:
+        # Already finishes early at 1/role — stretch calendar toward T.
+        return _stretch_gantt_toward_target(
+            feature_items,
+            phase_order,
+            start_date,
+            role_headcount=one_per_role,
+            baseline=gantt_max,
+            target_working_days=target_working_days,
+        )
+
+    if span_max == target_working_days:
+        return gantt_max
+
+    # Larger duration hint → fewer people → longer calendar. Maximize span ≤ T.
+    best = gantt_min
+    lo = 1.0
+    hi = float(target_working_days)
+    for _ in range(20):
+        mid = (lo + hi) / 2.0
+        headcount = estimate_role_headcount(eligible, mid)
+        candidate = build_gantt_timeline(
+            feature_items,
+            phase_order,
+            start_date,
+            role_headcount=headcount,
+        )
+        span = int(candidate["total_working_days"])
+        if span <= target_working_days:
+            best = candidate
+            lo = mid
+        else:
+            hi = mid
+
+    return best
+
+
 def build_gantt_timeline_two_pass(
     feature_items: list[GanttFeatureItem],
     phase_order: list[str] | None,
     start_date: date,
+    *,
+    target_working_days: int | None = None,
+    staffing_mode: StaffingMode = "natural",
 ) -> dict[str, Any]:
     eligible = [
         item
@@ -250,7 +393,30 @@ def build_gantt_timeline_two_pass(
         if item.name.strip() and float(item.hours) > 0
     ]
     if not eligible:
-        return build_gantt_timeline(feature_items, phase_order, start_date)
+        return _annotate_staffing(
+            build_gantt_timeline(feature_items, phase_order, start_date),
+            staffing_mode="natural",
+            target_working_days=target_working_days,
+        )
+
+    use_match = (
+        staffing_mode == "match_schedule"
+        and target_working_days is not None
+        and target_working_days > 0
+    )
+    if use_match:
+        matched = _build_gantt_match_schedule(
+            feature_items,
+            phase_order,
+            start_date,
+            eligible,
+            int(target_working_days),
+        )
+        return _annotate_staffing(
+            matched,
+            staffing_mode="match_schedule",
+            target_working_days=int(target_working_days),
+        )
 
     total_hours = sum(float(item.hours) for item in eligible)
     duration_hint = max(total_hours / HOURS_PER_EFFORT_DAY, 1.0)
@@ -263,9 +429,14 @@ def build_gantt_timeline_two_pass(
     )
     span = float(gantt_pass1["total_working_days"]) or duration_hint
     headcount_pass2 = estimate_role_headcount(eligible, span)
-    return build_gantt_timeline(
+    natural = build_gantt_timeline(
         feature_items,
         phase_order,
         start_date,
         role_headcount=headcount_pass2,
+    )
+    return _annotate_staffing(
+        natural,
+        staffing_mode="natural",
+        target_working_days=target_working_days,
     )

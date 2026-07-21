@@ -22,7 +22,10 @@ from app.calculation.schemas import GanttFeatureItemInput, RateCardSettings
 from app.estimates.access import can_access_estimate, require_estimate_access
 from app.estimates.form_fields import normalize_form_data, prune_form_data_to_schema, snapshot_fields
 from app.estimates.budget_comparison import build_budget_comparison
-from app.estimates.delivery_schedule import build_delivery_schedule_advisory
+from app.estimates.delivery_schedule import (
+    build_delivery_schedule_advisory,
+    resolve_timeline_staffing,
+)
 from app.estimates.nrc_rc_assumptions import (
     NrcRcAssumptions,
     apply_nrc_rc_assumptions_to_settings,
@@ -666,6 +669,27 @@ async def get_gantt_timeline(
     gantt_items = _gantt_items_from_estimate(estimate, display_locale=display_locale)
     phase_names = [phase.name for phase in rate_settings.phases]
 
+    form_data = resolve_localized_dict(
+        estimate.form_data,
+        display_locale or estimate.locale,
+        estimate.locale,
+    )
+    schema_snapshot = snapshot_fields(estimate.form_schema_snapshot)
+    if schema_snapshot:
+        form_data = normalize_form_data(schema_snapshot, form_data)
+    staffing_mode, target_working_days = resolve_timeline_staffing(form_data)
+
+    # Match-schedule stretch must run even when a prior calculation left role
+    # headcounts — replaying 1/role without dilution drops the calendar span.
+    if staffing_mode == "match_schedule":
+        return build_gantt_timeline_two_pass(
+            gantt_items,
+            phase_names,
+            resolved_start,
+            target_working_days=target_working_days,
+            staffing_mode="match_schedule",
+        )
+
     role_headcount: dict[str, int] | None = None
     calculation = estimate.calculation_result or {}
     breakdown = calculation.get("role_breakdown") or []
@@ -684,7 +708,13 @@ async def get_gantt_timeline(
             role_headcount=role_headcount,
         )
 
-    return build_gantt_timeline_two_pass(gantt_items, phase_names, resolved_start)
+    return build_gantt_timeline_two_pass(
+        gantt_items,
+        phase_names,
+        resolved_start,
+        target_working_days=target_working_days,
+        staffing_mode="natural",
+    )
 
 
 async def run_calculation(
@@ -845,6 +875,7 @@ async def run_calculation(
 
     discount_rate = await get_estimate_discount_rate(db)
     markup_rate = await get_estimate_markup_rate(db)
+    staffing_mode, target_working_days = resolve_timeline_staffing(form_data)
 
     try:
         result = calculate_estimate(
@@ -856,6 +887,8 @@ async def run_calculation(
             project_start_date=resolved_start,
             gantt_feature_items=gantt_feature_items,
             discount_rate=discount_rate,
+            target_working_days=target_working_days,
+            staffing_mode=staffing_mode,
         )
     except CalculationError:
         raise

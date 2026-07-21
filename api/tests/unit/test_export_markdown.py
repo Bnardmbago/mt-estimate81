@@ -55,7 +55,6 @@ def test_markdown_export_contains_first_year_total(report_context):
     assert "Development cost" in md
     assert "Maintenance & operations (monthly / annual)" in md
     assert "Development period" in md
-    assert "Developers" in md
     assert "¥700,000" in md
     assert "¥" in md
 

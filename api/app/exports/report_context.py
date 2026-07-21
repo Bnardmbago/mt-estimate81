@@ -17,6 +17,7 @@ from app.exports.markdown import (
 )
 from app.calculation.line_items import build_rc_export_breakdown
 from app.exports.export_i18n import (
+    apply_feature_names_to_gantt,
     localize_calculation_for_export,
     localize_feature_rows,
     localize_gantt,
@@ -63,9 +64,33 @@ def _normalize_extracted(extracted: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _resolve_estimate_type(extracted: dict[str, Any], form_data: dict[str, Any]) -> str:
-    if extracted.get("estimate_type"):
-        return str(extracted["estimate_type"])
+# Values the model sometimes puts in estimate_type that are not a system type.
+_NON_SYSTEM_TYPE_VALUES = frozenset(
+    {
+        "detailed",
+        "detail",
+        "rough",
+        "ballpark",
+        "preliminary",
+        "high",
+        "medium",
+        "low",
+        "概算",
+        "詳細",
+    }
+)
+
+
+def _resolve_estimate_type(
+    extracted: dict[str, Any],
+    form_data: dict[str, Any],
+    locale: str,
+) -> str:
+    from app.estimates.form_fields import option_label_for_field
+
+    raw = extracted.get("estimate_type")
+    if raw and str(raw).strip().lower() not in _NON_SYSTEM_TYPE_VALUES:
+        return str(raw)
     for key in (
         "system_type",
         "desired_system",
@@ -75,7 +100,13 @@ def _resolve_estimate_type(extracted: dict[str, Any], form_data: dict[str, Any])
     ):
         value = form_data.get(key)
         if value:
-            return str(value)
+            text = str(value).strip()
+            if not text:
+                continue
+            # Prefer short select labels; skip long free-text answers for this summary field.
+            if key in {"desired_system", "project_overview", "problem_to_solve"} and len(text) > 80:
+                continue
+            return option_label_for_field(key, text, locale)
     return ""
 
 
@@ -125,7 +156,7 @@ def build_report_context(
     nrc = calculation.get("nrc") or {}
     rc = calculation.get("rc") or {}
 
-    estimate_type = _resolve_estimate_type(extracted, form_data)
+    estimate_type = _resolve_estimate_type(extracted, form_data, locale)
     total_days = float(calculation.get("total_effort_days") or 0)
     estimated_duration_days = float(
         calculation.get("estimated_duration_days") or total_days or 0
@@ -152,8 +183,11 @@ def build_report_context(
         build_rc_export_breakdown(calculation_payload, locale=locale),
         locale,
     )
-    feature_items = localize_feature_rows(_build_feature_rows(estimate), locale)
-    gantt = localize_gantt(calculation.get("gantt") or {}, locale)
+    feature_items = localize_feature_rows(_build_feature_rows(estimate, locale), locale)
+    gantt = apply_feature_names_to_gantt(
+        localize_gantt(calculation.get("gantt") or {}, locale),
+        feature_items,
+    )
 
     nrc_total_jpy = int(round(float(nrc.get("total_jpy") or 0)))
     monthly_rc_jpy = int(round(float(rc.get("monthly_total_jpy") or 0)))

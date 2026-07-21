@@ -125,3 +125,28 @@ class EstimateFormFieldsSuggestion(BaseModel):
             for key, value in form_data.items()
         }
         return coerced
+
+
+class TranslatedFormField(BaseModel):
+    key: str = Field(min_length=1)
+    value: str = ""
+
+
+class TranslatedFeatureItem(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+
+
+class ExportNarrativeTranslation(BaseModel):
+    """AI translation of export narrative text only (no hours/costs)."""
+
+    form_fields: list[TranslatedFormField] = Field(default_factory=list)
+    functional_requirements: list[str] = Field(default_factory=list)
+    non_functional_requirements: list[str] = Field(default_factory=list)
+    user_roles: list[str] = Field(default_factory=list)
+    modules: list[str] = Field(default_factory=list)
+    external_systems: list[str] = Field(default_factory=list)
+    estimate_exclusions: list[str] = Field(default_factory=list)
+    estimate_type: str = ""
+    features: list[TranslatedFeatureItem] = Field(default_factory=list)
