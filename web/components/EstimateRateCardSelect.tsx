@@ -15,6 +15,7 @@ import GeneratedRateCardReviewModal, {
   type GeneratedRateCardPreview,
   type GeneratedRateCardSettings,
 } from "@/components/GeneratedRateCardReviewModal";
+import AiGenerationProgress from "@/components/AiGenerationProgress";
 import { apiJson } from "@/lib/api";
 
 type RateCardOption = {
@@ -398,9 +399,14 @@ const EstimateRateCardSelect = forwardRef<
       )}
 
       {(saving || generating) && (
-        <p className="text-xs text-gray-500">
-          {generating ? tPanel("generating") : t("rateCardSaving")}
-        </p>
+        <div className="mt-2">
+          <AiGenerationProgress
+            active
+            compact
+            title={generating ? tPanel("generating") : t("rateCardSaving")}
+            message={generating ? undefined : t("rateCardSaving")}
+          />
+        </div>
       )}
       {loadError && (
         <p className="text-sm text-amber-700" role="status">

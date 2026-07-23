@@ -31,6 +31,7 @@ from app.exceptions import (
 from app.exports.router import router as exports_router
 from app.feedback.router import router as feedback_router
 from app.fx import init_fx_service
+from app.proposals.router import router as proposals_router
 from app.rate_cards.router import router as rate_cards_router
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,7 @@ app.include_router(admin_form_templates_router)
 app.include_router(form_templates_router)
 app.include_router(admin_system_router)
 app.include_router(exports_router)
+app.include_router(proposals_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -8,6 +8,8 @@ type ExportPreviewModalProps = {
   exportId: string;
   format: string;
   onClose: () => void;
+  /** API path without /api prefix, ending before export id. Default: estimate exports. */
+  downloadPath?: string;
 };
 
 function isPdfExportFormat(format: string): boolean {
@@ -18,6 +20,7 @@ export default function ExportPreviewModal({
   exportId,
   format,
   onClose,
+  downloadPath,
 }: ExportPreviewModalProps) {
   const t = useTranslations("export");
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -26,6 +29,7 @@ export default function ExportPreviewModal({
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(isPdfExportFormat(format) || format === "md");
   const [error, setError] = useState<string | null>(null);
+  const basePath = downloadPath || `/exports/${exportId}/download`;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -59,7 +63,7 @@ export default function ExportPreviewModal({
       }
 
       try {
-        const response = await apiFetch(`/exports/${exportId}/download?inline=1`);
+        const response = await apiFetch(`${basePath}?inline=1`);
         if (!response.ok) {
           throw new Error(t("previewError"));
         }
@@ -96,7 +100,7 @@ export default function ExportPreviewModal({
         pdfObjectUrlRef.current = null;
       }
     };
-  }, [exportId, format, t]);
+  }, [basePath, format, t]);
 
   useEffect(() => {
     if (format !== "md") {
@@ -108,7 +112,7 @@ export default function ExportPreviewModal({
       setLoading(true);
       setError(null);
       try {
-        const response = await apiFetch(`/exports/${exportId}/download?inline=1`);
+        const response = await apiFetch(`${basePath}?inline=1`);
         if (!response.ok) {
           throw new Error(t("previewError"));
         }
@@ -133,7 +137,7 @@ export default function ExportPreviewModal({
     return () => {
       cancelled = true;
     };
-  }, [exportId, format, t]);
+  }, [basePath, format, t]);
 
   function handlePrint() {
     if (isPdfExportFormat(format)) {
@@ -254,7 +258,7 @@ export default function ExportPreviewModal({
             <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
               <p>{t("previewXlsxHint")}</p>
               <a
-                href={`/api/exports/${exportId}/download`}
+                href={`/api${basePath}`}
                 className="mt-3 inline-block font-medium text-indigo-600 hover:text-indigo-800"
               >
                 {t("download")}
@@ -266,7 +270,7 @@ export default function ExportPreviewModal({
             <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
               <p>{t("previewDocxHint")}</p>
               <a
-                href={`/api/exports/${exportId}/download`}
+                href={`/api${basePath}`}
                 className="mt-3 inline-block font-medium text-indigo-600 hover:text-indigo-800"
               >
                 {t("download")}

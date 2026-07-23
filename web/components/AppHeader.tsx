@@ -32,8 +32,8 @@ export default async function AppHeader({
           labels={{
             welcome: t("welcome"),
             estimates: t("estimates"),
+            proposal: t("proposal"),
             rateCards: t("rateCards"),
-            proofOfConcept: t("proofOfConcept"),
             help: t("help"),
             admin: t("admin"),
           }}

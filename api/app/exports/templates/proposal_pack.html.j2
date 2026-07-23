@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ ctx.project_name }} — {{ ctx.labels.title }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 25mm;
+      @top-left {
+        content: string(doc-title);
+        font-size: 8pt;
+        color: #{{ ctx.theme.text_muted }};
+        font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      }
+      @top-right {
+        content: string(part-title);
+        font-size: 8pt;
+        color: #{{ ctx.theme.text_muted }};
+        font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      }
+      @bottom-center {
+        content: "{{ ctx.labels.title }} · " counter(page);
+        font-size: 8pt;
+        color: #{{ ctx.theme.text_muted }};
+        font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+    }
+
+    :root {
+      --primary: #{{ ctx.theme.primary }};
+      --primary-light: #{{ ctx.theme.primary_light }};
+      --accent: #{{ ctx.theme.accent }};
+      --surface: #{{ ctx.theme.surface }};
+      --border: #{{ ctx.theme.border }};
+      --text-body: #{{ ctx.theme.text_body }};
+      --text-muted: #{{ ctx.theme.text_muted }};
+      --on-primary: #{{ ctx.theme.text_on_primary }};
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      font-size: 10pt;
+      font-weight: 400;
+      line-height: 1.15;
+      color: var(--text-body);
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Document title — 24pt bold */
+    .doc-title {
+      string-set: doc-title content();
+      font-size: 24pt;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--on-primary);
+      margin: 0 0 6pt;
+    }
+
+    .cover {
+      background: var(--primary);
+      color: var(--on-primary);
+      padding: 28pt 24pt;
+      margin: -8pt -8pt 18pt;
+      border-radius: 0;
+    }
+    .cover .meta {
+      font-size: 11pt;
+      color: #dbe4f0;
+      margin: 0;
+    }
+
+    /* Chapter headers — 18pt bold */
+    h2.chapter {
+      string-set: part-title content();
+      font-size: 18pt;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--primary);
+      border-bottom: 2.5pt solid var(--accent);
+      padding-bottom: 6pt;
+      margin: 28pt 0 14pt;
+      page-break-before: always;
+      page-break-after: avoid;
+    }
+    h2.chapter.first {
+      page-break-before: avoid;
+      margin-top: 8pt;
+    }
+
+    /* Section headers — 14pt bold */
+    h3.section {
+      font-size: 14pt;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--primary);
+      margin: 16pt 0 8pt;
+      page-break-after: avoid;
+    }
+
+    /* Subsection headers — 12pt semi-bold */
+    h4.subsection {
+      font-size: 12pt;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--primary);
+      margin: 12pt 0 6pt;
+      page-break-after: avoid;
+    }
+
+    p {
+      font-size: 10pt;
+      font-weight: 400;
+      line-height: 1.15;
+      margin: 0 0 8pt;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin: 0 0 10pt;
+      padding-left: 18pt;
+    }
+    li {
+      font-size: 10pt;
+      line-height: 1.15;
+      margin: 0 0 4pt;
+      text-align: justify;
+    }
+
+    .toc {
+      background: var(--primary-light);
+      border: 1pt solid var(--border);
+      border-left: 4pt solid var(--accent);
+      padding: 14pt 16pt;
+      margin: 0 0 18pt;
+      page-break-after: always;
+    }
+    .toc-title {
+      font-size: 14pt;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0 0 10pt;
+    }
+    .toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .toc li {
+      margin: 0 0 5pt;
+      text-align: left;
+    }
+    .toc a {
+      color: var(--text-body);
+      text-decoration: none;
+    }
+    .toc a::after {
+      content: leader('.') target-counter(attr(href), page);
+      color: var(--text-muted);
+      font-size: 9pt;
+    }
+    .toc .level-1 {
+      font-weight: 700;
+      font-size: 11pt;
+      margin-top: 8pt;
+    }
+    .toc .level-2 {
+      font-weight: 400;
+      font-size: 10pt;
+      padding-left: 14pt;
+    }
+
+    .rating {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--on-primary);
+      padding: 2pt 8pt;
+      border-radius: 3pt;
+      font-size: 9pt;
+      font-weight: 600;
+      margin: 0 0 6pt;
+    }
+
+    .cost-box, .poc-box, .brief-box {
+      border: 1pt solid var(--border);
+      border-left: 4pt solid var(--primary);
+      padding: 12pt 14pt;
+      margin: 0 0 14pt;
+      background: var(--surface);
+      page-break-inside: avoid;
+    }
+    .brief-box {
+      border-left-color: var(--accent);
+      background: var(--primary-light);
+    }
+    .brief-box dl { margin: 0; }
+    .brief-box dt {
+      font-size: 10pt;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 8pt;
+    }
+    .brief-box dd {
+      margin: 2pt 0 0;
+      font-size: 10pt;
+      text-align: justify;
+    }
+
+    .section-card {
+      border: 1pt solid var(--border);
+      border-radius: 3pt;
+      padding: 10pt 12pt;
+      margin: 0 0 12pt;
+      background: #ffffff;
+      page-break-inside: avoid;
+    }
+
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8pt 0 14pt;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    table.data caption {
+      caption-side: top;
+      text-align: left;
+      font-size: 12pt;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 6pt;
+    }
+    table.data th {
+      background: var(--primary);
+      color: var(--on-primary);
+      text-align: left;
+      padding: 6pt 8pt;
+      font-weight: 600;
+    }
+    table.data td {
+      border: 1pt solid var(--border);
+      padding: 6pt 8pt;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .gantt svg, .diagram-block {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 8pt 0 14pt;
+    }
+    img.diagram-block {
+      /* Tall TD flowcharts must not stretch to full page width (creates huge gaps). */
+      max-width: 55%;
+      max-height: 280pt;
+      width: auto;
+      height: auto;
+      margin: 6pt auto 10pt;
+      object-fit: contain;
+    }
+    pre.diagram {
+      background: var(--surface);
+      border: 1pt solid var(--border);
+      padding: 10pt;
+      white-space: pre-wrap;
+      font-size: 8.5pt;
+      line-height: 1.25;
+      margin: 0 0 14pt;
+    }
+    .muted { color: var(--text-muted); font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <h1 class="doc-title">{{ ctx.project_name }}</h1>
+    <p class="meta">{{ ctx.client_name }} · {{ ctx.labels.title }}</p>
+  </div>
+
+  <nav class="toc" id="toc">
+    <div class="toc-title">{{ ctx.labels.toc }}</div>
+    <ol>
+      {% for item in ctx.toc %}
+        <li class="level-{{ item.level }}">
+          <a href="#{{ item.id }}">{{ item.title }}</a>
+        </li>
+      {% endfor %}
+    </ol>
+  </nav>
+
+  {% if ctx.cost_summary and ctx.variant in ['full', 'proposal'] %}
+  <div class="cost-box">
+    <div><strong>{{ ctx.labels.one_time }}:</strong> {{ ctx.cost_summary.one_time_project_cost_jpy }} JPY</div>
+    <div><strong>{{ ctx.labels.monthly }}:</strong> {{ ctx.cost_summary.monthly_recurring_cost_jpy }} JPY</div>
+    <div><strong>{{ ctx.labels.first_year }}:</strong> {{ ctx.cost_summary.first_year_total_jpy }} JPY</div>
+  </div>
+  {% endif %}
+
+  {% macro render_part(part_id, title, blob, first=false) %}
+    {% if blob %}
+      <h2 class="chapter{{ ' first' if first else '' }}" id="{{ part_id }}">{{ title }}</h2>
+
+      {% if part_id == 'poc' and blob.project_brief %}
+        <div class="brief-box" id="poc-project_brief">
+          <h3 class="section">{{ ctx.labels.project_brief }}</h3>
+          <dl>
+            <dt>{{ ctx.labels.brief_project_name }}</dt>
+            <dd>{{ blob.project_brief.project_name }}</dd>
+            <dt>{{ ctx.labels.brief_description }}</dt>
+            <dd>{{ blob.project_brief.project_description }}</dd>
+            <dt>{{ ctx.labels.brief_business_problem }}</dt>
+            <dd>{{ blob.project_brief.business_problem }}</dd>
+            <dt>{{ ctx.labels.brief_target_users }}</dt>
+            <dd>{{ blob.project_brief.target_users }}</dd>
+            <dt>{{ ctx.labels.brief_technology_stack }}</dt>
+            <dd>{{ blob.project_brief.technology_stack }}</dd>
+            <dt>{{ ctx.labels.brief_constraints }}</dt>
+            <dd>{{ blob.project_brief.constraints }}</dd>
+          </dl>
+        </div>
+      {% endif %}
+
+      {% for section in blob.sections or [] %}
+        <div class="section-card" id="{{ part_id }}-{{ section.id }}">
+          <h3 class="section">{{ section.title }}</h3>
+          {% if part_id == 'assessment' and section.rating %}
+            {% set r = (section.rating or '')|lower %}
+            <div class="rating">
+              {% if locale == 'ja' %}
+                {% if r == 'high' %}高{% elif r == 'medium' %}中{% elif r == 'low' %}低{% else %}{{ section.rating }}{% endif %}
+              {% else %}
+                {{ section.rating }}
+              {% endif %}
+            </div>
+          {% endif %}
+          {% if section.body %}<p>{{ section.body }}</p>{% endif %}
+          {% if section.bullets %}
+            <ul>
+              {% for bullet in section.bullets %}
+                <li>{{ bullet }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      {% if part_id == 'poc' %}
+        {% if blob.tables %}
+          <h4 class="subsection">{{ ctx.labels.poc_tables }}</h4>
+          {% for table in blob.tables %}
+            <table class="data">
+              <caption>{{ table.title }}</caption>
+              <thead>
+                <tr>
+                  {% for h in table.headers or [] %}<th>{{ h }}</th>{% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in table.rows or [] %}
+                  <tr>
+                    {% for cell in row %}<td>{{ cell }}</td>{% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endfor %}
+        {% endif %}
+        {% if blob.diagrams %}
+          <h4 class="subsection">{{ ctx.labels.poc_diagrams }}</h4>
+          {% for diagram in blob.diagrams %}
+            <h4 class="subsection">{{ diagram.title }}</h4>
+            {% if diagram.png_base64 %}
+              <img class="diagram-block" alt="{{ diagram.title }}" src="data:image/png;base64,{{ diagram.png_base64 }}"/>
+            {% elif diagram.svg %}
+              <div class="diagram-block">{{ diagram.svg | safe }}</div>
+            {% else %}
+              <pre class="diagram">{{ diagram.source }}</pre>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
+        {% if blob.milestones %}
+          <h4 class="subsection">{{ ctx.labels.poc_milestones }}</h4>
+          <ul>
+            {% for m in blob.milestones %}
+              <li>{{ m.name }}{% if m.date %} — {{ m.date }}{% endif %}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  {% endmacro %}
+
+  {{ render_part('assessment', ctx.labels.assessment, ctx.assessment, true) }}
+  {{ render_part('proposal', ctx.labels.proposal, ctx.proposal_body, not ctx.assessment) }}
+
+  {% if ctx.proposal_body and ctx.gantt_svg %}
+    <h4 class="subsection">{{ ctx.labels.timeline }}</h4>
+    <div class="gantt diagram-block">{{ ctx.gantt_svg | safe }}</div>
+  {% endif %}
+
+  {% if ctx.milestones %}
+    <h4 class="subsection">{{ ctx.labels.milestones }}</h4>
+    <ul>
+      {% for m in ctx.milestones %}
+        <li>{{ m.name }}{% if m.date %} — {{ m.date }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if ctx.diagrams %}
+    {% for diagram in ctx.diagrams %}
+      <h4 class="subsection">{{ diagram.title }}</h4>
+      {% if diagram.png_base64 %}
+        <img class="diagram-block" alt="{{ diagram.title }}" src="data:image/png;base64,{{ diagram.png_base64 }}"/>
+      {% elif diagram.svg %}
+        <div class="diagram-block">{{ diagram.svg | safe }}</div>
+      {% else %}
+        <pre class="diagram">{{ diagram.source }}</pre>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  {{ render_part('poc', ctx.labels.poc, ctx.poc) }}
+
+  {% if ctx.poc and ctx.poc.official %}
+    <div class="poc-box">
+      <h4 class="subsection" style="margin-top:0">{{ ctx.labels.official_poc_cost }}</h4>
+      <div>{{ ctx.labels.effort_hours }}: {{ ctx.poc.official.total_effort_hours }}</div>
+      <div>{{ ctx.labels.effort_days }}: {{ ctx.poc.official.total_effort_days }}</div>
+      <div>{{ ctx.labels.working_days }}: {{ ctx.poc.official.estimated_timeline_working_days }}</div>
+      <div>{{ ctx.labels.one_time }}: {{ ctx.poc.official.estimated_one_time_cost_jpy }} JPY</div>
+      {% if ctx.poc.suggested_validation_window %}
+        <p class="muted">{{ ctx.labels.suggested_window }}: {{ ctx.poc.suggested_validation_window }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</body>
+</html>

@@ -9,8 +9,8 @@ import type { AccountType } from "@/lib/user-types";
 type NavLabels = {
   welcome: string;
   estimates: string;
+  proposal: string;
   rateCards: string;
-  proofOfConcept: string;
   help: string;
   admin: string;
 };
@@ -106,14 +106,14 @@ export default function AppHeaderNav({
     if (!isContactUser) {
       items.push(
         {
+          href: `/${locale}/proposal`,
+          label: labels.proposal,
+          match: (path) => path === "/proposal" || path.startsWith("/proposal/"),
+        },
+        {
           href: `/${locale}/rate-cards`,
           label: labels.rateCards,
           match: (path) => path === "/rate-cards" || path.startsWith("/rate-cards/"),
-        },
-        {
-          href: `/${locale}/proof-of-concept`,
-          label: labels.proofOfConcept,
-          match: (path) => path === "/proof-of-concept" || path.startsWith("/proof-of-concept/"),
         },
         {
           href: `/${locale}/help`,

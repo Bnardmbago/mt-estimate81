@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiJson } from "@/lib/api";
+import AiGenerationProgress from "@/components/AiGenerationProgress";
 import type { EstimateDetail, ExtractedData, GanttData, CalculationResult } from "@/lib/estimate";
 import type { EstimateFormHandle } from "@/components/EstimateForm";
 import EstimateCalculation from "@/components/EstimateCalculation";
@@ -102,6 +103,7 @@ export default function EstimateExtraction({
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("review");
+  const tProposal = useTranslations("proposal");
   const [status, setStatus] = useState(estimate.status);
   const [progress, setProgress] = useState<EstimateStatusResponse["extraction_progress"]>(null);
   const [extracting, setExtracting] = useState(false);
@@ -111,8 +113,6 @@ export default function EstimateExtraction({
     estimate.project_start_date ?? null,
   );
   const extractionPendingRef = useRef(false);
-  const extractionStartedAtRef = useRef<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [constraintConfirmation, setConstraintConfirmation] =
     useState<ConstraintConfirmation | null>(null);
   const [constraintProcessing, setConstraintProcessing] = useState(false);
@@ -283,30 +283,6 @@ export default function EstimateExtraction({
       setError(pollError instanceof Error ? pollError.message : t("extractError"));
     }
   }, [estimate.id, hydrateAfterExtraction, locale, router, t]);
-
-  useEffect(() => {
-    if (status !== "extracting" && !extracting) {
-      extractionStartedAtRef.current = null;
-      setElapsedSeconds(0);
-      return;
-    }
-
-    if (extractionStartedAtRef.current === null) {
-      extractionStartedAtRef.current = Date.now();
-    }
-
-    const updateElapsed = () => {
-      const startedAt = extractionStartedAtRef.current;
-      if (startedAt === null) {
-        return;
-      }
-      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
-    };
-
-    updateElapsed();
-    const interval = window.setInterval(updateElapsed, 1000);
-    return () => window.clearInterval(interval);
-  }, [status, extracting]);
 
   useEffect(() => {
     if (status !== "constraint_paused") {
@@ -551,17 +527,11 @@ export default function EstimateExtraction({
 
     return (
       <section className="mt-8 border-t border-gray-200 pt-8">
-        <h2 className="mb-1 text-lg font-semibold">{t("extractingTitle")}</h2>
-        <p className="text-sm text-gray-500">{progressLabel}</p>
-        {elapsedSeconds > 0 && (
-          <p className="mt-1 text-xs text-gray-400">
-            {t("progressElapsed", { seconds: elapsedSeconds })}
-          </p>
-        )}
-        <p className="mt-1 text-xs text-gray-400">{t("progressHint")}</p>
-        <div className="mt-4 h-2 w-full max-w-md overflow-hidden rounded-full bg-gray-200">
-          <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-500" />
-        </div>
+        <AiGenerationProgress
+          active
+          title={t("extractingTitle")}
+          message={progressLabel}
+        />
       </section>
     );
   }
@@ -692,6 +662,16 @@ export default function EstimateExtraction({
             calculationResult={calculationResult as CalculationResult}
             isContactUser={isContactUser}
           />
+        )}
+        {showExportPanel && calculationResult && !isContactUser && (
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <a
+              href={`/${locale}/proposal?estimate=${estimate.id}`}
+              className="text-sm font-medium text-sky-700 hover:underline dark:text-sky-300"
+            >
+              {tProposal("openFromEstimate")}
+            </a>
+          </div>
         )}
         {calculationResult && !isContactUser && (
           <ActualsForm

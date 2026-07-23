@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api";
+import AiGenerationProgress from "@/components/AiGenerationProgress";
 import {
   previewItemsForDisplay,
   type RateCardAiSection,
@@ -254,6 +255,11 @@ export default function RateCardSectionAiModal({
             {t("apply")}
           </button>
         </div>
+        {loading ? (
+          <div className="mt-4">
+            <AiGenerationProgress active compact />
+          </div>
+        ) : null}
       </div>
     </div>
   );

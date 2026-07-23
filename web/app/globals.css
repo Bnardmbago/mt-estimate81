@@ -37,6 +37,68 @@ body {
   }
 }
 
+/* Proposal pack theme — aligned with api/app/exports/theme.py */
+.proposal-theme {
+  --proposal-primary: #1e3a5f;
+  --proposal-primary-light: #e8eef4;
+  --proposal-accent: #2563eb;
+  --proposal-surface: #f8fafc;
+  --proposal-border: #e2e8f0;
+  --proposal-text: #1e293b;
+  --proposal-muted: #64748b;
+  --proposal-on-primary: #ffffff;
+}
+
+.proposal-theme .proposal-btn-primary {
+  background-color: var(--proposal-primary);
+  color: var(--proposal-on-primary);
+}
+
+.proposal-theme .proposal-btn-primary:hover:not(:disabled) {
+  background-color: var(--proposal-accent);
+}
+
+.proposal-theme .proposal-tab-active {
+  background-color: var(--proposal-primary);
+  color: var(--proposal-on-primary);
+}
+
+.proposal-theme .proposal-cost-strip {
+  border-color: var(--proposal-border);
+  border-left: 4px solid var(--proposal-primary);
+  background-color: var(--proposal-surface);
+}
+
+.proposal-theme .proposal-toc-active {
+  color: var(--proposal-primary);
+  font-weight: 600;
+}
+
+.proposal-theme .proposal-toc-link:hover {
+  color: var(--proposal-accent);
+}
+
+.proposal-theme .proposal-doc-heading {
+  color: var(--proposal-primary);
+  border-bottom: 2px solid var(--proposal-accent);
+  padding-bottom: 0.25rem;
+}
+
+.proposal-theme .proposal-link {
+  color: var(--proposal-accent);
+}
+
+.proposal-theme .proposal-rating {
+  background-color: var(--proposal-accent);
+  color: var(--proposal-on-primary);
+}
+
+.proposal-theme .proposal-box {
+  border-color: var(--proposal-border);
+  border-left: 4px solid var(--proposal-primary);
+  background-color: var(--proposal-surface);
+}
+
 @layer utilities {
   .dark .bg-white {
     @apply bg-gray-900;
@@ -81,4 +143,32 @@ body {
   .dark .shadow-sm {
     @apply shadow-none;
   }
+}
+
+/* Animated AI generation progress */
+@keyframes ai-progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes ai-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ai-progress-track {
+  position: relative;
+}
+
+.ai-progress-indeterminate {
+  animation: ai-progress-slide 1.35s ease-in-out infinite;
+}
+
+.ai-progress-spinner {
+  animation: ai-progress-spin 0.8s linear infinite;
 }

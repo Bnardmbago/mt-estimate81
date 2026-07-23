@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import DocumentUpload from "@/components/DocumentUpload";
 import type { EstimateFormHandle } from "@/components/EstimateForm";
 import { apiFetch, parseApiErrorPayload } from "@/lib/api";
+import AiGenerationProgress from "@/components/AiGenerationProgress";
 import { MAX_AI_USER_PROMPT_CHARS } from "@/lib/aiConstants";
 import { isUsableProjectName, resolveProjectNameForSave } from "@/lib/formFields";
 import {
@@ -191,6 +192,11 @@ export default function EstimateAiSpecPanel({
           >
             {loading ? t("generating") : t("generate")}
           </button>
+          {loading ? (
+            <div className="mt-3">
+              <AiGenerationProgress active compact />
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-col">

@@ -14,6 +14,7 @@ from app.models.form_template import FormTemplate
 from app.models.ai_instruction_layer import AiInstructionLayer
 from app.models.system_config import SystemConfig
 from app.models.contact_magic_link import ContactMagicLink
+from app.models.proposal import Proposal, ProposalExport, ProposalExportFormat, ProposalStatus
 from app.models.user import User
 
 __all__ = [
@@ -32,4 +33,8 @@ __all__ = [
     "AuditLog",
     "SystemConfig",
     "AiInstructionLayer",
+    "Proposal",
+    "ProposalExport",
+    "ProposalExportFormat",
+    "ProposalStatus",
 ]
