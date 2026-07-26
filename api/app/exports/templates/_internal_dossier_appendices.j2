@@ -1,0 +1,169 @@
+{# Appendices unique to the internal dossier (disclosure / rate card / proposals). #}
+{% set extracted = ctx.report.get('extracted', {}) %}
+
+<div class="section-card section">
+  <h2>Internal Disclosure Appendix</h2>
+  <h3>Cost Drivers</h3>
+  {% set cost_drivers = extracted.get('cost_drivers') %}
+  {% if cost_drivers %}
+    <table class="data-table">
+      <thead><tr><th>Driver</th><th class="num">Impact (JPY)</th></tr></thead>
+      <tbody>
+        {% for driver in cost_drivers %}
+        <tr>
+          {% if driver is mapping %}
+          <td>{{ driver.get('name') or driver.get('driver', '') }}</td>
+          <td class="num">{{ driver.get('impact_jpy', driver.get('impact', '')) }}</td>
+          {% else %}
+          <td>{{ driver }}</td>
+          <td class="num"></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">none</p>
+  {% endif %}
+
+  {% for key, label in [
+    ('risks', 'Risks'),
+    ('gaps', 'Gaps'),
+    ('confidence_factors', 'Confidence Factors'),
+    ('missing_inputs', 'Missing Inputs'),
+    ('recommendations', 'Recommendations'),
+    ('estimation_warnings', 'Estimation Warnings'),
+    ('assumption_risks', 'Assumption Risks'),
+    ('estimate_exclusions', 'Estimate Exclusions'),
+  ] %}
+  <h3>{{ label }}</h3>
+  {% set items = extracted.get(key) %}
+  {% if items %}
+    <ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% else %}
+    <p class="muted">none</p>
+  {% endif %}
+  {% endfor %}
+
+  <h3>Confidence</h3>
+  <table class="qa-table">
+    <tbody>
+      <tr><th>Score</th><td>{{ extracted.get('confidence_score', 'none') }}</td></tr>
+      <tr><th>Notes</th><td>{{ extracted.get('confidence_notes') or 'none' }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section-card section">
+  <h2>Rate Card Appendix</h2>
+  {% if ctx.rate_card %}
+    <table class="qa-table">
+      <tbody>
+        <tr><th>Rate Card Name</th><td>{{ ctx.rate_card.get('name', '') }}</td></tr>
+        <tr><th>Version</th><td>{{ ctx.rate_card.get('version_number', '') }}</td></tr>
+        <tr><th>Effective Date</th><td>{{ ctx.rate_card.get('effective_date', '') }}</td></tr>
+      </tbody>
+    </table>
+    {% set rc_settings = ctx.rate_card.get('settings', {}) %}
+    {% set roles = rc_settings.get('roles', []) %}
+    {% if roles %}
+    <table class="data-table">
+      <thead><tr><th>Role</th><th class="num">Hourly Rate</th></tr></thead>
+      <tbody>
+        {% for role in roles %}
+        <tr>
+          <td>{{ role.get('name', '') }}</td>
+          <td class="num">{{ format_currency(role.get('hourly_rate', 0)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% set setup_cost_items = rc_settings.get('setup_cost_items') or rc_settings.get('nrc_items', []) %}
+    {% if setup_cost_items %}
+    <table class="data-table">
+      <thead><tr><th>NRC Item</th><th class="num">Cost</th></tr></thead>
+      <tbody>
+        {% for item in setup_cost_items %}
+        <tr>
+          <td>{{ item.get('name') or item.get('item', '') }}</td>
+          <td class="num">{{ format_currency(item.get('amount') or item.get('cost_jpy') or item.get('cost', 0)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% set monthly_rc_items = rc_settings.get('monthly_rc_items') or rc_settings.get('rc_items', []) %}
+    {% if monthly_rc_items %}
+    <table class="data-table">
+      <thead><tr><th>RC Item</th><th class="num">Monthly</th></tr></thead>
+      <tbody>
+        {% for item in monthly_rc_items %}
+        <tr>
+          <td>{{ item.get('name') or item.get('item', '') }}</td>
+          <td class="num">{{ format_currency(item.get('amount') or item.get('monthly_jpy') or item.get('monthly', 0)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% else %}
+    <p class="muted">none</p>
+  {% endif %}
+</div>
+
+{% macro render_proposal_part(title, blob) %}
+  <h4>{{ title }}</h4>
+  {% if blob %}
+    {% set brief = blob.get('project_brief') %}
+    {% if brief %}
+    <table class="qa-table">
+      <tbody>
+        {% for key, label in [
+          ('project_name', 'Project Name'),
+          ('project_description', 'Description'),
+          ('business_problem', 'Business Problem'),
+          ('target_users', 'Target Users'),
+          ('technology_stack', 'Technology Stack'),
+          ('constraints', 'Constraints'),
+        ] %}
+          {% if brief.get(key) %}
+          <tr><th>{{ label }}</th><td>{{ brief.get(key) }}</td></tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% for section in blob.get('sections', []) %}
+    <div class="req-group">
+      {% if section.get('title') %}<h5>{{ section.get('title') }}</h5>{% endif %}
+      {% if section.get('body') %}<p class="field-value">{{ section.get('body') }}</p>{% endif %}
+      {% if section.get('bullets') %}
+      <ul>{% for bullet in section.get('bullets') %}<li>{{ bullet }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if section.get('rating') %}<p class="muted">Rating: {{ section.get('rating') }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% if not brief and not blob.get('sections') %}
+    <p class="muted">none</p>
+    {% endif %}
+  {% else %}
+    <p class="muted">none</p>
+  {% endif %}
+{% endmacro %}
+
+<div class="section-card section">
+  <h2>Proposal Appendix</h2>
+  {% if ctx.proposals %}
+    {% for proposal in ctx.proposals %}
+    <div class="req-group">
+      <h3>Proposal ({{ proposal.get('locale', '') }}) — {{ proposal.get('status', '') }}</h3>
+      {{ render_proposal_part('Assessment', proposal.get('assessment')) }}
+      {{ render_proposal_part('Proposal Body', proposal.get('proposal_body')) }}
+      {{ render_proposal_part('POC', proposal.get('poc')) }}
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted">No proposal (none)</p>
+  {% endif %}
+</div>

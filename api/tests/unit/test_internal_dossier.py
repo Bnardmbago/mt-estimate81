@@ -431,9 +431,31 @@ def test_internal_pdf_html_includes_executive_cost_summary():
 
     html = build_internal_dossier_html(ctx)
 
-    assert "Executive Cost Summary" in html
+    # Composed from estimate_report.html.j2 so headings use report labels (not hardcoded EN).
+    assert "Development Cost Summary" in html
+    assert "Executive Cost Summary" not in html
     assert "Functional Requirements" in html
     assert "User authentication" in html
+    assert "Internal Disclosure Appendix" in html
+    assert "INTERNAL — DO NOT DISTRIBUTE" in html
+
+
+def test_internal_pdf_html_uses_japanese_report_labels():
+    from app.exports.pdf import build_internal_dossier_html
+    from tests.unit.export_fixtures import sample_report_context
+
+    ctx = build_internal_export_context(
+        sample_report_context(locale="ja"),
+        None,
+        [],
+        locale="ja",
+    )
+
+    html = build_internal_dossier_html(ctx)
+
+    assert "開発コストの概要" in html
+    assert "Internal Disclosure Appendix" in html
+    assert "INTERNAL — DO NOT DISTRIBUTE" in html
 
 
 def test_internal_docx_includes_disclosure_appendix_fields():
