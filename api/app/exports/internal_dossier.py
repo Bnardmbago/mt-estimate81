@@ -107,7 +107,7 @@ async def build_internal_dossier_payload(
     if estimate.rate_card_version_id and rate_card is None:
         warnings.append(MISSING_RATE_CARD_WARNING)
 
-    has_calculation = bool(estimate.calculation_result)
+    has_calculation = estimate.calculation_result is not None
     if has_calculation:
         report = build_report_context(
             estimate,

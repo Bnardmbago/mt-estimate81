@@ -349,6 +349,7 @@ async def export_estimate(
         raise AppError(
             "Calculation result is required before export",
             "CALCULATION_REQUIRED",
+            status_code=422 if is_internal_format(export_format) else 400,
         )
 
     resolved_locale = locale or estimate.locale

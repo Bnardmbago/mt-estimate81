@@ -169,6 +169,36 @@ async def test_dossier_payload_warns_when_calculation_is_missing():
 
 
 @pytest.mark.asyncio
+async def test_dossier_payload_treats_empty_calculation_as_present():
+    estimate = SimpleNamespace(
+        id=uuid.uuid4(),
+        project_name="Calculated",
+        client_name="ACME",
+        status="calculated",
+        calculation_result={},
+        rate_card_version_id=None,
+        exports=[],
+    )
+    proposals_result = MagicMock()
+    proposals_result.scalars.return_value.all.return_value = []
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=proposals_result)
+
+    with (
+        patch("app.exports.internal_dossier.build_report_context", return_value={"labels": {}}) as build,
+        patch(
+            "app.exports.internal_dossier.is_rate_card_stale_for_estimate",
+            new=AsyncMock(return_value=False),
+        ),
+    ):
+        payload = await build_internal_dossier_payload(db, estimate, locale="en")
+
+    build.assert_called_once()
+    assert payload["has_calculation"] is True
+    assert payload["warnings"] == []
+
+
+@pytest.mark.asyncio
 async def test_load_internal_export_parts_wraps_payload_for_generators():
     payload = {
         "locale": "en",

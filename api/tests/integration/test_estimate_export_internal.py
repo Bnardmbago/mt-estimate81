@@ -81,6 +81,37 @@ async def test_admin_can_create_all_internal_formats(
 
 
 @pytest.mark.asyncio
+async def test_internal_export_without_calculation_returns_422(
+    db_session: AsyncSession,
+    client: AsyncClient,
+    admin_headers: dict[str, str],
+):
+    user = client.test_user  # type: ignore[attr-defined]
+    estimate = Estimate(
+        project_name="Missing Calculation",
+        client_name="Stakeholder Co",
+        locale="en",
+        status=EstimateStatus.CALCULATED.value,
+        created_by=user.id,
+        form_data={},
+        extracted_data={},
+        calculation_result=None,
+    )
+    db_session.add(estimate)
+    await db_session.commit()
+    await db_session.refresh(estimate)
+
+    response = await client.post(
+        f"/estimates/{estimate.id}/export",
+        headers=admin_headers,
+        json={"format": "pdf_internal", "locale": "en"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "CALCULATION_REQUIRED"
+
+
+@pytest.mark.asyncio
 async def test_admin_download_internal_export_has_internal_suffix(
     client: AsyncClient,
     admin_headers: dict[str, str],
