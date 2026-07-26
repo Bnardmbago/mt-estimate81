@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import SessionLocal
 from app.dependencies import get_content_locale, get_current_user, get_db, get_display_locale, require_full_account
+from app.dependencies import require_admin
 from app.estimates import ai_suggest_form, extraction, service
+from app.exports import internal_dossier as dossier_service
 from app.models.user import User
 from app.schemas.estimate import (
     AuditLogEntry,
@@ -27,6 +29,7 @@ from app.schemas.estimate import (
     GanttTimelineResponse,
     NrcRcAssumptionsUpdate,
 )
+from app.schemas.internal_dossier import InternalDossierResponse
 
 router = APIRouter(prefix="/estimates", tags=["estimates"])
 
@@ -74,6 +77,15 @@ async def get_estimate(
 ):
     estimate = await service.get_estimate_for_user(db, estimate_id, user)
     return await service.estimate_to_detail(db, estimate, display_locale=display_locale, user=user)
+
+
+@router.get("/{estimate_id}/internal-dossier", response_model=InternalDossierResponse)
+async def get_internal_dossier(
+    estimate_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    return await dossier_service.get_internal_dossier(db, estimate_id, admin)
 
 
 @router.patch("/{estimate_id}", response_model=EstimateDetail)

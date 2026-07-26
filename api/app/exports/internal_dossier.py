@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.estimates import service as estimate_service
 from app.estimates.rate_card_stale import is_rate_card_stale_for_estimate
 from app.exports.report_context import build_report_context
 from app.models.estimate import Estimate
 from app.models.proposal import Proposal
 from app.models.rate_card import RateCard, RateCardVersion
+from app.models.user import User
 
 
 INTERNAL_BANNER = "INTERNAL — DO NOT DISTRIBUTE"
@@ -132,6 +135,15 @@ async def build_internal_dossier_payload(
         "rate_card": rate_card,
         "proposals": proposals,
     }
+
+
+async def get_internal_dossier(
+    db: AsyncSession,
+    estimate_id: uuid.UUID,
+    admin: User,
+) -> dict[str, Any]:
+    estimate = await estimate_service.get_estimate_for_user(db, estimate_id, admin)
+    return await build_internal_dossier_payload(db, estimate, locale=estimate.locale)
 
 
 async def load_internal_export_parts(
