@@ -159,6 +159,32 @@
       "completed": "Completed"
     }
   },
+  "internalDossier": {
+    "openLink": "Internal dossier",
+    "title": "Internal Dossier",
+    "banner": "Internal use only. Do not share this page or its contents with clients.",
+    "backToEstimate": "Back to estimate",
+    "loading": "Loading internal dossier…",
+    "loadError": "Could not load the internal dossier",
+    "loadErrorDetail": "The server returned an error (HTTP {status}). Try refreshing or return to the estimate.",
+    "tabEstimate": "Estimate",
+    "tabRateCard": "Rate Card",
+    "tabProposal": "Proposal",
+    "warningsTitle": "Warnings",
+    "rateCardStale": "Rate card is stale — recalculate before finalizing.",
+    "emptyProposals": "No proposals generated yet",
+    "statusLabel": "Status",
+    "localeLabel": "Locale",
+    "rateCardEmpty": "No rate card is attached to this estimate.",
+    "rateCardVersion": "Version {number}",
+    "effectiveDate": "Effective date",
+    "noneLabel": "None",
+    "projectBrief": "Project brief",
+    "pocRecommendedBadge": "POC recommended",
+    "proposalLocaleSwitcher": "Proposal locale",
+    "exportSectionTitle": "Export",
+    "exportEmpty": "No exports yet"
+  },
   "documents": {
     "title": "Documents",
     "description": "Upload project documents for text extraction.",
