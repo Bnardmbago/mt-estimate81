@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import CalculationBreakdown, {
   type CalculationResult,
 } from "@/components/CalculationBreakdown";
+import InternalExportPanel from "@/components/internal/InternalExportPanel";
 import { useDisplayLabels } from "@/lib/displayI18n";
 import {
   fetchInternalDossier,
@@ -502,16 +503,10 @@ export default function InternalDossierClient({
             )
           ) : null}
 
-          {/*
-            Mount point for Task 10: <InternalExportPanel estimateId={estimateId} hasCalculation={dossier.has_calculation} />
-            replaces this placeholder once implemented.
-          */}
-          <section className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">
-            <h2 className="mb-1 font-medium text-gray-700 dark:text-gray-300">
-              {t("exportSectionTitle")}
-            </h2>
-            <p>{t("exportEmpty")}</p>
-          </section>
+          <InternalExportPanel
+            estimateId={estimateId}
+            hasCalculation={dossier.has_calculation}
+          />
         </div>
       ) : null}
     </div>

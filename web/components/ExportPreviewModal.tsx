@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch } from "@/lib/api";
+import { isDocxFormat, isMdFormat, isPdfFormat, isXlsxFormat } from "@/lib/export-destinations";
 
 type ExportPreviewModalProps = {
   exportId: string;
@@ -13,7 +14,7 @@ type ExportPreviewModalProps = {
 };
 
 function isPdfExportFormat(format: string): boolean {
-  return format === "pdf" || format.startsWith("pdf_");
+  return isPdfFormat(format);
 }
 
 export default function ExportPreviewModal({
@@ -27,7 +28,7 @@ export default function ExportPreviewModal({
   const pdfObjectUrlRef = useRef<string | null>(null);
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(isPdfExportFormat(format) || format === "md");
+  const [loading, setLoading] = useState(isPdfExportFormat(format) || isMdFormat(format));
   const [error, setError] = useState<string | null>(null);
   const basePath = downloadPath || `/exports/${exportId}/download`;
 
@@ -103,7 +104,7 @@ export default function ExportPreviewModal({
   }, [basePath, format, t]);
 
   useEffect(() => {
-    if (format !== "md") {
+    if (!isMdFormat(format)) {
       return;
     }
 
@@ -144,7 +145,7 @@ export default function ExportPreviewModal({
       iframeRef.current?.contentWindow?.print();
       return;
     }
-    if (format === "md") {
+    if (isMdFormat(format)) {
       window.print();
     }
   }
@@ -199,7 +200,7 @@ export default function ExportPreviewModal({
             {t("previewTitle")}
           </h2>
           <div className="flex items-center gap-2">
-            {(isPdfExportFormat(format) || format === "md") && (
+            {(isPdfExportFormat(format) || isMdFormat(format)) && (
               <button
                 type="button"
                 onClick={handlePrint}
@@ -238,7 +239,7 @@ export default function ExportPreviewModal({
             </>
           )}
 
-          {format === "md" && (
+          {isMdFormat(format) && (
             <>
               {loading && <p className="text-sm text-gray-500">{t("previewLoading")}</p>}
               {error && (
@@ -254,7 +255,7 @@ export default function ExportPreviewModal({
             </>
           )}
 
-          {format === "xlsx" && (
+          {isXlsxFormat(format) && (
             <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
               <p>{t("previewXlsxHint")}</p>
               <a
@@ -266,7 +267,7 @@ export default function ExportPreviewModal({
             </div>
           )}
 
-          {(format === "docx" || format === "docx_quotation") && (
+          {isDocxFormat(format) && (
             <div className="rounded border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
               <p>{t("previewDocxHint")}</p>
               <a

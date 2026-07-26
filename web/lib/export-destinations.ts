@@ -40,7 +40,11 @@ export function isPdfFormat(format: string): boolean {
 }
 
 export function isMdFormat(format: string): boolean {
-  return format === "md";
+  return format === "md" || format === "md_internal";
+}
+
+export function isInternalFormat(format: string): boolean {
+  return format.endsWith("_internal");
 }
 
 /** Extension family for Previous exports Format column (PDF / DOCX / XLSX / MD). */

@@ -183,7 +183,9 @@
     "pocRecommendedBadge": "POC recommended",
     "proposalLocaleSwitcher": "Proposal locale",
     "exportSectionTitle": "Export",
-    "exportEmpty": "No exports yet"
+    "exportEmpty": "No exports yet",
+    "exportDescription": "Internal-only formats (never shown to clients). Choose language and formats, then export.",
+    "exportCalculationRequiredHint": "Run Calculate on the estimate before exporting."
   },
   "documents": {
     "title": "Documents",
@@ -2093,22 +2095,5 @@
         }
       ]
     }
-  },
-  "internalDossier": {
-    "openLink": "Internal dossier",
-    "title": "Internal Dossier",
-    "banner": "Internal use only. Do not share this page or its contents with clients.",
-    "backToEstimate": "Back to estimate",
-    "loading": "Loading internal dossier…",
-    "loadError": "Could not load the internal dossier",
-    "loadErrorDetail": "The server returned an error (HTTP {status}). Try refreshing or return to the estimate.",
-    "tabEstimate": "Estimate",
-    "tabRateCard": "Rate Card",
-    "tabProposal": "Proposal",
-    "warningsTitle": "Warnings",
-    "rateCardStale": "Rate card is stale — recalculate before finalizing.",
-    "emptyProposals": "No proposals generated yet",
-    "exportSectionTitle": "Export",
-    "exportEmpty": "No exports yet"
   }
 }

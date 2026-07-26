@@ -183,7 +183,9 @@
     "pocRecommendedBadge": "POC推奨",
     "proposalLocaleSwitcher": "提案書の言語",
     "exportSectionTitle": "出力",
-    "exportEmpty": "出力はまだありません"
+    "exportEmpty": "出力はまだありません",
+    "exportDescription": "社内限定の出力形式です（クライアントには表示されません）。言語と形式を選択して出力してください。",
+    "exportCalculationRequiredHint": "出力する前に見積の計算を実行してください。"
   },
   "documents": {
     "title": "ドキュメント",
@@ -2087,22 +2089,5 @@
         }
       ]
     }
-  },
-  "internalDossier": {
-    "openLink": "内部資料",
-    "title": "内部資料",
-    "banner": "社内利用限定です。このページや内容をクライアントと共有しないでください。",
-    "backToEstimate": "見積に戻る",
-    "loading": "内部資料を読み込み中…",
-    "loadError": "内部資料を読み込めませんでした",
-    "loadErrorDetail": "サーバーからエラーが返されました（HTTP {status}）。再読み込みするか、見積に戻ってください。",
-    "tabEstimate": "見積",
-    "tabRateCard": "レートカード",
-    "tabProposal": "提案書",
-    "warningsTitle": "警告",
-    "rateCardStale": "レートカードが古くなっています。確定前に再計算してください。",
-    "emptyProposals": "まだ提案書が生成されていません",
-    "exportSectionTitle": "出力",
-    "exportEmpty": "出力はまだありません"
   }
 }

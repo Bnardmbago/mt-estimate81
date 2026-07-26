@@ -8,6 +8,7 @@ import ExportPreviewModal from "@/components/ExportPreviewModal";
 import { apiFetch, apiJson } from "@/lib/api";
 import { formatLocalTimestamp, parseUtcTimestamp } from "@/lib/datetime";
 import type { ExportRecord } from "@/lib/estimate";
+import { isInternalFormat } from "@/lib/export-destinations";
 
 type ExportFormat = "pdf" | "xlsx" | "md" | "docx";
 type PdfVersion = "pdf" | "pdf_quotation";
@@ -134,7 +135,9 @@ export default function ExportPanel({
   const loadExports = useCallback(async () => {
     try {
       const records = await apiJson<ExportRecord[]>(`/estimates/${estimateId}/exports`);
-      setExports(records);
+      // Defense in depth: internal-only exports are never shown to client-facing users,
+      // even if the API response were to include them.
+      setExports(records.filter((record) => !isInternalFormat(record.format)));
     } catch {
       setExports([]);
     } finally {
