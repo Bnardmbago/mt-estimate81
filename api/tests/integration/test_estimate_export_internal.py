@@ -101,3 +101,141 @@ async def test_admin_download_internal_export_has_internal_suffix(
     assert downloaded.status_code == 200
     disposition = downloaded.headers["content-disposition"]
     assert "-internal.docx" in disposition
+
+
+@pytest.mark.asyncio
+async def test_default_list_excludes_internal_exports(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    calculated_estimate_id: str,
+):
+    client_export = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=auth_headers,
+        json={"format": "md", "locale": "en"},
+    )
+    assert client_export.status_code == 201, client_export.text
+
+    internal_export = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=admin_headers,
+        json={"format": "pdf_internal", "locale": "en"},
+    )
+    assert internal_export.status_code == 201, internal_export.text
+
+    listed = await client.get(
+        f"/estimates/{calculated_estimate_id}/exports",
+        headers=auth_headers,
+    )
+    assert listed.status_code == 200
+    formats = [row["format"] for row in listed.json()]
+    assert "md" in formats
+    assert "pdf_internal" not in formats
+
+
+@pytest.mark.asyncio
+async def test_list_audience_internal_requires_admin(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    calculated_estimate_id: str,
+):
+    r = await client.get(
+        f"/estimates/{calculated_estimate_id}/exports?audience=internal",
+        headers=auth_headers,
+    )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_list_audience_internal_returns_only_internal(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    calculated_estimate_id: str,
+):
+    client_export = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=auth_headers,
+        json={"format": "md", "locale": "en"},
+    )
+    assert client_export.status_code == 201, client_export.text
+
+    internal_export = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=admin_headers,
+        json={"format": "pdf_internal", "locale": "en"},
+    )
+    assert internal_export.status_code == 201, internal_export.text
+
+    listed = await client.get(
+        f"/estimates/{calculated_estimate_id}/exports?audience=internal",
+        headers=admin_headers,
+    )
+    assert listed.status_code == 200
+    formats = [row["format"] for row in listed.json()]
+    assert formats == ["pdf_internal"]
+
+
+@pytest.mark.asyncio
+async def test_non_admin_cannot_download_internal_export_owned_by_own_estimate(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    calculated_estimate_id: str,
+):
+    created = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=admin_headers,
+        json={"format": "pdf_internal", "locale": "en"},
+    )
+    assert created.status_code == 201, created.text
+    export_id = created.json()["id"]
+
+    r = await client.get(f"/exports/{export_id}/download", headers=auth_headers)
+    assert r.status_code == 403
+    assert r.json()["code"] == "INTERNAL_EXPORT_ADMIN_REQUIRED"
+
+
+@pytest.mark.asyncio
+async def test_non_admin_cannot_delete_internal_export_owned_by_own_estimate(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    calculated_estimate_id: str,
+):
+    created = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=admin_headers,
+        json={"format": "pdf_internal", "locale": "en"},
+    )
+    assert created.status_code == 201, created.text
+    export_id = created.json()["id"]
+
+    r = await client.delete(f"/exports/{export_id}", headers=auth_headers)
+    assert r.status_code == 403
+    assert r.json()["code"] == "INTERNAL_EXPORT_ADMIN_REQUIRED"
+
+
+@pytest.mark.asyncio
+async def test_non_admin_cannot_email_internal_export(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
+    calculated_estimate_id: str,
+):
+    created = await client.post(
+        f"/estimates/{calculated_estimate_id}/export",
+        headers=admin_headers,
+        json={"format": "pdf_internal", "locale": "en"},
+    )
+    assert created.status_code == 201, created.text
+    export_id = created.json()["id"]
+
+    r = await client.post(
+        f"/estimates/{calculated_estimate_id}/exports/email",
+        headers=auth_headers,
+        json={"to_email": "client@example.com", "export_ids": [export_id]},
+    )
+    assert r.status_code == 403
+    assert r.json()["code"] == "INTERNAL_EXPORT_ADMIN_REQUIRED"

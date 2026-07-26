@@ -496,14 +496,27 @@ async def list_exports(
     db: AsyncSession,
     estimate_id: uuid.UUID,
     user: User,
+    *,
+    audience: str | None = None,
 ) -> list[Export]:
+    if audience == "internal" and not user.is_admin:
+        raise AppError(
+            "Internal exports are restricted to administrators",
+            "INTERNAL_EXPORT_ADMIN_REQUIRED",
+            status_code=403,
+        )
+
     await _get_estimate_for_export(db, estimate_id, user)
     result = await db.execute(
         select(Export)
         .where(Export.estimate_id == estimate_id)
         .order_by(Export.generated_at.desc())
     )
-    return list(result.scalars().all())
+    exports = list(result.scalars().all())
+
+    if audience == "internal":
+        return [record for record in exports if is_internal_format(record.format)]
+    return [record for record in exports if not is_internal_format(record.format)]
 
 
 async def download_export(
@@ -524,6 +537,7 @@ async def download_export(
 
     export_record, estimate = row
     require_estimate_access(estimate, user)
+    require_admin_for_internal_format(export_record.format, user)
 
     storage = get_storage_backend()
     if not await storage.exists(export_record.storage_path):
@@ -565,6 +579,7 @@ async def delete_export(
 
     export_record, estimate = row
     require_estimate_access(estimate, user)
+    require_admin_for_internal_format(export_record.format, user)
 
     if is_contact_user(user):
         raise AppError(
@@ -609,6 +624,9 @@ async def send_exports_email(
 
     if len(export_records) != len(unique_ids):
         raise AppError("One or more exports not found", "EXPORT_NOT_FOUND", status_code=404)
+
+    for export_record in export_records:
+        require_admin_for_internal_format(export_record.format, user)
 
     export_by_id = {record.id: record for record in export_records}
     ordered_exports = [export_by_id[export_id] for export_id in unique_ids]

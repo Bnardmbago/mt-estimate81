@@ -31,10 +31,11 @@ async def create_export(
 @router.get("/estimates/{estimate_id}/exports", response_model=list[ExportResponse])
 async def list_estimate_exports(
     estimate_id: uuid.UUID,
+    audience: str | None = Query(default=None, pattern=r"^(client|internal)$"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await service.list_exports(db, estimate_id, user)
+    return await service.list_exports(db, estimate_id, user, audience=audience)
 
 
 @router.get("/exports/{export_id}/download")
