@@ -345,7 +345,7 @@ async def export_estimate(
             details={"required_statuses": ["calculated", "exported", "completed"]},
         )
 
-    if not estimate.calculation_result:
+    if estimate.calculation_result is None:
         raise AppError(
             "Calculation result is required before export",
             "CALCULATION_REQUIRED",
