@@ -429,6 +429,7 @@
     "deleteConfirmAction": "削除する",
     "deleteCancel": "キャンセル",
     "deleteError": "エクスポートの削除に失敗しました",
+    "destinationsUnavailable": "クラウド連携は利用できないか未設定です。ダウンロードしてローカルで開いてください。",
     "contactExportsRemaining": "この見積のエクスポート残り {remaining}/{limit} 回",
     "contactExportLimitReached": "エクスポート上限（{limit}回）に達しました",
     "contactAutoEmailNote": "エクスポートは認証済みメールアドレスに自動送信されます。",

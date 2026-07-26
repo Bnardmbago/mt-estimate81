@@ -429,6 +429,7 @@
     "deleteConfirmAction": "Delete",
     "deleteCancel": "Cancel",
     "deleteError": "Failed to delete export",
+    "destinationsUnavailable": "Cloud destinations are unavailable or not configured. Download exports to open them locally.",
     "contactExportsRemaining": "{remaining} of {limit} exports remaining for this estimate",
     "contactExportLimitReached": "Export limit reached ({limit} per estimate)",
     "contactAutoEmailNote": "Each export is emailed automatically to your verified address.",

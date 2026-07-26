@@ -9,6 +9,7 @@ import type { ExportRecord } from "@/lib/estimate";
 import {
   ensureCanvaConnected,
   ensureGoogleConnected,
+  fetchIntegrationStatus,
   formatFamilyLabel,
   isDocxFormat,
   isPdfFormat,
@@ -85,6 +86,10 @@ export default function InternalExportPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [destinationAvailability, setDestinationAvailability] = useState<{
+    google: boolean;
+    canva: boolean;
+  } | null>(null);
 
   const loadExports = useCallback(async () => {
     try {
@@ -114,6 +119,35 @@ export default function InternalExportPanel({
     }
 
     void loadProfile();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDestinationAvailability() {
+      try {
+        const statuses = await fetchIntegrationStatus();
+        if (!cancelled) {
+          setDestinationAvailability({
+            google: statuses.some(
+              (status) => status.provider === "google" && status.configured,
+            ),
+            canva: statuses.some(
+              (status) => status.provider === "canva" && status.configured,
+            ),
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setDestinationAvailability({ google: false, canva: false });
+        }
+      }
+    }
+
+    void loadDestinationAvailability();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function toggleFormat(format: InternalExportFormat) {
@@ -461,7 +495,7 @@ export default function InternalExportPanel({
                     >
                       {t("download")}
                     </a>
-                    {isDocxFormat(record.format) ? (
+                    {destinationAvailability?.google && isDocxFormat(record.format) ? (
                       <button
                         type="button"
                         disabled={sendingDestinationId === record.id}
@@ -473,7 +507,7 @@ export default function InternalExportPanel({
                           : t("openInDocs")}
                       </button>
                     ) : null}
-                    {isXlsxFormat(record.format) ? (
+                    {destinationAvailability?.google && isXlsxFormat(record.format) ? (
                       <button
                         type="button"
                         disabled={sendingDestinationId === record.id}
@@ -485,7 +519,7 @@ export default function InternalExportPanel({
                           : t("openInSheets")}
                       </button>
                     ) : null}
-                    {isPdfFormat(record.format) ? (
+                    {destinationAvailability?.canva && isPdfFormat(record.format) ? (
                       <button
                         type="button"
                         disabled={sendingDestinationId === record.id}
@@ -551,6 +585,12 @@ export default function InternalExportPanel({
             })}
           </ul>
         )}
+        {destinationAvailability &&
+        (!destinationAvailability.google || !destinationAvailability.canva) ? (
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400" role="note">
+            {t("destinationsUnavailable")}
+          </p>
+        ) : null}
       </div>
 
       {exports.length > 0 && (
