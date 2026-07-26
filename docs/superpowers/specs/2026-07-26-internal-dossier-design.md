@@ -1,11 +1,11 @@
 # Internal Dossier (Estimate) — Design
 
 **Date:** 2026-07-26  
-**Status:** Approved for planning
+**Status:** Approved for planning (export UX revised)
 
 ## Goal
 
-Give admins an **internal-only** view of one estimate’s complete delivery package: full estimate details (including sections omitted from client docs), the frozen rate card, and linked proposal(s). Support live browsing on a dedicated page and optionally saving a dated **internal pack** into export history for later download.
+Give admins an **internal-only** view of one estimate’s complete delivery package: full estimate details (including sections omitted from client docs), the frozen rate card, and linked proposal(s). Support live browsing on a dedicated page, plus an **Export** experience that feels identical to estimate and proposal exports (formats, preview, history, email, destinations).
 
 Client-facing quotations and reports stay unchanged.
 
@@ -16,9 +16,10 @@ Client-facing quotations and reports stay unchanged.
 | Delivery shape | New admin-only page (not export-toggle-only) |
 | Scope | One estimate’s dossier: estimate + linked proposal(s) + rate card used for that estimate |
 | Access | Admins only (web + API) |
-| Save/download | Live browse + optional dated pack in export history |
+| Save/download | Live browse + Export panel identical in feel to estimate/proposal |
 | Disclosure level | Full rate card + full estimate calculation + full proposal/POC, including content client docs omit (cost drivers, risks, questionnaire appendix, AI confidence notes, etc.) |
-| Pack format (v1) | Single PDF (`internal_pack`); ZIP multi-file deferred |
+| Export formats | Same family as estimate report exports: PDF, DOCX, XLSX, MD (internal content; **no** quotation variants) |
+| Destinations / email | Included (same as estimate/proposal); all artifacts carry INTERNAL labeling |
 | Editing | Read-only on this page; edit elsewhere |
 
 ## Access, routing, entry points
@@ -27,11 +28,11 @@ Client-facing quotations and reports stay unchanged.
 
 **Web:** Server-side admin check (same pattern as `/admin`). Non-admins redirect away. Contact users never see the link.
 
-**API:** Dossier read and `internal_pack` generation require admin (`require_admin`).
+**API:** Dossier read and all internal export generate/list/download/delete/email/send-to endpoints require admin (`require_admin`).
 
 **Entry:** Admin-only control on the estimate detail page (“Internal dossier”). Optional later: entry from proposal page pointing at the same estimate dossier — not required for v1.
 
-**Unchanged:** Existing client/quotation exports, contact export limits, watermarks, and non-admin estimate/proposal/rate-card UX.
+**Unchanged:** Existing client/quotation exports, contact export limits, and non-admin estimate/proposal/rate-card UX.
 
 ## Page layout (live dossier)
 
@@ -39,7 +40,7 @@ Client-facing quotations and reports stay unchanged.
 - Project / client name, estimate id, status
 - Banner: **Internal — not for clients**
 - Rate card name + frozen version (when calculated); link to rate card editor when useful
-- Actions: Save internal pack, download latest pack (if any), back to estimate
+- Back to estimate
 
 **Tabs**
 
@@ -49,10 +50,23 @@ Client-facing quotations and reports stay unchanged.
 | Rate card | Full frozen settings: roles/rates, NRC setup items, RC monthly items, policy metadata — not name/version only |
 | Proposal | Linked proposal(s) for this estimate (per locale if multiple): full proposal + POC; empty state if none |
 
+**Export section** (below tabs, or a fourth “Export” tab — prefer a dedicated section matching `ExportPanel` / `ProposalExportPanel` layout)
+
+Same controls and flow as estimate/proposal export:
+
+- Locale selector (`ja` / `en`)
+- Format multi-select: **PDF**, **DOCX**, **XLSX**, **Markdown** (no report/quotation version split — every format is the full internal dossier content)
+- Export button → generates one stored file per selected format
+- Downloads / history list: preview (PDF), download, delete, selection checkboxes
+- Email selected exports
+- Send to Google / Canva for compatible formats (same destination rules as today)
+- Stale-export confirmation when calculation is newer than last export (same pattern)
+
 **Behavior**
 - Read-only live data composed from existing records
 - Clear warning if calculation is missing or rate card/fingerprint is stale; still show what exists
 - UI locale for labels; proposal tab can switch among available proposal locales
+- Export disabled (or blocked with `CALCULATION_REQUIRED`) until a calculation exists
 
 ## API and data flow
 
@@ -65,16 +79,30 @@ Composed response (no new dossier table):
 - Frozen rate card settings, or null with reason
 - Linked proposals (id, locale, status, sections) for this estimate
 
-### Save pack
+### Internal exports
 
-`POST /estimates/{id}/export` with format `internal_pack` (admin-only; reject for non-admins)
+Reuse the estimate export pipeline with **internal format codes** (parallel to `pdf_quotation`):
 
-- Builds one stored PDF artifact
-- Contents: estimate internal report + full rate card appendix + proposal/POC appendix when present
-- PDF header/footer watermark: e.g. `INTERNAL — DO NOT DISTRIBUTE`
-- Writes normal `exports` row (`format=internal_pack`) for re-download/delete via existing export endpoints
-- Visible on the internal page history; may also appear in the estimate export list labeled **Internal pack** (generate restricted to admins)
-- `GET /exports/{id}/download` (and delete) for `format=internal_pack` also requires admin — non-admins get 403 even if they somehow know the export id
+| Format code | Artifact |
+|-------------|----------|
+| `pdf_internal` | Full dossier PDF |
+| `docx_internal` | Full dossier DOCX |
+| `xlsx_internal` | Full dossier workbook |
+| `md_internal` | Full dossier Markdown |
+
+`POST /estimates/{id}/export` with one of the above formats (admin-only).
+
+Each artifact includes:
+- Full estimate internal report content
+- Full rate card appendix
+- Proposal/POC appendix when present (else marked none)
+- Clear INTERNAL labeling (PDF watermark / header-footer; equivalent banner text in DOCX/MD; sheet note in XLSX)
+
+Writes normal `exports` rows. List/download/delete/email/send-to use the **same endpoints** as other estimate exports, with admin-only enforcement whenever `format` is `*_internal`.
+
+Non-admins: 403 on generate, download, delete, email, and send-to for internal formats (even if they know the export id).
+
+Internal formats appear in the **internal dossier Export section** as the primary UI. They may also show in the main estimate export list labeled as Internal (generate still admin-only); if that clutters the client export list, hide `*_internal` from the non-admin ExportPanel and only show them on the internal page — **prefer: show internal history only on the internal dossier page** so client export UI stays clean.
 
 ### Flow
 
@@ -83,7 +111,11 @@ Estimate page (admin) → Internal dossier page
         ↓
 GET internal-dossier → render tabs (live)
         ↓
-POST export format=internal_pack → store file → list/download via existing export endpoints
+Export section (same UX as ExportPanel)
+        ↓
+POST export format=pdf_internal|docx_internal|xlsx_internal|md_internal
+        ↓
+list / preview / download / delete / email / send-to (existing endpoints, admin-gated for *_internal)
 ```
 
 ### Errors
@@ -92,36 +124,36 @@ POST export format=internal_pack → store file → list/download via existing e
 |------|----------|
 | Non-admin | 403 |
 | Estimate missing / inaccessible | 404 |
-| Pack requested with no calculation | 422 with code `CALCULATION_REQUIRED` |
-| No proposal yet | Pack still generates; proposal section marked none |
+| Export requested with no calculation | 422 with code `CALCULATION_REQUIRED` |
+| No proposal yet | Export still generates; proposal section marked none |
 
 ## Architecture notes
 
-- Reuse `build_report_context` (and related export builders) for estimate content; extend or add an internal view model so rate card **settings** and omitted sections are included in dossier + pack.
+- Reuse `build_report_context` / DOCX / XLSX / MD generators; add an internal dossier context that appends full rate card settings + proposal/POC + ensures omitted sections are present.
 - Load frozen `rate_card_version` settings for the estimate’s `rate_card_version_id`.
 - Load proposals by `estimate_id` (unique per locale today).
-- Extend `ExportFormat` / export request pattern to accept `internal_pack`.
-- Frontend: new page under `web/app/[locale]/estimates/[id]/internal/` plus a small client component for tabs, pack actions, and history.
+- Extend `ExportFormat` and `ExportRequest` pattern for `pdf_internal`, `docx_internal`, `xlsx_internal`, `md_internal`.
+- Frontend: page under `web/app/[locale]/estimates/[id]/internal/` with dossier tabs + an export panel component modeled on `ExportPanel` / `ProposalExportPanel` (shared patterns for preview, destinations, email).
 
 ## Out of scope (v1)
 
 - Editing from the internal page
-- Send-to Google/Canva or email of internal packs to clients
 - Access for contact or non-admin full accounts
 - Cross-project internal hub / search
-- ZIP multi-file pack
+- ZIP multi-file pack as a separate format (multi-format multi-select already covers separate files)
 - Changing client quotation/report export contents
+- Quotation-style variants for internal exports
 
 ## Testing
 
-- **Unit:** Dossier composer includes rate card settings + omitted report sections; pack PDF contains markers for estimate / rate card / proposal (or “none”)
-- **Integration:** Non-admin → 403 on dossier and `internal_pack`; admin can GET dossier and POST/download pack; pack appears in export list
-- **UI:** Admin sees link and page; non-admin does not
+- **Unit:** Dossier composer includes rate card settings + omitted report sections; each internal format contains markers for estimate / rate card / proposal (or “none”) and INTERNAL labeling
+- **Integration:** Non-admin → 403 on dossier and all `*_internal` generate/download/email/send-to; admin can export each format, preview PDF, download, delete, email, send-to
+- **UI:** Admin sees identical export controls on the internal page; non-admin does not see the page; main estimate ExportPanel does not offer internal formats to non-admins
 
 ## Success criteria
 
 - Admin can open one estimate’s internal dossier and see estimate, full rate card, and proposals without client omissions
-- Admin can save a dated `internal_pack` PDF and re-download it from history
-- Non-admins cannot open the page or generate/download internal packs via API
-- Client-facing export formats remain unchanged
-- Internal pack is clearly labeled as internal / do not distribute
+- Admin can export internal PDF/DOCX/XLSX/MD with the same feel as estimate/proposal export (history, preview, email, destinations)
+- Non-admins cannot open the page or generate/download/email/send internal exports via API
+- Client-facing export formats and ExportPanel options remain unchanged for non-admins
+- Every internal artifact is clearly labeled as internal / do not distribute
