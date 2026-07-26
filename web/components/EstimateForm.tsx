@@ -29,6 +29,7 @@ type EstimateFormProps = {
   estimate: EstimateDetail;
   hasUploadedDocuments?: boolean;
   isContactUser?: boolean;
+  isAdmin?: boolean;
   children?: ReactNode;
   documentsSection?: ReactNode;
 };
@@ -83,13 +84,21 @@ function valuesEqual(
 }
 
 const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function EstimateForm(
-  { estimate, hasUploadedDocuments = false, isContactUser = false, children, documentsSection },
+  {
+    estimate,
+    hasUploadedDocuments = false,
+    isContactUser = false,
+    isAdmin = false,
+    children,
+    documentsSection,
+  },
   ref,
 ) {
   const router = useRouter();
   const locale = useLocale();
   const tForm = useTranslations("form");
   const tEstimates = useTranslations("estimates");
+  const tInternalDossier = useTranslations("internalDossier");
 
   const schema = useMemo(
     () => resolveFormSchema(estimate.form_schema_snapshot),
@@ -558,57 +567,67 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
 
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link
-            href={`/${locale}/estimates`}
-            className="mb-2 inline-block text-sm text-gray-500 hover:text-blue-600"
-          >
-            ← {tEstimates("back")}
-          </Link>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold">
-              {values.project_name ||
-                localizedProjectName(estimate.project_name, locale)}
-            </h1>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide ${badgeClass}`}
+      <div className="sticky top-14 z-40 -mx-6 mb-6 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <Link
+              href={`/${locale}/estimates`}
+              className="mb-2 inline-block text-sm text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
             >
-              {tEstimates(`status.${estimate.status}`)}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">
-            {tEstimates("client")}: {estimate.client_name}
-          </p>
-          {estimate.form_template_name && !isContactUser && (
-            <p className="mt-1 text-sm text-gray-500">
-              {tForm("templateLabel")}: {estimate.form_template_name}
+              ← {tEstimates("back")}
+            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold">
+                {values.project_name ||
+                  localizedProjectName(estimate.project_name, locale)}
+              </h1>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide ${badgeClass}`}
+              >
+                {tEstimates(`status.${estimate.status}`)}
+              </span>
+              {isAdmin ? (
+                <Link
+                  href={`/${locale}/estimates/${estimate.id}/internal`}
+                  className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  {tInternalDossier("openLink")}
+                </Link>
+              ) : null}
+            </div>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {tEstimates("client")}: {estimate.client_name}
             </p>
-          )}
-        </div>
+            {estimate.form_template_name && !isContactUser && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {tForm("templateLabel")}: {estimate.form_template_name}
+              </p>
+            )}
+          </div>
 
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <div className="flex items-center gap-3">
-            {isDirty && (
-              <span className="text-sm text-amber-600">{tEstimates("unsaved")}</span>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <div className="flex items-center gap-3">
+              {isDirty && (
+                <span className="text-sm text-amber-600">{tEstimates("unsaved")}</span>
+              )}
+              {!isDirty && saveState === "saved" && (
+                <span className="text-sm text-green-600">{tEstimates("saved")}</span>
+              )}
+              <button
+                type="submit"
+                form="estimate-form"
+                disabled={saving || !isDirty}
+                className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? tEstimates("saving") : tEstimates("save")}
+              </button>
+            </div>
+            {saveState === "error" && saveError && (
+              <p className="text-sm text-red-600" role="alert">
+                {saveError}
+              </p>
             )}
-            {!isDirty && saveState === "saved" && (
-              <span className="text-sm text-green-600">{tEstimates("saved")}</span>
-            )}
-            <button
-              type="submit"
-              form="estimate-form"
-              disabled={saving || !isDirty}
-              className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? tEstimates("saving") : tEstimates("save")}
-            </button>
           </div>
-          {saveState === "error" && saveError && (
-            <p className="text-sm text-red-600" role="alert">
-              {saveError}
-            </p>
-          )}
         </div>
       </div>
 

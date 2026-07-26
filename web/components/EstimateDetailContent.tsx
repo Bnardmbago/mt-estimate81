@@ -12,11 +12,13 @@ import type { EstimateDetail, EstimateDocument } from "@/lib/estimate";
 type EstimateDetailContentProps = {
   estimate: EstimateDetail;
   isContactUser?: boolean;
+  isAdmin?: boolean;
 };
 
 export default function EstimateDetailContent({
   estimate,
   isContactUser = false,
+  isAdmin = false,
 }: EstimateDetailContentProps) {
   const formRef = useRef<EstimateFormHandle>(null);
   const [hasUploadedDocuments, setHasUploadedDocuments] = useState(
@@ -41,6 +43,7 @@ export default function EstimateDetailContent({
         estimate={estimate}
         hasUploadedDocuments={hasUploadedDocuments}
         isContactUser={isContactUser}
+        isAdmin={isAdmin}
         documentsSection={
           !isDraft ? (
             <DocumentUpload

@@ -27,6 +27,7 @@ export default async function EstimateDetailPage({
   const profile = await serverApiJson<UserProfile>("/auth/me", token.value);
   const isContactUser =
     profile.status === "ok" && profile.data.account_type === "contact";
+  const isAdmin = profile.status === "ok" && profile.data.is_admin;
 
   const result = await fetchEstimateResult(id, token.value, locale);
 
@@ -59,7 +60,11 @@ export default async function EstimateDetailPage({
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-      <EstimateDetailContent estimate={estimate} isContactUser={isContactUser} />
+      <EstimateDetailContent
+        estimate={estimate}
+        isContactUser={isContactUser}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }
