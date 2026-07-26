@@ -199,24 +199,24 @@ def _rate_card_markdown(rate_card: dict[str, Any] | None) -> str:
         for role in roles:
             lines.append(f"| {role.get('name', '')} | {role.get('hourly_rate', '')} |")
 
-    nrc_items = settings.get("nrc_items") or []
-    if nrc_items:
+    setup_cost_items = settings.get("setup_cost_items") or settings.get("nrc_items") or []
+    if setup_cost_items:
         lines.append("")
         lines.append("| NRC Item | Cost |")
         lines.append("|---|---:|")
-        for item in nrc_items:
+        for item in setup_cost_items:
             name = item.get("name") or item.get("item", "")
-            cost = item.get("cost_jpy", item.get("cost", ""))
+            cost = item.get("amount", item.get("cost_jpy", item.get("cost", "")))
             lines.append(f"| {name} | {cost} |")
 
-    rc_items = settings.get("rc_items") or []
-    if rc_items:
+    monthly_rc_items = settings.get("monthly_rc_items") or settings.get("rc_items") or []
+    if monthly_rc_items:
         lines.append("")
         lines.append("| RC Item | Monthly |")
         lines.append("|---|---:|")
-        for item in rc_items:
+        for item in monthly_rc_items:
             name = item.get("name") or item.get("item", "")
-            monthly = item.get("monthly_jpy", item.get("monthly", ""))
+            monthly = item.get("amount", item.get("monthly_jpy", item.get("monthly", "")))
             lines.append(f"| {name} | {monthly} |")
 
     return "\n".join(lines)
@@ -241,9 +241,8 @@ def _proposals_markdown(proposals: list[dict[str, Any]]) -> str:
 def generate_internal_markdown(ctx: dict[str, Any]) -> str:
     """Build the internal Markdown dossier: banner + report + rate card + proposals."""
     report = ctx.get("report") or {}
-    banner = ctx.get("internal_banner", INTERNAL_BANNER)
 
-    sections = [f"# {banner}", ""]
+    sections = [f"# {INTERNAL_BANNER}", ""]
 
     if report.get("labels"):
         sections.append(generate_markdown(report))

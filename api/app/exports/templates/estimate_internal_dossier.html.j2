@@ -133,29 +133,29 @@
         </tbody>
       </table>
       {% endif %}
-      {% set nrc_items = rc_settings.get('nrc_items', []) %}
-      {% if nrc_items %}
+      {% set setup_cost_items = rc_settings.get('setup_cost_items') or rc_settings.get('nrc_items', []) %}
+      {% if setup_cost_items %}
       <table class="data-table">
         <thead><tr><th>NRC Item</th><th class="num">Cost</th></tr></thead>
         <tbody>
-          {% for item in nrc_items %}
+          {% for item in setup_cost_items %}
           <tr>
             <td>{{ item.get('name') or item.get('item', '') }}</td>
-            <td class="num">{{ format_currency(item.get('cost_jpy') or item.get('cost', 0)) }}</td>
+            <td class="num">{{ format_currency(item.get('amount') or item.get('cost_jpy') or item.get('cost', 0)) }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
       {% endif %}
-      {% set rc_items = rc_settings.get('rc_items', []) %}
-      {% if rc_items %}
+      {% set monthly_rc_items = rc_settings.get('monthly_rc_items') or rc_settings.get('rc_items', []) %}
+      {% if monthly_rc_items %}
       <table class="data-table">
         <thead><tr><th>RC Item</th><th class="num">Monthly</th></tr></thead>
         <tbody>
-          {% for item in rc_items %}
+          {% for item in monthly_rc_items %}
           <tr>
             <td>{{ item.get('name') or item.get('item', '') }}</td>
-            <td class="num">{{ format_currency(item.get('monthly_jpy') or item.get('monthly', 0)) }}</td>
+            <td class="num">{{ format_currency(item.get('amount') or item.get('monthly_jpy') or item.get('monthly', 0)) }}</td>
           </tr>
           {% endfor %}
         </tbody>

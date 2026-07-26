@@ -204,14 +204,24 @@ def test_internal_dossier_response_accepts_documented_shape():
 def test_internal_markdown_contains_banner_and_rate_card():
     ctx = build_internal_export_context(
         {"project_summary": {"project_name": "Alpha"}},
-        {"name": "RC1", "settings": {"roles": [{"name": "PM", "hourly_rate": 1}]}},
+        {
+            "name": "RC1",
+            "settings": {
+                "roles": [{"name": "PM", "hourly_rate": 1}],
+                "setup_cost_items": [{"name": "Production setup", "amount": 250000}],
+                "monthly_rc_items": [{"name": "Managed hosting", "amount": 50000}],
+            },
+        },
         [],
         locale="en",
     )
+    ctx["internal_banner"] = ""
     md = generate_internal_markdown(ctx)
     assert "INTERNAL — DO NOT DISTRIBUTE" in md
     assert "Alpha" in md
     assert "PM" in md
+    assert "Production setup" in md
+    assert "Managed hosting" in md
     assert "none" in md.lower() or "No proposal" in md
 
 
@@ -220,11 +230,20 @@ def test_internal_pdf_is_pdf_and_html_has_banner():
 
     ctx = build_internal_export_context(
         {"project_summary": {"project_name": "Alpha"}, "labels": {}, "extracted": {}},
-        {"name": "RC1", "settings": {"roles": []}},
+        {
+            "name": "RC1",
+            "settings": {
+                "roles": [],
+                "setup_cost_items": [{"name": "Production setup", "amount": 250000}],
+                "monthly_rc_items": [{"name": "Managed hosting", "amount": 50000}],
+            },
+        },
         [],
         locale="en",
     )
     html = build_internal_dossier_html(ctx)
     assert "INTERNAL — DO NOT DISTRIBUTE" in html
+    assert "Production setup" in html
+    assert "Managed hosting" in html
     pdf = generate_internal_pdf(ctx)
     assert pdf.startswith(b"%PDF")
