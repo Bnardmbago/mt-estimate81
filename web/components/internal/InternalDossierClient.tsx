@@ -19,7 +19,9 @@ type DossierTab = "estimate" | "rateCard" | "proposal";
 type RateCardRoleView = {
   name: string;
   hourly_rate?: number | null;
+  hourly_rate_jpy?: number | null;
   daily_rate?: number | null;
+  daily_rate_jpy?: number | null;
 };
 
 type RateCardLineItemView = {
@@ -30,7 +32,9 @@ type RateCardLineItemView = {
 type RateCardSettingsView = {
   roles?: RateCardRoleView[];
   setup_cost_items?: RateCardLineItemView[];
+  nrc_items?: RateCardLineItemView[];
   monthly_rc_items?: RateCardLineItemView[];
+  rc_items?: RateCardLineItemView[];
   currency?: string;
 };
 
@@ -324,7 +328,7 @@ export default function InternalDossierClient({
   const t = useTranslations("internalDossier");
   const tRateCards = useTranslations("rateCards");
   const tProposal = useTranslations("proposal");
-  const { formatMoney, moneySymbol } = useDisplayLabels();
+  const { formatMoney, moneySymbol, translateRole, translateSetupItem } = useDisplayLabels();
 
   const [dossier, setDossier] = useState<InternalDossier | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -380,8 +384,10 @@ export default function InternalDossierClient({
   }
 
   const roles = rateCardSettings.roles ?? [];
-  const setupCostItems = rateCardSettings.setup_cost_items ?? [];
-  const monthlyRcItems = rateCardSettings.monthly_rc_items ?? [];
+  const setupCostItems =
+    rateCardSettings.setup_cost_items ?? rateCardSettings.nrc_items ?? [];
+  const monthlyRcItems =
+    rateCardSettings.monthly_rc_items ?? rateCardSettings.rc_items ?? [];
 
   return (
     <div className="space-y-4">
@@ -501,17 +507,21 @@ export default function InternalDossierClient({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-                          {roles.map((role) => (
+                          {roles.map((role) => {
+                            const hourly = role.hourly_rate ?? role.hourly_rate_jpy;
+                            const daily = role.daily_rate ?? role.daily_rate_jpy;
+                            return (
                             <tr key={role.name}>
-                              <td className="px-3 py-2">{role.name}</td>
+                              <td className="px-3 py-2">{translateRole(role.name)}</td>
                               <td className="px-3 py-2 text-right">
-                                {formatAmount(role.hourly_rate)}
+                                {formatAmount(hourly)}
                               </td>
                               <td className="px-3 py-2 text-right">
-                                {role.daily_rate != null ? formatAmount(role.daily_rate) : "—"}
+                                {daily != null ? formatAmount(daily) : "—"}
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -536,7 +546,7 @@ export default function InternalDossierClient({
                         <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
                           {setupCostItems.map((item) => (
                             <tr key={item.name}>
-                              <td className="px-3 py-2">{item.name}</td>
+                              <td className="px-3 py-2">{translateSetupItem(item.name)}</td>
                               <td className="px-3 py-2 text-right">{formatAmount(item.amount)}</td>
                             </tr>
                           ))}

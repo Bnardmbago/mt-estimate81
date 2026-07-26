@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.estimates import service as estimate_service
 from app.estimates.rate_card_stale import is_rate_card_stale_for_estimate
+from app.exports.export_i18n import localize_role
 from app.exports.markdown import generate_markdown
-from app.exports.report_context import build_report_context
+from app.exports.report_context import _enrich_role_breakdown, build_report_context
 from app.models.estimate import Estimate
 from app.models.proposal import Proposal
 from app.models.rate_card import RateCard, RateCardVersion
@@ -21,6 +22,39 @@ from app.proposals.export_pack_content import brief_field_rows, section_rows
 INTERNAL_BANNER = "INTERNAL — DO NOT DISTRIBUTE"
 MISSING_CALCULATION_WARNING = "Calculation result is unavailable."
 MISSING_RATE_CARD_WARNING = "Rate card version is unavailable."
+
+
+def _restore_full_role_breakdown_for_dossier(
+    report: dict[str, Any],
+    estimate: Estimate,
+    *,
+    locale: str,
+) -> None:
+    """Keep every frozen rate-card role (incl. 0h) so Estimate tab matches Rate Card tab.
+
+    ``build_report_context`` filters inactive roles for client exports; the dossier UI
+    should list the same roles as the attached rate card version.
+    """
+    calculation = report.get("calculation")
+    raw = (estimate.calculation_result or {}).get("role_breakdown") or []
+    if not calculation or not raw:
+        return
+
+    total_days = float((estimate.calculation_result or {}).get("total_effort_days") or 0)
+    estimated_duration_days = float(
+        (estimate.calculation_result or {}).get("estimated_duration_days") or total_days or 0
+    )
+    enriched = _enrich_role_breakdown(
+        list(raw),
+        estimated_duration_days=estimated_duration_days,
+        total_days=total_days,
+    )
+    if locale == "ja":
+        enriched = [
+            {**row, "role": localize_role(str(row.get("role") or ""), locale)}
+            for row in enriched
+        ]
+    calculation["role_breakdown"] = enriched
 
 
 def build_internal_export_context(
@@ -119,6 +153,7 @@ async def build_internal_dossier_payload(
             rate_card_effective_date=rate_card_effective_date,
             export_revision=1,
         )
+        _restore_full_role_breakdown_for_dossier(report, estimate, locale=locale)
     else:
         report = {}
         warnings.append(MISSING_CALCULATION_WARNING)

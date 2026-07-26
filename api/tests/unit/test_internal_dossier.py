@@ -137,6 +137,63 @@ async def test_dossier_payload_loads_frozen_rate_card_and_proposals():
 
 
 @pytest.mark.asyncio
+async def test_dossier_payload_keeps_zero_hour_roles_for_ui_parity():
+    """Dossier Estimate tab should list all rate-card roles, including 0h rows."""
+    estimate = SimpleNamespace(
+        id=uuid.uuid4(),
+        project_name="Portal",
+        client_name="ACME",
+        status="calculated",
+        calculation_result={
+            "total_effort_hours": 40,
+            "total_effort_days": 5,
+            "estimated_duration_days": 5,
+            "role_breakdown": [
+                {"role": "PM", "hours": 0, "personnel_count": 0, "rate_jpy": 8000, "cost_jpy": 0},
+                {
+                    "role": "developer",
+                    "hours": 40,
+                    "personnel_count": 1,
+                    "rate_jpy": 6000,
+                    "cost_jpy": 240000,
+                },
+            ],
+        },
+        rate_card_version_id=None,
+        exports=[],
+    )
+    proposals_result = MagicMock()
+    proposals_result.scalars.return_value.all.return_value = []
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=proposals_result)
+    report = {
+        "calculation": {
+            "role_breakdown": [
+                {
+                    "role": "developer",
+                    "hours": 40,
+                    "personnel_count": 1,
+                    "rate_jpy": 6000,
+                    "cost_jpy": 240000,
+                }
+            ]
+        }
+    }
+
+    with (
+        patch("app.exports.internal_dossier.build_report_context", return_value=report),
+        patch(
+            "app.exports.internal_dossier.is_rate_card_stale_for_estimate",
+            new=AsyncMock(return_value=False),
+        ),
+    ):
+        payload = await build_internal_dossier_payload(db, estimate, locale="en")
+
+    roles = [row["role"] for row in payload["report"]["calculation"]["role_breakdown"]]
+    assert roles == ["PM", "developer"]
+
+
+@pytest.mark.asyncio
 async def test_dossier_payload_warns_when_calculation_is_missing():
     estimate = SimpleNamespace(
         id=uuid.uuid4(),
