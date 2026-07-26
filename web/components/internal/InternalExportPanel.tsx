@@ -586,7 +586,8 @@ export default function InternalExportPanel({
           </ul>
         )}
         {destinationAvailability &&
-        (!destinationAvailability.google || !destinationAvailability.canva) ? (
+        !destinationAvailability.google &&
+        !destinationAvailability.canva ? (
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400" role="note">
             {t("destinationsUnavailable")}
           </p>
