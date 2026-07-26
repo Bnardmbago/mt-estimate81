@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.estimates import service as estimate_service
 from app.estimates.rate_card_stale import is_rate_card_stale_for_estimate
+from app.exports.markdown import generate_markdown
 from app.exports.report_context import build_report_context
 from app.models.estimate import Estimate
 from app.models.proposal import Proposal
@@ -159,3 +160,106 @@ async def load_internal_export_parts(
         payload["proposals"],
         locale=locale,
     )
+
+
+def _fallback_report_markdown(report: dict[str, Any]) -> str:
+    project_summary = report.get("project_summary") or {}
+    lines = ["## Project Summary", ""]
+    for label, key in (
+        ("Project Name", "project_name"),
+        ("Client", "client_name"),
+        ("Estimate ID", "estimate_id"),
+    ):
+        value = project_summary.get(key)
+        if value:
+            lines.append(f"- {label}: {value}")
+    if len(lines) == 2:
+        lines.append(f"- {MISSING_CALCULATION_WARNING}")
+    return "\n".join(lines)
+
+
+def _rate_card_markdown(rate_card: dict[str, Any] | None) -> str:
+    lines = ["## Rate Card Appendix", ""]
+    if not rate_card:
+        lines.append("- none")
+        return "\n".join(lines)
+
+    lines.append(f"- Rate Card Name: {rate_card.get('name', '')}")
+    version_number = rate_card.get("version_number")
+    if version_number is not None:
+        lines.append(f"- Version: {version_number}")
+
+    settings = rate_card.get("settings") or {}
+
+    roles = settings.get("roles") or []
+    if roles:
+        lines.append("")
+        lines.append("| Role | Hourly Rate |")
+        lines.append("|---|---:|")
+        for role in roles:
+            lines.append(f"| {role.get('name', '')} | {role.get('hourly_rate', '')} |")
+
+    nrc_items = settings.get("nrc_items") or []
+    if nrc_items:
+        lines.append("")
+        lines.append("| NRC Item | Cost |")
+        lines.append("|---|---:|")
+        for item in nrc_items:
+            name = item.get("name") or item.get("item", "")
+            cost = item.get("cost_jpy", item.get("cost", ""))
+            lines.append(f"| {name} | {cost} |")
+
+    rc_items = settings.get("rc_items") or []
+    if rc_items:
+        lines.append("")
+        lines.append("| RC Item | Monthly |")
+        lines.append("|---|---:|")
+        for item in rc_items:
+            name = item.get("name") or item.get("item", "")
+            monthly = item.get("monthly_jpy", item.get("monthly", ""))
+            lines.append(f"| {name} | {monthly} |")
+
+    return "\n".join(lines)
+
+
+def _proposals_markdown(proposals: list[dict[str, Any]]) -> str:
+    lines = ["## Proposal Appendix", ""]
+    if not proposals:
+        lines.append("No proposal (none)")
+        return "\n".join(lines)
+
+    for proposal in proposals:
+        lines.append(f"### Proposal ({proposal.get('locale', '')}) — {proposal.get('status', '')}")
+        lines.append(f"- Assessment: {proposal.get('assessment')}")
+        lines.append(f"- Proposal Body: {proposal.get('proposal_body')}")
+        lines.append(f"- POC: {proposal.get('poc')}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def generate_internal_markdown(ctx: dict[str, Any]) -> str:
+    """Build the internal Markdown dossier: banner + report + rate card + proposals."""
+    report = ctx.get("report") or {}
+    banner = ctx.get("internal_banner", INTERNAL_BANNER)
+
+    sections = [f"# {banner}", ""]
+
+    if report.get("labels"):
+        sections.append(generate_markdown(report))
+    else:
+        sections.append(_fallback_report_markdown(report))
+
+    sections.append("")
+    sections.append(_rate_card_markdown(ctx.get("rate_card")))
+    sections.append("")
+    sections.append(_proposals_markdown(ctx.get("proposals") or []))
+
+    return "\n".join(sections)
+
+
+def generate_internal_pdf(ctx: dict[str, Any]) -> bytes:
+    """Render the internal PDF dossier (banner + report + rate card + proposals)."""
+    from app.exports.pdf import generate_internal_dossier_pdf
+
+    return generate_internal_dossier_pdf(ctx)

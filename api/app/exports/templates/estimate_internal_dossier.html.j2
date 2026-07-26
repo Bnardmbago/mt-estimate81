@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="{{ ctx.locale }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ ctx.internal_banner }}</title>
+  <style>
+    {% include '_export_theme.css.j2' %}
+    {% include '_pdf_base.css.j2' %}
+    {% if show_watermark %}
+    {% include '_watermark.css.j2' %}
+    {% endif %}
+  </style>
+</head>
+<body>
+  {% if show_watermark %}
+  <div class="contact-watermark">{{ watermark_text }}</div>
+  {% endif %}
+  <h1>{{ ctx.internal_banner }}</h1>
+
+  {% set project_summary = ctx.report.get('project_summary', {}) %}
+  <div class="section-card section">
+    <h2>Project Summary</h2>
+    <table class="qa-table">
+      <tbody>
+        <tr><th>Project Name</th><td>{{ project_summary.get('project_name', '') }}</td></tr>
+        <tr><th>Client</th><td>{{ project_summary.get('client_name', '') }}</td></tr>
+        <tr><th>Estimate ID</th><td>{{ project_summary.get('estimate_id', '') }}</td></tr>
+        <tr><th>Generated Date</th><td>{{ project_summary.get('generated_date', '') }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  {% set effort_summary = ctx.report.get('effort_summary') %}
+  {% if effort_summary %}
+  <div class="section-card section">
+    <h2>Effort Summary</h2>
+    <table class="qa-table">
+      <tbody>
+        <tr><th>Total Hours</th><td class="num">{{ format_hours(effort_summary.get('total_hours', 0)) }}</td></tr>
+        <tr><th>Total Days</th><td class="num">{{ format_effort_days(effort_summary.get('total_hours', 0)) }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% set feature_items = ctx.report.get('feature_items') %}
+  {% if feature_items %}
+  <div class="section-card section">
+    <h2>Feature Line Items</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Feature</th><th>Phase</th><th>Role</th><th class="num">Hours</th></tr>
+      </thead>
+      <tbody>
+        {% for item in feature_items %}
+        <tr>
+          <td>{{ item.get('name', '') }}</td>
+          <td>{{ item.get('phase', '') }}</td>
+          <td>{{ item.get('role', '') }}</td>
+          <td class="num">{{ format_hours(item.get('hours', 0)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% set calculation = ctx.report.get('calculation') %}
+  {% if calculation and calculation.get('nrc_line_items') %}
+  <div class="section-card section">
+    <h2>NRC Breakdown (Detailed)</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Category</th><th>Item</th><th class="num">Cost</th></tr>
+      </thead>
+      <tbody>
+        {% for row in calculation.get('nrc_line_items', []) %}
+        <tr>
+          <td>{{ row.get('category', '') }}</td>
+          <td>{{ row.get('item', '') }}</td>
+          <td class="num">{{ format_currency(row.get('cost_jpy', 0)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% set rc_breakdown = ctx.report.get('rc_breakdown') %}
+  {% if rc_breakdown and rc_breakdown.get('line_items') %}
+  <div class="section-card section">
+    <h2>RC Breakdown (Detailed)</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Category</th><th>Service</th><th class="num">Monthly</th><th class="num">Annual</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rc_breakdown.get('line_items', []) %}
+        <tr>
+          <td>{{ row.get('category', '') }}</td>
+          <td>{{ row.get('service_description') or row.get('item', '') }}</td>
+          <td class="num">{{ format_currency(row.get('monthly_jpy', 0)) }}</td>
+          <td class="num">{{ format_currency(row.get('annual_jpy', 0)) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="section-card section">
+    <h2>Rate Card Appendix</h2>
+    {% if ctx.rate_card %}
+      <table class="qa-table">
+        <tbody>
+          <tr><th>Rate Card Name</th><td>{{ ctx.rate_card.get('name', '') }}</td></tr>
+          <tr><th>Version</th><td>{{ ctx.rate_card.get('version_number', '') }}</td></tr>
+          <tr><th>Effective Date</th><td>{{ ctx.rate_card.get('effective_date', '') }}</td></tr>
+        </tbody>
+      </table>
+      {% set rc_settings = ctx.rate_card.get('settings', {}) %}
+      {% set roles = rc_settings.get('roles', []) %}
+      {% if roles %}
+      <table class="data-table">
+        <thead><tr><th>Role</th><th class="num">Hourly Rate</th></tr></thead>
+        <tbody>
+          {% for role in roles %}
+          <tr>
+            <td>{{ role.get('name', '') }}</td>
+            <td class="num">{{ format_currency(role.get('hourly_rate', 0)) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% set nrc_items = rc_settings.get('nrc_items', []) %}
+      {% if nrc_items %}
+      <table class="data-table">
+        <thead><tr><th>NRC Item</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          {% for item in nrc_items %}
+          <tr>
+            <td>{{ item.get('name') or item.get('item', '') }}</td>
+            <td class="num">{{ format_currency(item.get('cost_jpy') or item.get('cost', 0)) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% set rc_items = rc_settings.get('rc_items', []) %}
+      {% if rc_items %}
+      <table class="data-table">
+        <thead><tr><th>RC Item</th><th class="num">Monthly</th></tr></thead>
+        <tbody>
+          {% for item in rc_items %}
+          <tr>
+            <td>{{ item.get('name') or item.get('item', '') }}</td>
+            <td class="num">{{ format_currency(item.get('monthly_jpy') or item.get('monthly', 0)) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% else %}
+      <p class="muted">none</p>
+    {% endif %}
+  </div>
+
+  <div class="section-card section">
+    <h2>Proposal Appendix</h2>
+    {% if ctx.proposals %}
+      {% for proposal in ctx.proposals %}
+      <div class="req-group">
+        <h3>Proposal ({{ proposal.get('locale', '') }}) — {{ proposal.get('status', '') }}</h3>
+        <p class="field-value"><strong>Assessment:</strong> {{ proposal.get('assessment') }}</p>
+        <p class="field-value"><strong>Proposal Body:</strong> {{ proposal.get('proposal_body') }}</p>
+        <p class="field-value"><strong>POC:</strong> {{ proposal.get('poc') }}</p>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="muted">No proposal (none)</p>
+    {% endif %}
+  </div>
+</body>
+</html>

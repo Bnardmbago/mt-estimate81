@@ -10,6 +10,8 @@ import pytest
 from app.exports.internal_dossier import (
     build_internal_dossier_payload,
     build_internal_export_context,
+    generate_internal_markdown,
+    generate_internal_pdf,
     load_internal_export_parts,
 )
 from app.schemas.internal_dossier import InternalDossierResponse
@@ -197,3 +199,32 @@ def test_internal_dossier_response_accepts_documented_shape():
 
     assert response.rate_card is None
     assert response.proposals == []
+
+
+def test_internal_markdown_contains_banner_and_rate_card():
+    ctx = build_internal_export_context(
+        {"project_summary": {"project_name": "Alpha"}},
+        {"name": "RC1", "settings": {"roles": [{"name": "PM", "hourly_rate": 1}]}},
+        [],
+        locale="en",
+    )
+    md = generate_internal_markdown(ctx)
+    assert "INTERNAL — DO NOT DISTRIBUTE" in md
+    assert "Alpha" in md
+    assert "PM" in md
+    assert "none" in md.lower() or "No proposal" in md
+
+
+def test_internal_pdf_is_pdf_and_html_has_banner():
+    from app.exports.pdf import build_internal_dossier_html
+
+    ctx = build_internal_export_context(
+        {"project_summary": {"project_name": "Alpha"}, "labels": {}, "extracted": {}},
+        {"name": "RC1", "settings": {"roles": []}},
+        [],
+        locale="en",
+    )
+    html = build_internal_dossier_html(ctx)
+    assert "INTERNAL — DO NOT DISTRIBUTE" in html
+    pdf = generate_internal_pdf(ctx)
+    assert pdf.startswith(b"%PDF")
