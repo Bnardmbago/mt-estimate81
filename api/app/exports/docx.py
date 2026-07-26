@@ -83,7 +83,13 @@ def _executive_pricing_rows(report_context: dict[str, Any]) -> list[tuple[str, s
     ]
 
 
-def generate_report_docx(report_context: dict[str, Any]) -> bytes:
+def build_report_document(report_context: dict[str, Any]) -> Document:
+    """Build the standard report DOCX as a `Document` (not yet serialized to bytes).
+
+    Exposed so callers (e.g. the internal dossier generator) can append
+    additional sections to the same document instead of duplicating the
+    report layout.
+    """
     labels = report_context["labels"]
     project = report_context["project_summary"]
     executive_display = report_context["executive_display"]
@@ -264,7 +270,11 @@ def generate_report_docx(report_context: dict[str, Any]) -> bytes:
     document.add_paragraph(f"{labels['approved_by']}:")
     document.add_paragraph(f"{labels['approval_date']}:")
 
-    return _document_bytes(document)
+    return document
+
+
+def generate_report_docx(report_context: dict[str, Any]) -> bytes:
+    return _document_bytes(build_report_document(report_context))
 
 
 def _set_cell_text(

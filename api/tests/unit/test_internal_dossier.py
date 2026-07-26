@@ -2,19 +2,25 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from docx import Document
+from openpyxl import load_workbook
 
 from app.exports.internal_dossier import (
     build_internal_dossier_payload,
     build_internal_export_context,
+    generate_internal_docx,
     generate_internal_markdown,
     generate_internal_pdf,
+    generate_internal_xlsx,
     load_internal_export_parts,
 )
 from app.schemas.internal_dossier import InternalDossierResponse
+from tests.unit.export_fixtures import sample_report_context
 
 
 def test_export_context_includes_rate_card_and_proposal_markers():
@@ -247,3 +253,117 @@ def test_internal_pdf_is_pdf_and_html_has_banner():
     assert "Managed hosting" in html
     pdf = generate_internal_pdf(ctx)
     assert pdf.startswith(b"%PDF")
+
+
+def _table_text(table) -> str:
+    parts: list[str] = []
+    for row in table.rows:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                if paragraph.text.strip():
+                    parts.append(paragraph.text)
+            for nested_table in cell.tables:
+                parts.append(_table_text(nested_table))
+    return "\n".join(parts)
+
+
+def _docx_text(content: bytes) -> str:
+    document = Document(BytesIO(content))
+    parts: list[str] = []
+    for paragraph in document.paragraphs:
+        if paragraph.text.strip():
+            parts.append(paragraph.text)
+    for table in document.tables:
+        parts.append(_table_text(table))
+    return "\n".join(parts)
+
+
+def _xlsx_text(content: bytes) -> str:
+    wb = load_workbook(BytesIO(content))
+    parts: list[str] = []
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value is not None:
+                    parts.append(str(cell.value))
+    return "\n".join(parts)
+
+
+def _sample_internal_ctx(**overrides):
+    defaults = dict(
+        report=sample_report_context(),
+        rate_card={
+            "name": "RC1",
+            "version_number": 2,
+            "settings": {
+                "roles": [{"name": "Senior Engineer", "hourly_rate": 12000}],
+                "setup_cost_items": [{"name": "Production setup", "amount": 250000}],
+                "monthly_rc_items": [{"name": "Managed hosting", "amount": 50000}],
+            },
+        },
+        proposals=[
+            {
+                "locale": "en",
+                "status": "ready",
+                "assessment": {"sections": []},
+                "proposal_body": {"sections": [{"title": "Approach"}]},
+                "poc": None,
+            }
+        ],
+        locale="en",
+    )
+    defaults.update(overrides)
+    return build_internal_export_context(
+        defaults["report"],
+        defaults["rate_card"],
+        defaults["proposals"],
+        locale=defaults["locale"],
+    )
+
+
+def test_internal_docx_is_valid_zip_with_banner_and_rate_card():
+    ctx = _sample_internal_ctx()
+
+    content = generate_internal_docx(ctx)
+
+    assert content[:2] == b"PK"
+    text = _docx_text(content)
+    assert "INTERNAL — DO NOT DISTRIBUTE" in text
+    assert "Portal Redesign" in text
+    assert "Senior Engineer" in text
+    assert "Production setup" in text
+    assert "Managed hosting" in text
+
+
+def test_internal_docx_handles_missing_calculation_and_no_proposals():
+    ctx = build_internal_export_context({"project_summary": {}}, None, [], locale="en")
+
+    content = generate_internal_docx(ctx)
+
+    assert content[:2] == b"PK"
+    text = _docx_text(content)
+    assert "INTERNAL — DO NOT DISTRIBUTE" in text
+
+
+def test_internal_xlsx_is_valid_zip_with_banner_and_rate_card():
+    ctx = _sample_internal_ctx()
+
+    content = generate_internal_xlsx(ctx)
+
+    assert content[:2] == b"PK"
+    text = _xlsx_text(content)
+    assert "INTERNAL — DO NOT DISTRIBUTE" in text
+    assert "Portal Redesign" in text
+    assert "Senior Engineer" in text
+    assert "Production setup" in text
+    assert "Managed hosting" in text
+
+
+def test_internal_xlsx_handles_missing_calculation_and_no_proposals():
+    ctx = build_internal_export_context({"project_summary": {}}, None, [], locale="en")
+
+    content = generate_internal_xlsx(ctx)
+
+    assert content[:2] == b"PK"
+    text = _xlsx_text(content)
+    assert "INTERNAL — DO NOT DISTRIBUTE" in text

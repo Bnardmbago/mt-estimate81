@@ -400,15 +400,17 @@ def _build_reference_sheet(ws, ctx: dict[str, Any]) -> None:
         ws.cell(row=row_idx, column=1, value=labels["none"])
 
 
-def generate_excel(report_context: dict[str, Any], estimate: Estimate) -> bytes:
+def add_report_sheets(wb: Workbook, report_context: dict[str, Any]) -> None:
+    """Build the standard report sheets (Executive..Reference) into `wb`.
+
+    Shared by `generate_excel` and the internal dossier XLSX generator so the
+    report layout is defined in exactly one place.
+    """
     locale = report_context["locale"]
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
 
     sheet_names = SHEET_NAMES[locale]
-    wb = Workbook()
-    wb.remove(wb.active)
-
     builders = [
         (sheet_names["executive"], _build_executive_sheet),
         (sheet_names["features"], _build_features_sheet),
@@ -423,6 +425,13 @@ def generate_excel(report_context: dict[str, Any], estimate: Estimate) -> bytes:
         ws = wb.create_sheet(name)
         builder(ws, report_context)
         _auto_width(ws)
+
+
+def generate_excel(report_context: dict[str, Any], estimate: Estimate) -> bytes:
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    add_report_sheets(wb, report_context)
 
     del estimate  # retained for API compatibility; workbook uses report_context only
 
