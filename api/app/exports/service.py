@@ -20,6 +20,14 @@ from app.audit.service import log_change
 from app.email.smtp import EmailAttachment, send_email_with_attachments
 from app.exceptions import AppError
 from app.exports.excel import generate_excel
+from app.exports.internal_dossier import (
+    generate_internal_docx,
+    generate_internal_markdown,
+    generate_internal_pdf,
+    generate_internal_xlsx,
+    load_internal_export_parts,
+)
+from app.exports.internal_formats import is_internal_format, require_admin_for_internal_format
 from app.exports.markdown import generate_markdown
 from app.exports.narrative_translate import ensure_export_narrative_locale
 from app.exports.quotation_context import build_formal_quotation_context
@@ -43,6 +51,10 @@ FORMAT_EXTENSIONS = {
     ExportFormat.DOCX.value: "docx",
     ExportFormat.DOCX_QUOTATION.value: "docx",
     "pdf_preliminary": "pdf",
+    ExportFormat.PDF_INTERNAL.value: "pdf",
+    ExportFormat.DOCX_INTERNAL.value: "docx",
+    ExportFormat.XLSX_INTERNAL.value: "xlsx",
+    ExportFormat.MD_INTERNAL.value: "md",
 }
 
 CONTENT_TYPES = {
@@ -57,6 +69,14 @@ CONTENT_TYPES = {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     ),
     "pdf_preliminary": "application/pdf",
+    ExportFormat.PDF_INTERNAL.value: "application/pdf",
+    ExportFormat.DOCX_INTERNAL.value: (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ),
+    ExportFormat.XLSX_INTERNAL.value: (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ),
+    ExportFormat.MD_INTERNAL.value: "text/markdown; charset=utf-8",
 }
 
 QUOTATION_FORMATS = frozenset(
@@ -137,7 +157,20 @@ def _generate_content(
     quotation_number: str | None = None,
     registration_number: str | None = None,
     contact_person: str | None = None,
+    internal_ctx: dict[str, Any] | None = None,
 ) -> bytes:
+    if export_format == ExportFormat.MD_INTERNAL.value:
+        return generate_internal_markdown(internal_ctx or {}).encode("utf-8")
+
+    if export_format == ExportFormat.XLSX_INTERNAL.value:
+        return generate_internal_xlsx(internal_ctx or {})
+
+    if export_format == ExportFormat.PDF_INTERNAL.value:
+        return generate_internal_pdf(internal_ctx or {})
+
+    if export_format == ExportFormat.DOCX_INTERNAL.value:
+        return generate_internal_docx(internal_ctx or {})
+
     report_context = build_report_context(
         estimate,
         locale,
@@ -289,6 +322,8 @@ async def export_estimate(
     locale: str | None,
     user: User,
 ) -> Export:
+    require_admin_for_internal_format(export_format, user)
+
     estimate = await _get_estimate_for_export(db, estimate_id, user)
 
     if is_contact_user(user) and len(estimate.exports) >= settings.contact_export_limit:
@@ -358,6 +393,10 @@ async def export_estimate(
             )
         )
 
+    internal_ctx: dict[str, Any] | None = None
+    if is_internal_format(export_format):
+        internal_ctx = await load_internal_export_parts(db, estimate, resolved_locale)
+
     if export_format in REPORT_FORMATS:
         try:
             translated = await ensure_export_narrative_locale(
@@ -401,6 +440,7 @@ async def export_estimate(
             quotation_number=quotation_number,
             registration_number=registration_number,
             contact_person=contact_person,
+            internal_ctx=internal_ctx,
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)
@@ -496,6 +536,8 @@ async def download_export(
         suffix = "-quotation"
     elif export_record.format == "pdf_preliminary":
         suffix = "-preliminary"
+    elif is_internal_format(export_record.format):
+        suffix = "-internal"
     filename = f"estimate-{export_record.estimate_id}{suffix}.{extension}"
     content_type = CONTENT_TYPES.get(export_record.format, "application/octet-stream")
     disposition = "inline" if inline else "attachment"
