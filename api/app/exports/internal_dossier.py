@@ -15,6 +15,7 @@ from app.models.estimate import Estimate
 from app.models.proposal import Proposal
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.proposals.export_pack_content import brief_field_rows, section_rows
 
 
 INTERNAL_BANNER = "INTERNAL — DO NOT DISTRIBUTE"
@@ -222,6 +223,132 @@ def _rate_card_markdown(rate_card: dict[str, Any] | None) -> str:
     return "\n".join(lines)
 
 
+# Disclosure fields pulled from report["extracted"] that client-facing reports omit.
+# Each entry renders as a bulleted list under the Internal Disclosure Appendix.
+_DISCLOSURE_LIST_FIELDS: list[tuple[str, str]] = [
+    ("risks", "Risks"),
+    ("gaps", "Gaps"),
+    ("confidence_factors", "Confidence Factors"),
+    ("missing_inputs", "Missing Inputs"),
+    ("recommendations", "Recommendations"),
+    ("estimation_warnings", "Estimation Warnings"),
+    ("assumption_risks", "Assumption Risks"),
+    ("estimate_exclusions", "Estimate Exclusions"),
+]
+
+# Labels for the project brief fields shared across assessment/proposal/poc blobs.
+_BRIEF_LABELS: dict[str, str] = {
+    "brief_project_name": "Project Name",
+    "brief_description": "Description",
+    "brief_business_problem": "Business Problem",
+    "brief_target_users": "Target Users",
+    "brief_technology_stack": "Technology Stack",
+    "brief_constraints": "Constraints",
+}
+
+
+def _cost_driver_rows(cost_drivers: list[Any] | None) -> list[tuple[str, str]]:
+    rows: list[tuple[str, str]] = []
+    for driver in cost_drivers or []:
+        if isinstance(driver, dict):
+            name = str(driver.get("name") or driver.get("driver") or "")
+            impact = driver.get("impact_jpy", driver.get("impact", ""))
+            rows.append((name, str(impact) if impact != "" else ""))
+        else:
+            rows.append((str(driver), ""))
+    return rows
+
+
+def _disclosure_markdown(report: dict[str, Any]) -> str:
+    """Render the Internal Disclosure Appendix: fields client reports omit."""
+    extracted = report.get("extracted") or {}
+    lines = ["## Internal Disclosure Appendix", ""]
+
+    lines.append("### Cost Drivers")
+    lines.append("")
+    cost_driver_rows = _cost_driver_rows(extracted.get("cost_drivers"))
+    if cost_driver_rows:
+        lines.append("| Driver | Impact (JPY) |")
+        lines.append("|---|---:|")
+        for name, impact in cost_driver_rows:
+            lines.append(f"| {name} | {impact} |")
+    else:
+        lines.append("- none")
+    lines.append("")
+
+    for key, label in _DISCLOSURE_LIST_FIELDS:
+        items = extracted.get(key) or []
+        lines.append(f"### {label}")
+        lines.append("")
+        if items:
+            lines.extend(f"- {item}" for item in items)
+        else:
+            lines.append("- none")
+        lines.append("")
+
+    lines.append("### Confidence")
+    lines.append("")
+    score = extracted.get("confidence_score")
+    lines.append(f"- Score: {score if score is not None else 'none'}")
+    lines.append(f"- Notes: {extracted.get('confidence_notes') or 'none'}")
+    lines.append("")
+
+    lines.append("### Questionnaire Appendix")
+    lines.append("")
+    questionnaire_sections = report.get("questionnaire_sections") or []
+    if questionnaire_sections:
+        for section in questionnaire_sections:
+            lines.append(f"#### {section.get('title', '')}")
+            lines.append("")
+            for field in section.get("fields") or []:
+                lines.append(f"- **{field.get('label')}:** {field.get('value')}")
+            lines.append("")
+    else:
+        lines.append("- none")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def _proposal_part_markdown(title: str, blob: dict[str, Any] | None) -> list[str]:
+    """Render an assessment/proposal_body/poc blob as structured sections (not str(dict))."""
+    lines = [f"#### {title}"]
+    lines.append("")
+    if not blob:
+        lines.append("- none")
+        lines.append("")
+        return lines
+
+    brief_rows = brief_field_rows(blob.get("project_brief"), _BRIEF_LABELS)
+    if brief_rows:
+        lines.append("##### Project Brief")
+        lines.append("")
+        for label, value in brief_rows:
+            lines.append(f"- **{label}:** {value}")
+        lines.append("")
+
+    for row in section_rows(blob):
+        if row["title"]:
+            lines.append(f"##### {row['title']}")
+            lines.append("")
+        if row["body"]:
+            lines.append(str(row["body"]))
+            lines.append("")
+        for bullet in row["bullets"]:
+            lines.append(f"- {bullet}")
+        if row["bullets"]:
+            lines.append("")
+        if row.get("rating"):
+            lines.append(f"_Rating: {row['rating']}_")
+            lines.append("")
+
+    if not brief_rows and not blob.get("sections"):
+        lines.append("- none")
+        lines.append("")
+
+    return lines
+
+
 def _proposals_markdown(proposals: list[dict[str, Any]]) -> str:
     lines = ["## Proposal Appendix", ""]
     if not proposals:
@@ -230,16 +357,16 @@ def _proposals_markdown(proposals: list[dict[str, Any]]) -> str:
 
     for proposal in proposals:
         lines.append(f"### Proposal ({proposal.get('locale', '')}) — {proposal.get('status', '')}")
-        lines.append(f"- Assessment: {proposal.get('assessment')}")
-        lines.append(f"- Proposal Body: {proposal.get('proposal_body')}")
-        lines.append(f"- POC: {proposal.get('poc')}")
         lines.append("")
+        lines.extend(_proposal_part_markdown("Assessment", proposal.get("assessment")))
+        lines.extend(_proposal_part_markdown("Proposal Body", proposal.get("proposal_body")))
+        lines.extend(_proposal_part_markdown("POC", proposal.get("poc")))
 
     return "\n".join(lines)
 
 
 def generate_internal_markdown(ctx: dict[str, Any]) -> str:
-    """Build the internal Markdown dossier: banner + report + rate card + proposals."""
+    """Build the internal Markdown dossier: banner + report + disclosure + rate card + proposals."""
     report = ctx.get("report") or {}
 
     sections = [f"# {INTERNAL_BANNER}", ""]
@@ -249,6 +376,8 @@ def generate_internal_markdown(ctx: dict[str, Any]) -> str:
     else:
         sections.append(_fallback_report_markdown(report))
 
+    sections.append("")
+    sections.append(_disclosure_markdown(report))
     sections.append("")
     sections.append(_rate_card_markdown(ctx.get("rate_card")))
     sections.append("")
@@ -305,14 +434,73 @@ def _rate_card_item_table(
     return (headers, rows)
 
 
-def _proposal_rows(proposal: dict[str, Any]) -> list[tuple[str, str]]:
-    return [
-        ("Locale", str(proposal.get("locale", ""))),
-        ("Status", str(proposal.get("status", ""))),
-        ("Assessment", str(proposal.get("assessment"))),
-        ("Proposal Body", str(proposal.get("proposal_body"))),
-        ("POC", str(proposal.get("poc"))),
-    ]
+def _add_disclosure_docx(document: Any, report: dict[str, Any]) -> None:
+    """DOCX rendering of the Internal Disclosure Appendix: fields client reports omit."""
+    from app.exports.docx import _add_bullet_list, _add_data_table, _add_key_value_table, _add_subheading
+
+    extracted = report.get("extracted") or {}
+
+    _add_subheading(document, "Cost Drivers")
+    cost_driver_rows = _cost_driver_rows(extracted.get("cost_drivers"))
+    if cost_driver_rows:
+        _add_data_table(document, ["Driver", "Impact (JPY)"], [list(row) for row in cost_driver_rows])
+    else:
+        document.add_paragraph("None")
+
+    for key, label in _DISCLOSURE_LIST_FIELDS:
+        _add_subheading(document, label)
+        _add_bullet_list(document, [str(item) for item in extracted.get(key) or []])
+
+    _add_subheading(document, "Confidence")
+    score = extracted.get("confidence_score")
+    _add_key_value_table(
+        document,
+        [
+            ("Score", str(score) if score is not None else "None"),
+            ("Notes", str(extracted.get("confidence_notes") or "None")),
+        ],
+    )
+
+    _add_subheading(document, "Questionnaire Appendix")
+    questionnaire_sections = report.get("questionnaire_sections") or []
+    if questionnaire_sections:
+        for section in questionnaire_sections:
+            document.add_heading(str(section.get("title") or ""), level=4)
+            _add_key_value_table(
+                document,
+                [(field.get("label", ""), str(field.get("value", ""))) for field in section.get("fields") or []],
+            )
+    else:
+        document.add_paragraph("None")
+
+
+def _add_proposal_part_docx(document: Any, title: str, blob: dict[str, Any] | None) -> None:
+    """Render an assessment/proposal_body/poc blob as structured sections (not str(dict))."""
+    from app.exports.docx import _add_bullet_list, _add_key_value_table, _add_subheading
+
+    _add_subheading(document, title)
+    if not blob:
+        document.add_paragraph("None")
+        return
+
+    brief_rows = brief_field_rows(blob.get("project_brief"), _BRIEF_LABELS)
+    if brief_rows:
+        document.add_heading("Project Brief", level=4)
+        _add_key_value_table(document, brief_rows)
+
+    rows = section_rows(blob)
+    for row in rows:
+        if row["title"]:
+            document.add_heading(row["title"], level=4)
+        if row["body"]:
+            document.add_paragraph(str(row["body"]))
+        if row["bullets"]:
+            _add_bullet_list(document, row["bullets"])
+        if row.get("rating"):
+            document.add_paragraph(f"Rating: {row['rating']}")
+
+    if not brief_rows and not rows:
+        document.add_paragraph("None")
 
 
 def _add_fallback_report_docx(document: Any, report: dict[str, Any]) -> None:
@@ -336,7 +524,7 @@ def _add_fallback_report_docx(document: Any, report: dict[str, Any]) -> None:
 
 
 def generate_internal_docx(ctx: dict[str, Any]) -> bytes:
-    """Render the internal DOCX dossier: banner + report + rate card + proposals."""
+    """Render the internal DOCX dossier: banner + report + disclosure + rate card + proposals."""
     from docx import Document
 
     from app.exports.docx import (
@@ -361,6 +549,9 @@ def generate_internal_docx(ctx: dict[str, Any]) -> bytes:
         banner_paragraph.style = document.styles["Heading 1"]
     else:
         document.add_heading(banner_text, level=1)
+
+    document.add_heading("Internal Disclosure Appendix", level=2)
+    _add_disclosure_docx(document, report)
 
     document.add_heading("Rate Card Appendix", level=2)
     rate_card = ctx.get("rate_card")
@@ -390,7 +581,9 @@ def generate_internal_docx(ctx: dict[str, Any]) -> bytes:
                 document,
                 f"Proposal ({proposal.get('locale', '')}) — {proposal.get('status', '')}",
             )
-            _add_key_value_table(document, _proposal_rows(proposal))
+            _add_proposal_part_docx(document, "Assessment", proposal.get("assessment"))
+            _add_proposal_part_docx(document, "Proposal Body", proposal.get("proposal_body"))
+            _add_proposal_part_docx(document, "POC", proposal.get("poc"))
 
     return _document_bytes(document)
 
@@ -434,6 +627,106 @@ def _write_rate_card_sheet(ws: Any, rate_card: dict[str, Any] | None) -> None:
         row_idx += 1
 
 
+def _write_disclosure_sheet(ws: Any, report: dict[str, Any]) -> None:
+    """XLSX rendering of the Internal Disclosure Appendix: fields client reports omit."""
+    extracted = report.get("extracted") or {}
+    row_idx = 1
+
+    ws.cell(row=row_idx, column=1, value="Cost Drivers")
+    row_idx += 1
+    cost_driver_rows = _cost_driver_rows(extracted.get("cost_drivers"))
+    if cost_driver_rows:
+        ws.cell(row=row_idx, column=1, value="Driver")
+        ws.cell(row=row_idx, column=2, value="Impact (JPY)")
+        row_idx += 1
+        for name, impact in cost_driver_rows:
+            ws.cell(row=row_idx, column=1, value=name)
+            ws.cell(row=row_idx, column=2, value=impact)
+            row_idx += 1
+    else:
+        ws.cell(row=row_idx, column=1, value="none")
+        row_idx += 1
+    row_idx += 1
+
+    for key, label in _DISCLOSURE_LIST_FIELDS:
+        ws.cell(row=row_idx, column=1, value=label)
+        row_idx += 1
+        items = extracted.get(key) or []
+        if items:
+            for item in items:
+                ws.cell(row=row_idx, column=1, value=str(item))
+                row_idx += 1
+        else:
+            ws.cell(row=row_idx, column=1, value="none")
+            row_idx += 1
+        row_idx += 1
+
+    ws.cell(row=row_idx, column=1, value="Confidence")
+    row_idx += 1
+    score = extracted.get("confidence_score")
+    ws.cell(row=row_idx, column=1, value="Score")
+    ws.cell(row=row_idx, column=2, value=score if score is not None else "none")
+    row_idx += 1
+    ws.cell(row=row_idx, column=1, value="Notes")
+    ws.cell(row=row_idx, column=2, value=extracted.get("confidence_notes") or "none")
+    row_idx += 1
+    row_idx += 1
+
+    ws.cell(row=row_idx, column=1, value="Questionnaire Appendix")
+    row_idx += 1
+    questionnaire_sections = report.get("questionnaire_sections") or []
+    if questionnaire_sections:
+        for section in questionnaire_sections:
+            ws.cell(row=row_idx, column=1, value=section.get("title") or "")
+            row_idx += 1
+            for field in section.get("fields") or []:
+                ws.cell(row=row_idx, column=1, value=field.get("label", ""))
+                ws.cell(row=row_idx, column=2, value=str(field.get("value", "")))
+                row_idx += 1
+            row_idx += 1
+    else:
+        ws.cell(row=row_idx, column=1, value="none")
+
+
+def _write_proposal_part_sheet(ws: Any, row_idx: int, title: str, blob: dict[str, Any] | None) -> int:
+    """Render an assessment/proposal_body/poc blob as structured rows (not str(dict))."""
+    ws.cell(row=row_idx, column=1, value=title)
+    row_idx += 1
+    if not blob:
+        ws.cell(row=row_idx, column=1, value="None")
+        return row_idx + 1
+
+    brief_rows = brief_field_rows(blob.get("project_brief"), _BRIEF_LABELS)
+    if brief_rows:
+        ws.cell(row=row_idx, column=1, value="Project Brief")
+        row_idx += 1
+        for label, value in brief_rows:
+            ws.cell(row=row_idx, column=1, value=label)
+            ws.cell(row=row_idx, column=2, value=value)
+            row_idx += 1
+
+    rows = section_rows(blob)
+    for row in rows:
+        if row["title"]:
+            ws.cell(row=row_idx, column=1, value=row["title"])
+            row_idx += 1
+        if row["body"]:
+            ws.cell(row=row_idx, column=1, value=str(row["body"]))
+            row_idx += 1
+        for bullet in row["bullets"]:
+            ws.cell(row=row_idx, column=1, value=f"- {bullet}")
+            row_idx += 1
+        if row.get("rating"):
+            ws.cell(row=row_idx, column=1, value=f"Rating: {row['rating']}")
+            row_idx += 1
+
+    if not brief_rows and not rows:
+        ws.cell(row=row_idx, column=1, value="None")
+        row_idx += 1
+
+    return row_idx + 1
+
+
 def _write_proposals_sheet(ws: Any, proposals: list[dict[str, Any]]) -> None:
     row_idx = 1
     if not proposals:
@@ -447,15 +740,14 @@ def _write_proposals_sheet(ws: Any, proposals: list[dict[str, Any]]) -> None:
             value=f"Proposal ({proposal.get('locale', '')}) — {proposal.get('status', '')}",
         )
         row_idx += 1
-        for label, value in _proposal_rows(proposal):
-            ws.cell(row=row_idx, column=1, value=label)
-            ws.cell(row=row_idx, column=2, value=value)
-            row_idx += 1
+        row_idx = _write_proposal_part_sheet(ws, row_idx, "Assessment", proposal.get("assessment"))
+        row_idx = _write_proposal_part_sheet(ws, row_idx, "Proposal Body", proposal.get("proposal_body"))
+        row_idx = _write_proposal_part_sheet(ws, row_idx, "POC", proposal.get("poc"))
         row_idx += 1
 
 
 def generate_internal_xlsx(ctx: dict[str, Any]) -> bytes:
-    """Render the internal XLSX dossier: banner + report + rate card + proposals."""
+    """Render the internal XLSX dossier: banner + report + disclosure + rate card + proposals."""
     from io import BytesIO
 
     from openpyxl import Workbook
@@ -489,6 +781,9 @@ def generate_internal_xlsx(ctx: dict[str, Any]) -> bytes:
                 row_idx += 1
         if row_idx == 1:
             report_ws.cell(row=1, column=1, value=MISSING_CALCULATION_WARNING)
+
+    disclosure_ws = wb.create_sheet("Internal Disclosure")
+    _write_disclosure_sheet(disclosure_ws, report)
 
     rate_card_ws = wb.create_sheet("Rate Card Appendix")
     _write_rate_card_sheet(rate_card_ws, ctx.get("rate_card"))

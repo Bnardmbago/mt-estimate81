@@ -152,10 +152,6 @@ class Export(Base):
     locale: Mapped[str] = mapped_column(String(2))
     quotation_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
     registration_number: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    destination: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    external_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    external_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    manually_edited_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     generated_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 

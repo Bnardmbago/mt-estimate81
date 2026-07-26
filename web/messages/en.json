@@ -185,7 +185,20 @@
     "exportSectionTitle": "Export",
     "exportEmpty": "No exports yet",
     "exportDescription": "Internal-only formats (never shown to clients). Choose language and formats, then export.",
-    "exportCalculationRequiredHint": "Run Calculate on the estimate before exporting."
+    "exportCalculationRequiredHint": "Run Calculate on the estimate before exporting.",
+    "disclosureTitle": "Internal Disclosure",
+    "disclosureCostDrivers": "Cost Drivers",
+    "disclosureRisks": "Risks",
+    "disclosureGaps": "Gaps",
+    "disclosureConfidenceFactors": "Confidence Factors",
+    "disclosureMissingInputs": "Missing Inputs",
+    "disclosureRecommendations": "Recommendations",
+    "disclosureEstimationWarnings": "Estimation Warnings",
+    "disclosureAssumptionRisks": "Assumption Risks",
+    "disclosureEstimateExclusions": "Estimate Exclusions",
+    "disclosureConfidence": "Confidence",
+    "disclosureConfidenceScore": "Score: {score}.",
+    "disclosureQuestionnaire": "Questionnaire"
   },
   "documents": {
     "title": "Documents",

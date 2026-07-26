@@ -397,3 +397,158 @@ def test_internal_xlsx_handles_missing_calculation_and_no_proposals():
     assert content[:2] == b"PK"
     text = _xlsx_text(content)
     assert "INTERNAL — DO NOT DISTRIBUTE" in text
+
+
+def test_internal_markdown_includes_disclosure_appendix_fields():
+    ctx = _sample_internal_ctx()
+
+    md = generate_internal_markdown(ctx)
+
+    assert "Internal Disclosure Appendix" in md
+    assert "OAuth integration" in md  # cost_drivers
+    assert "Third-party API changes" in md  # risks
+    assert "High confidence on auth module." in md  # confidence_notes
+    assert "Mobile support scope unclear" in md  # gaps
+
+
+def test_internal_pdf_html_includes_disclosure_appendix_fields():
+    from app.exports.pdf import build_internal_dossier_html
+
+    ctx = _sample_internal_ctx()
+
+    html = build_internal_dossier_html(ctx)
+
+    assert "Internal Disclosure Appendix" in html
+    assert "OAuth integration" in html  # cost_drivers
+    assert "Third-party API changes" in html  # risks
+    assert "High confidence on auth module." in html  # confidence_notes
+
+
+def test_internal_pdf_html_includes_executive_cost_summary():
+    from app.exports.pdf import build_internal_dossier_html
+
+    ctx = _sample_internal_ctx()
+
+    html = build_internal_dossier_html(ctx)
+
+    assert "Executive Cost Summary" in html
+    assert "Functional Requirements" in html
+    assert "User authentication" in html
+
+
+def test_internal_docx_includes_disclosure_appendix_fields():
+    ctx = _sample_internal_ctx()
+
+    content = generate_internal_docx(ctx)
+
+    text = _docx_text(content)
+    assert "Internal Disclosure Appendix" in text
+    assert "OAuth integration" in text
+    assert "Third-party API changes" in text
+    assert "High confidence on auth module." in text
+
+
+def test_internal_xlsx_includes_disclosure_appendix_fields():
+    ctx = _sample_internal_ctx()
+
+    content = generate_internal_xlsx(ctx)
+
+    text = _xlsx_text(content)
+    assert "OAuth integration" in text
+    assert "Third-party API changes" in text
+    assert "High confidence on auth module." in text
+
+
+def test_internal_markdown_proposal_appendix_avoids_raw_dict_dump():
+    ctx = build_internal_export_context(
+        {"project_summary": {}},
+        None,
+        [
+            {
+                "locale": "en",
+                "status": "ready",
+                "assessment": {
+                    "sections": [
+                        {
+                            "title": "Feasibility",
+                            "body": "Looks feasible.",
+                            "bullets": ["Clear scope"],
+                            "rating": "green",
+                        }
+                    ]
+                },
+                "proposal_body": {"sections": [{"title": "Approach", "body": "Iterative delivery."}]},
+                "poc": None,
+            }
+        ],
+        locale="en",
+    )
+
+    md = generate_internal_markdown(ctx)
+
+    assert "Feasibility" in md
+    assert "Looks feasible." in md
+    assert "Clear scope" in md
+    assert "Rating: green" in md
+    assert "{'sections'" not in md
+    assert "{'title'" not in md
+
+
+def test_internal_docx_proposal_appendix_avoids_raw_dict_dump():
+    ctx = build_internal_export_context(
+        {"project_summary": {}},
+        None,
+        [
+            {
+                "locale": "en",
+                "status": "ready",
+                "assessment": {
+                    "sections": [
+                        {"title": "Feasibility", "body": "Looks feasible.", "bullets": ["Clear scope"]}
+                    ]
+                },
+                "proposal_body": None,
+                "poc": None,
+            }
+        ],
+        locale="en",
+    )
+
+    content = generate_internal_docx(ctx)
+
+    text = _docx_text(content)
+    assert "Feasibility" in text
+    assert "Looks feasible." in text
+    assert "Clear scope" in text
+    assert "{'sections'" not in text
+
+
+def test_internal_pdf_proposal_appendix_avoids_raw_dict_dump():
+    from app.exports.pdf import build_internal_dossier_html
+
+    ctx = build_internal_export_context(
+        {"project_summary": {}, "labels": {}, "extracted": {}},
+        None,
+        [
+            {
+                "locale": "en",
+                "status": "ready",
+                "assessment": {
+                    "sections": [
+                        {"title": "Feasibility", "body": "Looks feasible.", "bullets": ["Clear scope"]}
+                    ]
+                },
+                "proposal_body": None,
+                "poc": None,
+            }
+        ],
+        locale="en",
+    )
+
+    html = build_internal_dossier_html(ctx)
+
+    assert "Feasibility" in html
+    assert "Looks feasible." in html
+    assert "Clear scope" in html
+    assert "{&#39;sections&#39;" not in html
+    assert "{'sections'" not in html

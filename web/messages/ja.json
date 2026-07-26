@@ -185,7 +185,20 @@
     "exportSectionTitle": "出力",
     "exportEmpty": "出力はまだありません",
     "exportDescription": "社内限定の出力形式です（クライアントには表示されません）。言語と形式を選択して出力してください。",
-    "exportCalculationRequiredHint": "出力する前に見積の計算を実行してください。"
+    "exportCalculationRequiredHint": "出力する前に見積の計算を実行してください。",
+    "disclosureTitle": "内部開示情報",
+    "disclosureCostDrivers": "コスト要因",
+    "disclosureRisks": "リスク",
+    "disclosureGaps": "ギャップ",
+    "disclosureConfidenceFactors": "確信度の要因",
+    "disclosureMissingInputs": "不足している入力",
+    "disclosureRecommendations": "推奨事項",
+    "disclosureEstimationWarnings": "見積の警告",
+    "disclosureAssumptionRisks": "前提リスク",
+    "disclosureEstimateExclusions": "見積の除外事項",
+    "disclosureConfidence": "確信度",
+    "disclosureConfidenceScore": "スコア: {score}。",
+    "disclosureQuestionnaire": "質問票"
   },
   "documents": {
     "title": "ドキュメント",

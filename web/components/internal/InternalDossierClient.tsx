@@ -34,8 +34,33 @@ type RateCardSettingsView = {
   currency?: string;
 };
 
+type CostDriverView = { name?: string; impact_jpy?: number } | string;
+
+type ExtractedDisclosureView = {
+  cost_drivers?: CostDriverView[];
+  risks?: string[];
+  gaps?: string[];
+  confidence_notes?: string;
+  confidence_score?: number;
+  confidence_factors?: string[];
+  missing_inputs?: string[];
+  recommendations?: string[];
+  estimation_warnings?: string[];
+  assumption_risks?: string[];
+  estimate_exclusions?: string[];
+};
+
+type QuestionnaireFieldView = { label: string; value: string };
+type QuestionnaireSectionView = {
+  id?: string;
+  title: string;
+  fields: QuestionnaireFieldView[];
+};
+
 type ReportView = {
   calculation?: CalculationResult;
+  extracted?: ExtractedDisclosureView;
+  questionnaire_sections?: QuestionnaireSectionView[];
 };
 
 type InternalDossierClientProps = {
@@ -180,6 +205,118 @@ function ProposalPartSection({
   );
 }
 
+const DISCLOSURE_LIST_FIELDS: {
+  key: keyof ExtractedDisclosureView;
+  labelKey: string;
+}[] = [
+  { key: "risks", labelKey: "disclosureRisks" },
+  { key: "gaps", labelKey: "disclosureGaps" },
+  { key: "confidence_factors", labelKey: "disclosureConfidenceFactors" },
+  { key: "missing_inputs", labelKey: "disclosureMissingInputs" },
+  { key: "recommendations", labelKey: "disclosureRecommendations" },
+  { key: "estimation_warnings", labelKey: "disclosureEstimationWarnings" },
+  { key: "assumption_risks", labelKey: "disclosureAssumptionRisks" },
+  { key: "estimate_exclusions", labelKey: "disclosureEstimateExclusions" },
+];
+
+function DisclosureSection({
+  extracted,
+  questionnaireSections,
+  t,
+}: {
+  extracted: ExtractedDisclosureView | undefined;
+  questionnaireSections: QuestionnaireSectionView[] | undefined;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const costDrivers = extracted?.cost_drivers ?? [];
+  const sections = questionnaireSections ?? [];
+  const hasContent =
+    costDrivers.length > 0 ||
+    DISCLOSURE_LIST_FIELDS.some(
+      ({ key }) => ((extracted?.[key] as string[] | undefined) ?? []).length > 0,
+    ) ||
+    Boolean(extracted?.confidence_notes) ||
+    extracted?.confidence_score != null ||
+    sections.length > 0;
+
+  if (!hasContent) {
+    return null;
+  }
+
+  return (
+    <section className="space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+      <h3 className="text-base font-semibold">{t("disclosureTitle")}</h3>
+
+      {costDrivers.length > 0 ? (
+        <div>
+          <h4 className="mb-1 text-sm font-medium">{t("disclosureCostDrivers")}</h4>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-200">
+            {costDrivers.map((driver, idx) => (
+              <li key={idx}>
+                {typeof driver === "string"
+                  ? driver
+                  : [driver.name, driver.impact_jpy != null ? `¥${driver.impact_jpy.toLocaleString()}` : null]
+                      .filter(Boolean)
+                      .join(" — ")}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {DISCLOSURE_LIST_FIELDS.map(({ key, labelKey }) => {
+        const items = (extracted?.[key] as string[] | undefined) ?? [];
+        if (items.length === 0) {
+          return null;
+        }
+        return (
+          <div key={key}>
+            <h4 className="mb-1 text-sm font-medium">{t(labelKey)}</h4>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700 dark:text-gray-200">
+              {items.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+
+      {extracted?.confidence_notes || extracted?.confidence_score != null ? (
+        <div>
+          <h4 className="mb-1 text-sm font-medium">{t("disclosureConfidence")}</h4>
+          <p className="text-sm text-gray-700 dark:text-gray-200">
+            {extracted?.confidence_score != null
+              ? t("disclosureConfidenceScore", { score: extracted.confidence_score })
+              : ""}
+            {extracted?.confidence_notes ? ` ${extracted.confidence_notes}` : ""}
+          </p>
+        </div>
+      ) : null}
+
+      {sections.length > 0 ? (
+        <div>
+          <h4 className="mb-1 text-sm font-medium">{t("disclosureQuestionnaire")}</h4>
+          <div className="space-y-2">
+            {sections.map((section, sIdx) => (
+              <div key={section.id ?? sIdx}>
+                <p className="text-sm font-medium">{section.title}</p>
+                <dl className="grid gap-1 text-sm sm:grid-cols-2">
+                  {section.fields.map((field, fIdx) => (
+                    <div key={fIdx}>
+                      <dt className="text-gray-500 dark:text-gray-400">{field.label}</dt>
+                      <dd>{field.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export default function InternalDossierClient({
   estimateId,
   locale,
@@ -314,11 +451,18 @@ export default function InternalDossierClient({
           </nav>
 
           {tab === "estimate" ? (
-            dossier.has_calculation && report.calculation ? (
-              <CalculationBreakdown result={report.calculation} />
-            ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t("noneLabel")}</p>
-            )
+            <div className="space-y-4">
+              {dossier.has_calculation && report.calculation ? (
+                <CalculationBreakdown result={report.calculation} />
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t("noneLabel")}</p>
+              )}
+              <DisclosureSection
+                extracted={report.extracted}
+                questionnaireSections={report.questionnaire_sections}
+                t={t}
+              />
+            </div>
           ) : null}
 
           {tab === "rateCard" ? (
