@@ -421,10 +421,42 @@ def add_report_sheets(wb: Workbook, report_context: dict[str, Any]) -> None:
         (sheet_names["reference"], _build_reference_sheet),
     ]
 
+    if report_context.get("include_cover"):
+        cover_ws = wb.create_sheet("Cover")
+        cover_ws.sheet_view.showGridLines = False
+        row = 1
+        fields = (report_context.get("cover") or {}).get("fields") or []
+        if fields:
+            for field in fields:
+                if field.get("value") is None:
+                    continue
+                cover_ws.cell(row=row, column=1, value=field.get("label") or field.get("key"))
+                cover_ws.cell(row=row + 1, column=1, value=field.get("value"))
+                row += 3
+        else:
+            project = report_context.get("project_summary") or {}
+            cover_ws.cell(row=1, column=1, value=project.get("project_name"))
+            cover_ws.cell(row=3, column=1, value=project.get("client_name"))
+        cover_ws.column_dimensions["A"].width = 60
+
     for name, builder in builders:
         ws = wb.create_sheet(name)
         builder(ws, report_context)
         _auto_width(ws)
+
+    theme = report_context.get("theme") or {}
+    replacements = {
+        BLUE_PRIMARY: str(theme.get("primary") or BLUE_PRIMARY).lstrip("#"),
+        BLUE_LIGHT: str(theme.get("primary_light") or BLUE_LIGHT).lstrip("#"),
+        YELLOW_SECTION: str(theme.get("surface") or YELLOW_SECTION).lstrip("#"),
+        YELLOW_TOTAL: str(theme.get("primary_light") or YELLOW_TOTAL).lstrip("#"),
+    }
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                color = cell.fill.fgColor.rgb
+                if color and color[-6:] in replacements:
+                    cell.fill = _solid_fill(replacements[color[-6:]])
 
 
 def generate_excel(report_context: dict[str, Any], estimate: Estimate) -> bytes:

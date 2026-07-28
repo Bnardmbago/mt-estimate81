@@ -661,6 +661,10 @@ export default function EstimateExtraction({
             estimateUpdatedAt={estimate.updated_at}
             calculationResult={calculationResult as CalculationResult}
             isContactUser={isContactUser}
+            initialThemeId={estimate.theme_id}
+            initialStyleId={estimate.style_id}
+            initialTemplateId={estimate.template_id}
+            initialCoverValues={estimate.cover_values}
           />
         )}
         {showExportPanel && calculationResult && !isContactUser && (

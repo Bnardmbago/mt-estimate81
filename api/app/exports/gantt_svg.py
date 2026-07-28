@@ -23,8 +23,11 @@ def _parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
 
 
-def _phase_color(phase: str) -> str:
-    return PHASE_COLORS.get(phase.strip().lower(), DEFAULT_BAR_COLOR)
+def _phase_color(phase: str, accent_color: str) -> str:
+    normalized_phase = phase.strip().lower()
+    if normalized_phase == "design":
+        return accent_color
+    return PHASE_COLORS.get(normalized_phase, DEFAULT_BAR_COLOR)
 
 
 def _truncate(text: str, max_len: int = 32) -> str:
@@ -34,7 +37,10 @@ def _truncate(text: str, max_len: int = 32) -> str:
     return f"{cleaned[: max_len - 1]}…"
 
 
-def build_gantt_svg(gantt: dict[str, Any]) -> str:
+def build_gantt_svg(
+    gantt: dict[str, Any],
+    accent_color: str = f"#{ACCENT}",
+) -> str:
     tasks = gantt.get("tasks") or []
     if not tasks:
         return ""
@@ -108,7 +114,7 @@ def build_gantt_svg(gantt: dict[str, Any]) -> str:
         bar_left = chart_left + (start_offset / total_days) * chart_width
         bar_width = max(((end_offset - start_offset + 1) / (total_days + 1)) * chart_width, 6)
         phase = str(task.get("phase_key") or task.get("phase") or "")
-        color = _phase_color(phase)
+        color = _phase_color(phase, accent_color)
         display_phase = str(task.get("phase") or phase)
         phases_seen.setdefault(display_phase, color)
         parts.append(

@@ -1,5 +1,30 @@
 export type ProposalLocale = "en" | "ja";
 
+export type ProposalCoverField = {
+  key: string;
+  required?: boolean;
+  emphasis?: string | null;
+  auto_fill?: string | boolean | null;
+  content?: {
+    _i18n?: Partial<
+      Record<ProposalLocale, { label?: string; default_text?: string }>
+    >;
+    label?: string;
+    default_text?: string;
+  };
+};
+
+export type ProposalCoverValues = Record<
+  string,
+  | string
+  | number
+  | null
+  | {
+      value?: unknown;
+      _i18n?: Partial<Record<ProposalLocale, { value?: unknown }>>;
+    }
+>;
+
 export type ProposalSection = {
   id: string;
   title: string;
@@ -69,6 +94,13 @@ export type ProposalExportRecord = {
   locale: string;
   revision: number;
   generated_at: string;
+  theme_id?: string | null;
+  style_id?: string | null;
+  template_id?: string | null;
+  destination?: string | null;
+  external_file_id?: string | null;
+  external_url?: string | null;
+  manually_edited_at?: string | null;
 };
 
 export type ProposalDetail = {
@@ -118,6 +150,16 @@ export type ProposalDetail = {
   };
   source_fingerprint: string;
   source_stale: boolean;
+  theme_id?: string | null;
+  style_id?: string | null;
+  template_id?: string | null;
+  theme_name?: string | null;
+  style_name?: string | null;
+  template_name?: string | null;
+  presentation_meta?: Record<string, unknown>;
+  presentation_css_vars?: Record<string, string>;
+  presentation_layout_class?: string;
+  cover_values: ProposalCoverValues;
   created_at: string;
   updated_at: string;
   finalized_at: string | null;
@@ -134,6 +176,9 @@ export type ProposalSummary = {
   status: string;
   updated_at: string;
   source_stale: boolean;
+  theme_id?: string | null;
+  style_id?: string | null;
+  template_id?: string | null;
 };
 
 export type ProposalStatusResponse = {

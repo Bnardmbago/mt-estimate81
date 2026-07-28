@@ -4,11 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import contact as contact_service
-from app.auth.service import create_access_token, verify_password
+from app.auth.service import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.exceptions import AppError
 from app.models.user import ACCOUNT_TYPE_CONTACT, User
 from app.schemas.user import UserResponse
+from app.users.access import is_contact_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,6 +42,16 @@ class ContactVerifyResponse(BaseModel):
     estimate_id: str
     user: dict
 
+
+class ProfileUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=255)
+    company_name: str | None = Field(default=None, max_length=255)
+    preferred_locale: str | None = Field(default=None, pattern="^(ja|en)$")
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=128)
 
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
@@ -127,3 +139,43 @@ async def contact_verify(
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(user: User = Depends(get_current_user)):
     return user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_current_user_profile(
+    body: ProfileUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if body.display_name is not None:
+        user.display_name = body.display_name.strip()
+    if body.company_name is not None:
+        stripped = body.company_name.strip()
+        user.company_name = stripped or None
+    if body.preferred_locale is not None:
+        user.preferred_locale = body.preferred_locale
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.post("/change-password", status_code=204)
+async def change_password(
+    body: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if is_contact_user(user) or not user.password_hash:
+        raise AppError(
+            "Password change is not available for this account",
+            "PASSWORD_CHANGE_FORBIDDEN",
+            status_code=403,
+        )
+    if not verify_password(body.current_password, user.password_hash):
+        raise AppError(
+            "Current password is incorrect",
+            "PASSWORD_INCORRECT",
+            status_code=400,
+        )
+    user.password_hash = hash_password(body.new_password)
+    await db.commit()

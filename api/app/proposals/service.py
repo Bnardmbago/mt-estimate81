@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.estimates.access import require_estimate_access
 from app.estimates.service import get_gantt_timeline
+from app.i18n.localized_content import store_localized_dict
 from app.models.estimate import Estimate
 from app.models.proposal import Proposal, ProposalExport, ProposalStatus
 from app.models.user import User
@@ -35,6 +36,9 @@ from app.schemas.proposal import (
     ProposalStatusResponse,
     ProposalSummary,
 )
+from app.presentation.resolver import resolve_presentation
+from app.presentation.service import assert_preset_ids_exist
+from app.proposals.recommend_presentation import recommend_presentation
 
 
 async def _build_snapshot_with_live_gantt(
@@ -112,6 +116,12 @@ async def to_detail(db: AsyncSession, proposal: Proposal, user: User) -> Proposa
         ProposalExportRecord.model_validate(row)
         for row in sorted(proposal.exports or [], key=lambda e: e.generated_at, reverse=True)
     ]
+    bundle = await resolve_presentation(
+        db,
+        proposal.theme_id,
+        proposal.style_id,
+        proposal.template_id,
+    )
     return ProposalDetail(
         id=proposal.id,
         estimate_id=proposal.estimate_id,
@@ -127,6 +137,16 @@ async def to_detail(db: AsyncSession, proposal: Proposal, user: User) -> Proposa
         generation_meta=proposal.generation_meta or {},
         source_fingerprint=proposal.source_fingerprint or "",
         source_stale=_is_stale(proposal, estimate),
+        theme_id=proposal.theme_id or bundle.theme_id,
+        style_id=proposal.style_id or bundle.style_id,
+        template_id=proposal.template_id or bundle.template_id,
+        theme_name=bundle.theme_name,
+        style_name=bundle.style_name,
+        template_name=bundle.template_name,
+        presentation_meta=proposal.presentation_meta or {},
+        presentation_css_vars=bundle.css_var_map(),
+        presentation_layout_class=bundle.layout_class(),
+        cover_values=proposal.cover_values or {},
         created_at=proposal.created_at,
         updated_at=proposal.updated_at,
         finalized_at=proposal.finalized_at,
@@ -167,6 +187,9 @@ async def list_proposals(db: AsyncSession, user: User) -> list[ProposalSummary]:
                 status=proposal.status,
                 updated_at=proposal.updated_at,
                 source_stale=_is_stale(proposal, estimate),
+                theme_id=proposal.theme_id,
+                style_id=proposal.style_id,
+                template_id=proposal.template_id,
             )
         )
     return summaries
@@ -203,9 +226,16 @@ async def start_generate(
     locale: Literal["ja", "en"],
     include_poc: bool,
     background_tasks: BackgroundTasks | None,
+    theme_id: str | None = None,
+    style_id: str | None = None,
+    template_id: str | None = None,
 ) -> ProposalDetail:
     estimate = await _get_estimate(db, estimate_id, user)
     _require_eligible(estimate)
+
+    await assert_preset_ids_exist(
+        db, theme_id=theme_id, style_id=style_id, template_id=template_id
+    )
 
     result = await db.execute(
         select(Proposal)
@@ -216,6 +246,18 @@ async def start_generate(
     run_id, meta = begin_generation_meta(include_poc)
     snapshot = await _build_snapshot_with_live_gantt(db, estimate, user, locale)
     fingerprint = compute_source_fingerprint(estimate)
+
+    resolved_theme, resolved_style, resolved_template, presentation_meta = (
+        await recommend_presentation(
+            db,
+            snapshot,
+            locale,
+            include_poc=include_poc,
+            theme_id=theme_id,
+            style_id=style_id,
+            template_id=template_id,
+        )
+    )
 
     if proposal is None:
         proposal = Proposal(
@@ -232,6 +274,10 @@ async def start_generate(
             generation_meta=meta,
             source_fingerprint=fingerprint,
             user_id=user.id,
+            theme_id=resolved_theme,
+            style_id=resolved_style,
+            template_id=resolved_template,
+            presentation_meta=presentation_meta,
         )
         db.add(proposal)
     else:
@@ -246,6 +292,10 @@ async def start_generate(
         proposal.diagrams = []
         proposal.milestones = []
         proposal.finalized_at = None
+        proposal.theme_id = resolved_theme
+        proposal.style_id = resolved_style
+        proposal.template_id = resolved_template
+        proposal.presentation_meta = presentation_meta
         proposal.updated_at = datetime.utcnow()
 
     await db.commit()
@@ -256,6 +306,77 @@ async def start_generate(
     else:
         background_tasks.add_task(run_generation_sequence, proposal.id)
 
+    proposal = await get_proposal_or_404(db, proposal.id, user)
+    return await to_detail(db, proposal, user)
+
+
+async def patch_presentation(
+    db: AsyncSession,
+    user: User,
+    proposal_id: uuid.UUID,
+    *,
+    theme_id: str | None = None,
+    style_id: str | None = None,
+    template_id: str | None = None,
+) -> ProposalDetail:
+    proposal = await get_proposal_or_404(db, proposal_id, user)
+    await assert_preset_ids_exist(
+        db, theme_id=theme_id, style_id=style_id, template_id=template_id
+    )
+    if theme_id is not None:
+        proposal.theme_id = theme_id
+    if style_id is not None:
+        proposal.style_id = style_id
+    if template_id is not None:
+        proposal.template_id = template_id
+    meta = dict(proposal.presentation_meta or {})
+    meta["source"] = "user"
+    meta["warnings"] = list(meta.get("warnings") or [])
+    proposal.presentation_meta = meta
+    proposal.updated_at = datetime.utcnow()
+    await db.commit()
+    proposal = await get_proposal_or_404(db, proposal.id, user)
+    return await to_detail(db, proposal, user)
+
+
+def merge_cover_values(
+    existing: dict[str, Any] | None,
+    locale: str,
+    values: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge flat request values into per-field localized storage."""
+    merged = dict(existing or {})
+    for key, raw_value in (values or {}).items():
+        if not isinstance(key, str) or not key.strip():
+            continue
+        if isinstance(raw_value, dict) and "_i18n" in raw_value:
+            merged[key] = raw_value
+            continue
+        content = (
+            dict(raw_value)
+            if isinstance(raw_value, dict) and "value" in raw_value
+            else {"value": raw_value}
+        )
+        merged[key] = store_localized_dict(
+            merged.get(key) if isinstance(merged.get(key), dict) else {},
+            locale,
+            content,
+        )
+    return merged
+
+
+async def patch_cover_values(
+    db: AsyncSession,
+    user: User,
+    proposal_id: uuid.UUID,
+    *,
+    locale: str,
+    values: dict[str, Any],
+) -> ProposalDetail:
+    proposal = await get_proposal_or_404(db, proposal_id, user)
+    proposal.cover_values = merge_cover_values(proposal.cover_values, locale, values)
+    proposal.updated_at = datetime.utcnow()
+    await db.commit()
     proposal = await get_proposal_or_404(db, proposal.id, user)
     return await to_detail(db, proposal, user)
 

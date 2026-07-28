@@ -1,14 +1,17 @@
 :root {
-  --export-primary: #1E3A5F;
-  --export-primary-light: #E8EEF4;
-  --export-surface: #F8FAFC;
-  --export-border: #E2E8F0;
-  --export-border-light: #CBD5E1;
-  --export-text: #1E293B;
-  --export-text-body: #1E293B;
-  --export-muted: #64748B;
-  --export-accent: #2563EB;
-  --export-text-on-primary: #FFFFFF;
+  --export-primary: #{{ ctx.theme.primary if ctx.theme else '1E3A5F' }};
+  --export-primary-light: #{{ ctx.theme.primary_light if ctx.theme else 'E8EEF4' }};
+  --export-surface: #{{ ctx.theme.surface if ctx.theme else 'F8FAFC' }};
+  --export-border: #{{ ctx.theme.border if ctx.theme else 'E2E8F0' }};
+  --export-border-light: #{{ ctx.theme.border_light if ctx.theme else 'CBD5E1' }};
+  --export-text: #{{ ctx.theme.text_body if ctx.theme else '1E293B' }};
+  --export-text-body: #{{ ctx.theme.text_body if ctx.theme else '1E293B' }};
+  --export-muted: #{{ ctx.theme.text_muted if ctx.theme else '64748B' }};
+  --export-accent: #{{ ctx.theme.accent if ctx.theme else '2563EB' }};
+  --export-chart: #{{ ctx.theme.chart if ctx.theme and ctx.theme.chart else (ctx.theme.accent if ctx.theme else '2563EB') }};
+  --export-callout: #{{ ctx.theme.callout if ctx.theme and ctx.theme.callout else (ctx.theme.accent if ctx.theme else '2563EB') }};
+  --export-table-highlight: #{{ ctx.theme.table_highlight if ctx.theme and ctx.theme.table_highlight else (ctx.theme.accent if ctx.theme else '2563EB') }};
+  --export-text-on-primary: #{{ ctx.theme.text_on_primary if ctx.theme else 'FFFFFF' }};
   /* Legacy aliases */
   --export-blue-primary: var(--export-primary);
   --export-blue-light: var(--export-primary-light);

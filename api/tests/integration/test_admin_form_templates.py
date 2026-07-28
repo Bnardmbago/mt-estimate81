@@ -211,6 +211,23 @@ async def test_form_template_options_for_authenticated_users(
 
 
 @pytest.mark.asyncio
+async def test_get_form_template_for_authenticated_users(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+):
+    options = await client.get("/form-templates/options", headers=auth_headers)
+    assert options.status_code == 200
+    template_id = options.json()[0]["id"]
+
+    response = await client.get(f"/form-templates/{template_id}", headers=auth_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == template_id
+    assert isinstance(body["fields"], list)
+    assert len(body["fields"]) >= 1
+
+
+@pytest.mark.asyncio
 async def test_create_estimate_snapshots_template_schema(
     client: AsyncClient,
     admin_headers: dict[str, str],

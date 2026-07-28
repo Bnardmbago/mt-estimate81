@@ -8,9 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.admin.ai_instruction_layers import router as admin_ai_instruction_layers_router
 from app.admin.ai_settings import router as admin_ai_settings_router
+from app.admin.proposal_ai_settings import router as admin_proposal_ai_settings_router
 from app.admin.discount_settings import router as admin_discount_settings_router
 from app.admin.quotation_settings import router as admin_quotation_settings_router
+from app.admin.presentation import admin_router as admin_presentation_router
+from app.admin.presentation import public_router as presentation_public_router
 from app.admin.smtp_settings import router as admin_smtp_settings_router
+from app.admin.oauth_app_settings import router as admin_oauth_app_settings_router
 from app.admin.system import router as admin_system_router
 from app.admin.form_templates import public_router as form_templates_router
 from app.admin.form_templates import router as admin_form_templates_router
@@ -19,6 +23,7 @@ from app.auth.router import router as auth_router
 from app.calculation.engine import CalculationError
 from app.config import settings
 from app.database import SessionLocal
+from app.destinations.router import router as integrations_router
 from app.documents.router import router as documents_router
 from app.estimates.router import router as estimates_router
 from app.exceptions import (
@@ -70,16 +75,21 @@ app.include_router(estimates_router)
 app.include_router(documents_router)
 app.include_router(rate_cards_router)
 app.include_router(admin_ai_settings_router)
+app.include_router(admin_proposal_ai_settings_router)
 app.include_router(admin_ai_instruction_layers_router)
 app.include_router(admin_discount_settings_router)
 app.include_router(admin_quotation_settings_router)
+app.include_router(admin_presentation_router)
+app.include_router(presentation_public_router)
 app.include_router(admin_smtp_settings_router)
+app.include_router(admin_oauth_app_settings_router)
 app.include_router(admin_users_router)
 app.include_router(admin_form_templates_router)
 app.include_router(form_templates_router)
 app.include_router(admin_system_router)
 app.include_router(exports_router)
 app.include_router(proposals_router)
+app.include_router(integrations_router)
 
 app.add_middleware(
     CORSMiddleware,

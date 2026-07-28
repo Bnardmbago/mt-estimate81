@@ -3,8 +3,9 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Inches, Pt
+from docx.shared import Inches, Mm, Pt, RGBColor
 
 from app.exports.markdown import (
     format_currency,
@@ -12,14 +13,85 @@ from app.exports.markdown import (
     format_hours,
     format_person_days,
 )
+from app.proposals.svg_raster import svg_to_png_bytes
 
 LOGO_PATH = Path(__file__).parent / "templates" / "assets" / "BI_logo.png"
+DOCX_COVER_LAYOUT_FIDELITY_WARNING = (
+    "DOCX uses flow-based Cover layout; exact positioning may differ from PDF."
+)
+PAGE_DIMENSIONS_MM = {
+    "A3": (297.0, 420.0),
+    "A4": (210.0, 297.0),
+    "Letter": (215.9, 279.4),
+    "Legal": (215.9, 355.6),
+}
 
 
 def _document_bytes(document: Document) -> bytes:
     buffer = BytesIO()
     document.save(buffer)
     return buffer.getvalue()
+
+
+def _set_page_dimensions(document: Document, page: dict[str, Any]) -> tuple[float, float]:
+    section = document.sections[0]
+    width_mm, height_mm = PAGE_DIMENSIONS_MM.get(
+        str(page.get("size") or "A4"),
+        PAGE_DIMENSIONS_MM["A4"],
+    )
+    if page.get("orientation") == "landscape":
+        width_mm, height_mm = height_mm, width_mm
+        section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width = Mm(width_mm)
+    section.page_height = Mm(height_mm)
+    return width_mm, height_mm
+
+
+def add_docx_cover_accent(
+    document: Document,
+    cover: dict[str, Any],
+    *,
+    page_width_mm: float,
+    page_height_mm: float,
+) -> bool:
+    """Rasterize and add generated Cover SVG in stable document flow."""
+    accent_svg = str(cover.get("accent_svg") or "").strip()
+    if not accent_svg:
+        return False
+
+    png = svg_to_png_bytes(accent_svg, scale=1.5)
+    if not png:
+        warnings = cover.get("warnings")
+        if not isinstance(warnings, list):
+            warnings = list(warnings or [])
+            cover["warnings"] = warnings
+        if DOCX_COVER_LAYOUT_FIDELITY_WARNING not in warnings:
+            warnings.append(DOCX_COVER_LAYOUT_FIDELITY_WARNING)
+        return False
+
+    section = document.sections[0]
+    printable_width_mm = max(
+        page_width_mm - section.left_margin.mm - section.right_margin.mm,
+        1.0,
+    )
+    printable_height_mm = max(
+        page_height_mm - section.top_margin.mm - section.bottom_margin.mm,
+        1.0,
+    )
+    fit_scale = min(
+        printable_width_mm / page_width_mm,
+        printable_height_mm / page_height_mm,
+    )
+    paragraph = document.add_paragraph()
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    paragraph.paragraph_format.space_before = Pt(0)
+    paragraph.paragraph_format.space_after = Pt(0)
+    paragraph.add_run().add_picture(
+        BytesIO(png),
+        width=Mm(page_width_mm * fit_scale),
+        height=Mm(page_height_mm * fit_scale),
+    )
+    return True
 
 
 def _add_heading(document: Document, text: str, *, level: int = 1) -> None:
@@ -100,6 +172,37 @@ def build_report_document(report_context: dict[str, Any]) -> Document:
     gantt = report_context.get("gantt") or {}
 
     document = Document()
+    page = report_context.get("page") or {}
+    page_width_mm, page_height_mm = _set_page_dimensions(document, page)
+
+    theme = report_context.get("theme") or {}
+    primary = str(theme.get("primary") or "1E3A5F").lstrip("#")
+    for style_name in ("Title", "Heading 1", "Heading 2", "Heading 3"):
+        document.styles[style_name].font.color.rgb = RGBColor.from_string(primary)
+
+    if report_context.get("include_cover"):
+        cover = report_context.get("cover") or {}
+        add_docx_cover_accent(
+            document,
+            cover,
+            page_width_mm=page_width_mm,
+            page_height_mm=page_height_mm,
+        )
+        fields = cover.get("fields") or []
+        if fields:
+            for field in fields:
+                if field.get("value") is None:
+                    continue
+                paragraph = document.add_paragraph()
+                paragraph.add_run(str(field.get("label") or field.get("key") or "")).italic = True
+                paragraph.add_run(f"\n{field['value']}").bold = field.get("emphasis") == "title"
+        else:
+            paragraph = document.add_paragraph()
+            run = paragraph.add_run(project["project_name"])
+            run.bold = True
+            run.font.size = Pt(28)
+            document.add_paragraph(f"{project['client_name']} · {labels['title']}")
+        document.add_page_break()
     _add_heading(document, labels["title"])
 
     _add_heading(document, labels["project_summary"], level=2)

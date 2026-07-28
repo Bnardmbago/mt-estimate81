@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import PasswordField from "@/components/PasswordField";
 import { resolveReturnPath } from "@/lib/authRedirect";
 import { parseApiErrorPayload } from "@/lib/api";
 
@@ -91,11 +92,10 @@ export default function LoginForm() {
           <label htmlFor="password" className="mb-1 block text-sm font-medium">
             {t("password")}
           </label>
-          <input
+          <PasswordField
             id="password"
-            type="password"
             required
-            autoComplete="current-password"
+            autoComplete="off"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

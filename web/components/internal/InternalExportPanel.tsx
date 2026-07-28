@@ -3,9 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import ExportPreviewModal from "@/components/ExportPreviewModal";
+import EstimatePresentationControls, {
+  type EstimatePresentationState,
+} from "@/components/EstimatePresentationControls";
 import { apiFetch, apiJson, parseApiErrorPayload } from "@/lib/api";
 import { formatLocalTimestamp } from "@/lib/datetime";
 import type { ExportRecord } from "@/lib/estimate";
+import type { EstimateDetail } from "@/lib/estimate-types";
 import {
   ensureCanvaConnected,
   ensureGoogleConnected,
@@ -90,6 +94,14 @@ export default function InternalExportPanel({
     google: boolean;
     canva: boolean;
   } | null>(null);
+  const [presentation, setPresentation] = useState<EstimatePresentationState>({
+    themeId: "",
+    styleId: "",
+    templateId: "",
+    includeCover: null,
+    coverPresetId: "",
+    coverValues: {},
+  });
 
   const loadExports = useCallback(async () => {
     try {
@@ -107,6 +119,20 @@ export default function InternalExportPanel({
   useEffect(() => {
     void loadExports();
   }, [loadExports]);
+
+  useEffect(() => {
+    void apiJson<EstimateDetail>(`/estimates/${estimateId}`)
+      .then((estimate) => {
+        setPresentation((current) => ({
+          ...current,
+          themeId: estimate.theme_id || "",
+          styleId: estimate.style_id || "",
+          templateId: estimate.template_id || "",
+          coverValues: estimate.cover_values || {},
+        }));
+      })
+      .catch(() => undefined);
+  }, [estimateId]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -192,7 +218,16 @@ export default function InternalExportPanel({
         const exportFormat = FORMAT_TO_INTERNAL[format];
         const response = await apiFetch(`/estimates/${estimateId}/export`, {
           method: "POST",
-          body: JSON.stringify({ format: exportFormat, locale: exportLocale }),
+          body: JSON.stringify({
+            format: exportFormat,
+            locale: exportLocale,
+            theme_id: presentation.themeId || undefined,
+            style_id: presentation.styleId || undefined,
+            template_id: presentation.templateId || undefined,
+            include_cover: Boolean(presentation.coverPresetId),
+            cover_template_id: presentation.coverPresetId || undefined,
+            cover_values: presentation.coverValues,
+          }),
         });
 
         if (!response.ok) {
@@ -385,6 +420,13 @@ export default function InternalExportPanel({
           ))}
         </div>
       </div>
+
+      <EstimatePresentationControls
+        value={presentation}
+        locale={exportLocale}
+        disabled={exporting || !hasCalculation}
+        onChange={setPresentation}
+      />
 
       <div className="mb-4">
         <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">

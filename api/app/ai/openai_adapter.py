@@ -1,3 +1,4 @@
+import base64
 import json
 from typing import Any, Literal
 
@@ -27,6 +28,7 @@ from app.ai.schemas import (
     ExtractedRequirements,
     GeneratedRateCardSuggestion,
 )
+from app.ai.schemas_presentation import PresentationDraftAI
 from app.ai.section_schemas import section_suggestion_model, section_tool_name
 from app.schemas.rate_card import RateCardAiSection
 
@@ -41,6 +43,73 @@ class OpenAIProvider:
             return await self._client.chat.completions.create(**kwargs)
 
         return await with_rate_limit_retry(_call)
+
+    def supports_vision(self) -> bool:
+        model = self.model.casefold()
+        return model.startswith(
+            ("gpt-4o", "gpt-4.1", "gpt-4.5", "gpt-4-turbo", "gpt-4-vision", "gpt-5")
+        )
+
+    async def generate_presentation_draft(
+        self,
+        *,
+        source_locale: Literal["ja", "en"],
+        signals: dict[str, Any],
+        page_images: list[dict[str, Any]],
+    ) -> PresentationDraftAI:
+        if not self.supports_vision():
+            raise ValueError(f"Model '{self.model}' does not support vision")
+        if not page_images:
+            raise ValueError("No rasterized reference pages are available")
+
+        content: list[dict[str, Any]] = [
+            {
+                "type": "text",
+                "text": (
+                    "Analyze this presentation reference and produce a cohesive Theme, "
+                    "Style, and Template draft, including page setup and cover fields. "
+                    f"Write names and labels in locale '{source_locale}'. "
+                    f"Deterministic signals: {json.dumps(signals, ensure_ascii=False)}"
+                ),
+            }
+        ]
+        for image in page_images[:10]:
+            encoded = base64.b64encode(image["content"]).decode("ascii")
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{image['media_type']};base64,{encoded}",
+                        "detail": "high",
+                    },
+                }
+            )
+        response = await self._create_completion(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a presentation design analyst. Return safe, practical "
+                        "preset recommendations grounded in the supplied reference."
+                    ),
+                },
+                {"role": "user", "content": content},
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "presentation_draft",
+                    "schema": build_openai_strict_schema(PresentationDraftAI),
+                    "strict": True,
+                },
+            },
+            **completion_kwargs(None),
+        )
+        response_content = response.choices[0].message.content
+        if not response_content:
+            raise ValueError("OpenAI returned an empty presentation draft")
+        return PresentationDraftAI.model_validate(json.loads(response_content))
 
     async def extract_requirements(
         self,

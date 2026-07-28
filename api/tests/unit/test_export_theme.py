@@ -7,6 +7,7 @@ from openpyxl import load_workbook
 from app.exports.excel import SHEET_NAMES, generate_excel
 from app.exports.markdown import format_currency, format_effort_days, format_hours, format_person_days
 from app.exports.theme import PRIMARY, SURFACE
+from app.presentation.resolver import PresentationBundle
 from tests.unit.export_fixtures import (
     sample_estimate_with_calculation,
     sample_quotation_context,
@@ -63,6 +64,38 @@ def test_quotation_template_includes_readability_styles():
     assert "payment-footer" in html
     assert "questionnaire-appendix" not in html
     assert "数量" not in html
+
+
+def test_estimate_theme_accent_controls_approved_document_highlights():
+    presentation = PresentationBundle(
+        theme_id="custom",
+        style_id="comfortable",
+        template_id="classic-linear",
+        theme_tokens={
+            "colors": {
+                "primary": "123456",
+                "text_body": "222222",
+                "accent": "C026D3",
+            }
+        },
+    )
+    html = _render_template(
+        "estimate_report.html.j2",
+        ctx=sample_report_context(presentation=presentation),
+        format_currency=format_currency,
+        format_hours=format_hours,
+        format_effort_days=format_effort_days,
+        format_person_days=format_person_days,
+    )
+
+    assert "--export-primary: #123456" in html
+    assert "--export-text: #222222" in html
+    assert "--export-accent: #C026D3" in html
+    assert "--export-callout: #C026D3" in html
+    assert "--export-table-highlight: #C026D3" in html
+    assert "border-bottom: 0.75pt solid var(--export-accent)" in html
+    assert "border-left: 2pt solid var(--export-callout)" in html
+    assert "color: var(--export-table-highlight)" in html
 
 
 def test_excel_table_headers_use_primary_theme():

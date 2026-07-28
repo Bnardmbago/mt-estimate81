@@ -6,6 +6,13 @@ import json
 import logging
 from typing import Any, Literal
 
+from app.proposals.generation_presets import (
+    DEFAULT_PROPOSAL_AI_SETTINGS,
+    GenerationPurpose,
+    get_preset,
+    min_tables_for_part,
+    purpose_for_part,
+)
 from app.proposals.poc_pricing import price_poc_selection
 from app.proposals.snapshot import feature_label
 
@@ -176,6 +183,8 @@ def stub_proposal_body(
     snapshot: dict[str, Any],
     assessment: dict[str, Any],
     locale: Locale,
+    *,
+    purpose: GenerationPurpose = "detailed",
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
     features = snapshot.get("features") or []
     modules = snapshot.get("modules") or []
@@ -353,8 +362,83 @@ def stub_proposal_body(
                 "  D --> E[Validate]\n"
                 "  E --> F[Operate]\n"
             ),
-        }
+        },
+        {
+            "id": "delivery_flow",
+            "title": "Delivery flow" if locale == "en" else "デリバリーフロー",
+            "engine": "mermaid",
+            "source": (
+                "flowchart TD\n"
+                "  K[Kickoff] --> D[Design]\n"
+                "  D --> B[Build]\n"
+                "  B --> T[Test]\n"
+                "  T --> A[Acceptance]\n"
+                "  A --> O[Operate]\n"
+            ),
+        },
     ]
+    if locale == "ja":
+        tables = [
+            {
+                "id": "cost_timeline",
+                "title": "費用・スケジュール概要",
+                "headers": ["項目", "値"],
+                "rows": [
+                    ["一次性のプロジェクト費用", f"{costs.get('one_time_project_cost_jpy')} 円"],
+                    ["月次の継続費用", f"{costs.get('monthly_recurring_cost_jpy')} 円"],
+                    ["初年度合計", f"{costs.get('first_year_total_jpy')} 円"],
+                    [
+                        "稼働日数目安",
+                        str(gantt.get("total_working_days") or costs.get("total_effort_days") or "—"),
+                    ],
+                ],
+            },
+            {
+                "id": "risks_mitigation",
+                "title": "リスクと緩和策",
+                "headers": ["リスク", "影響", "緩和策"],
+                "rows": [
+                    [str(r), "中〜高", "早期に範囲を確定し段階的に検証"]
+                    for r in (risks[:4] or ["スコープ変更"])
+                ],
+            },
+        ]
+    else:
+        tables = [
+            {
+                "id": "cost_timeline",
+                "title": "Cost and timeline summary",
+                "headers": ["Item", "Value"],
+                "rows": [
+                    [
+                        "One-time project cost",
+                        f"{costs.get('one_time_project_cost_jpy')} JPY",
+                    ],
+                    [
+                        "Monthly recurring cost",
+                        f"{costs.get('monthly_recurring_cost_jpy')} JPY",
+                    ],
+                    ["First-year total", f"{costs.get('first_year_total_jpy')} JPY"],
+                    [
+                        "Working days (reference)",
+                        str(gantt.get("total_working_days") or costs.get("total_effort_days") or "—"),
+                    ],
+                ],
+            },
+            {
+                "id": "risks_mitigation",
+                "title": "Risks and mitigation",
+                "headers": ["Risk", "Impact", "Mitigation"],
+                "rows": [
+                    [str(r), "Medium–High", "Confirm scope early and validate in stages"]
+                    for r in (risks[:4] or ["Scope change"])
+                ],
+            },
+        ]
+    preset = get_preset(purpose)
+    diagrams = diagrams[: max(1, preset.min_diagrams)]
+    n_tables = min_tables_for_part(purpose, "proposal")
+    body["tables"] = tables[:n_tables] if n_tables else []
     return body, diagrams, milestones
 
 
@@ -367,6 +451,8 @@ def stub_poc(
     snapshot: dict[str, Any],
     assessment: dict[str, Any],
     locale: Locale,
+    *,
+    purpose: GenerationPurpose = "detailed",
 ) -> dict[str, Any]:
     features = snapshot.get("features") or []
     ranked = sorted(
@@ -518,6 +604,16 @@ def stub_poc(
                     for r in (risks[:4] or ["技術的不確実性"])
                 ],
             },
+            {
+                "id": "success_matrix",
+                "title": "成功基準マトリクス",
+                "headers": ["基準", "検証方法", "合格の目安"],
+                "rows": [
+                    ["主要シナリオの動作", "エンドツーエンド試験", "クリティカルパスが完走"],
+                    ["関係者判断", "レビュー会", "次工程の意思決定が可能"],
+                    ["費用・工数の突合", "公式見積との比較", "残リスクが説明可能"],
+                ],
+            },
         ]
         diagrams = [
             {
@@ -531,7 +627,19 @@ def stub_poc(
                     "  B --> C[選定機能]\n"
                     "  B --> D[モック/簡易連携]\n"
                 ),
-            }
+            },
+            {
+                "id": "poc_validation_flow",
+                "title": "検証フロー",
+                "engine": "mermaid",
+                "source": (
+                    "flowchart TD\n"
+                    "  P[準備] --> I[コア実装]\n"
+                    "  I --> T[統合試験]\n"
+                    "  T --> R[ステークホルダーレビュー]\n"
+                    "  R --> D[次工程判断]\n"
+                ),
+            },
         ]
         milestones = [
             {"id": "kickoff", "name": "キックオフ", "date": gantt.get("project_start_date")},
@@ -677,6 +785,28 @@ def stub_poc(
                     for r in (risks[:4] or ["Technical uncertainty"])
                 ],
             },
+            {
+                "id": "success_matrix",
+                "title": "Success criteria matrix",
+                "headers": ["Criterion", "How validated", "Pass signal"],
+                "rows": [
+                    [
+                        "Critical scenarios work",
+                        "End-to-end scenario tests",
+                        "Critical path completes",
+                    ],
+                    [
+                        "Stakeholder decision readiness",
+                        "Review workshop",
+                        "Clear go / adjust / stop call",
+                    ],
+                    [
+                        "Cost and effort reconciliation",
+                        "Compare with official estimate",
+                        "Residual risks are explainable",
+                    ],
+                ],
+            },
         ]
         diagrams = [
             {
@@ -690,7 +820,19 @@ def stub_poc(
                     "  B --> C[Selected capabilities]\n"
                     "  B --> D[Mocked integrations]\n"
                 ),
-            }
+            },
+            {
+                "id": "poc_validation_flow",
+                "title": "Validation flow",
+                "engine": "mermaid",
+                "source": (
+                    "flowchart TD\n"
+                    "  P[Prepare] --> I[Implement core slices]\n"
+                    "  I --> T[Integration tests]\n"
+                    "  T --> R[Stakeholder review]\n"
+                    "  R --> D[Next-step decision]\n"
+                ),
+            },
         ]
         milestones = [
             {"id": "kickoff", "name": "Kickoff", "date": gantt.get("project_start_date")},
@@ -698,6 +840,11 @@ def stub_poc(
             {"id": "review", "name": "Stakeholder review", "date": None},
         ]
         window = "About two to four weeks (guidance only)"
+
+    preset = get_preset(purpose)
+    diagrams = diagrams[: max(1, preset.min_diagrams)]
+    n_tables = min_tables_for_part(purpose, "poc")
+    tables = tables[:n_tables] if n_tables else []
 
     return {
         "project_brief": brief,
@@ -827,6 +974,19 @@ def build_project_brief_from_snapshot(snapshot: dict[str, Any], locale: Locale) 
     }
 
 
+async def _purpose_for_stub(part: Literal["assessment", "proposal", "poc"]) -> GenerationPurpose:
+    try:
+        from app.admin.proposal_ai_config import get_proposal_ai_settings
+        from app.database import SessionLocal
+
+        async with SessionLocal() as db:
+            settings = await get_proposal_ai_settings(db)
+            return purpose_for_part(settings, part)
+    except Exception:
+        logger.exception("Failed to load proposal AI purpose; using defaults")
+        return purpose_for_part(DEFAULT_PROPOSAL_AI_SETTINGS, part)
+
+
 async def generate_assessment_content(snapshot: dict[str, Any], locale: Locale) -> dict[str, Any]:
     """Generate assessment via AI when available; fall back to stub on failure."""
     try:
@@ -855,7 +1015,8 @@ async def generate_proposal_content(
                 return result
     except Exception:
         logger.exception("Proposal body AI failed; using stub")
-    return stub_proposal_body(snapshot, assessment, locale)
+    purpose = await _purpose_for_stub("proposal")
+    return stub_proposal_body(snapshot, assessment, locale, purpose=purpose)
 
 
 async def generate_poc_content(
@@ -889,7 +1050,8 @@ async def generate_poc_content(
                 return result
     except Exception:
         logger.exception("Proposal POC AI failed; using stub")
-    return stub_poc(snapshot, assessment, locale)
+    purpose = await _purpose_for_stub("poc")
+    return stub_poc(snapshot, assessment, locale, purpose=purpose)
 
 
 def dump_json(data: Any) -> str:

@@ -15,6 +15,59 @@
   {% if show_watermark %}
   <div class="contact-watermark">{{ watermark_text }}</div>
   {% endif %}
+  {% if ctx.include_cover %}
+  <section class="estimate-cover">
+    {% for asset in ctx.cover.assets or [] %}
+      {% if asset.url and (asset.region or 'decorative') == 'background' %}
+      <img
+        class="estimate-cover-asset estimate-cover-asset-{{ asset.region or 'decorative' }}"
+        src="{{ asset.url }}"
+        alt="{{ asset.alt or asset.region or '' }}"
+        style="{{ asset.background_css or cover_background_inline_css(asset) }}"
+      />
+      {% endif %}
+    {% endfor %}
+    {% include '_cover_accent_svg.html.j2' %}
+    {% for asset in ctx.cover.assets or [] %}
+      {% if asset.url and (asset.region or 'decorative') != 'background' %}
+      {% set asset_geometry = asset.geometry or {} %}
+      <img
+        class="estimate-cover-asset estimate-cover-asset-{{ asset.region or 'decorative' }}"
+        src="{{ asset.url }}"
+        alt="{{ asset.alt or asset.region or '' }}"
+        style="opacity:{{ asset.opacity if asset.opacity is defined else 1 }};{% if asset_geometry.x_pct is defined %}left:{{ asset_geometry.x_pct }}%;right:auto;{% elif asset.x_pct is defined %}left:{{ asset.x_pct }}%;right:auto;{% elif asset.x is defined %}left:{{ asset.x }}%;right:auto;{% endif %}{% if asset_geometry.y_pct is defined %}top:{{ asset_geometry.y_pct }}%;bottom:auto;{% elif asset.y_pct is defined %}top:{{ asset.y_pct }}%;bottom:auto;{% elif asset.y is defined %}top:{{ asset.y }}%;bottom:auto;{% endif %}{% if asset_geometry.width_pct is defined %}width:{{ asset_geometry.width_pct }}%;max-width:none;{% elif asset.width_pct is defined %}width:{{ asset.width_pct }}%;max-width:none;{% endif %}{% if asset_geometry.height_pct is defined %}height:{{ asset_geometry.height_pct }}%;max-height:none;{% elif asset.height_pct is defined %}height:{{ asset.height_pct }}%;max-height:none;{% endif %}{% if asset_geometry.z_index is defined %}z-index:{{ asset_geometry.z_index }};{% elif asset.z_index is defined %}z-index:{{ asset.z_index }};{% endif %}{% set asset_rotation = asset_geometry.rotation_deg if asset_geometry.rotation_deg is defined else asset.rotation %}{% if asset_rotation %}transform:rotate({{ asset_rotation }}deg);transform-origin:center;{% endif %}"
+      />
+      {% endif %}
+    {% endfor %}
+    <div class="estimate-cover-content">
+      {% if ctx.cover.fields %}
+        {% for field in ctx.cover.fields %}
+          {% if field.value is not none and not field.geometry %}
+          {% set field_style = field.style or {} %}
+          <div class="estimate-cover-field estimate-cover-field-{{ field.emphasis or 'metadata' }}{% if field_style %} estimate-cover-field-styled{% endif %}" data-cover-key="{{ field.key }}"{% if field_style %} style="{% if field_style.font_family is defined %}font-family:{{ field_style.font_family | tojson | forceescape }};{% endif %}{% if field_style.font_size_pt is defined %}font-size:{{ field_style.font_size_pt }}pt;{% endif %}{% if field_style.font_weight is defined %}font-weight:{{ field_style.font_weight }};{% endif %}{% if field_style.italic is defined %}font-style:{{ 'italic' if field_style.italic else 'normal' }};{% endif %}{% if field_style.color is defined %}color:{{ field_style.color }};{% endif %}{% if field_style.alignment is defined %}text-align:{{ field_style.alignment }};{% elif field_style.text_align is defined %}text-align:{{ field_style.text_align }};{% endif %}{% if field_style.line_height is defined %}line-height:{{ field_style.line_height }};{% endif %}{% if field_style.letter_spacing_pt is defined %}letter-spacing:{{ field_style.letter_spacing_pt }}pt;{% elif field_style.letter_spacing_em is defined %}letter-spacing:{{ field_style.letter_spacing_em }}em;{% endif %}{% if field_style.opacity is defined %}opacity:{{ field_style.opacity }};{% endif %}{% if field_style.background_color is defined %}background-color:{{ field_style.background_color }};{% endif %}{% if field_style.padding_mm is defined %}padding:{{ field_style.padding_mm }}mm;{% endif %}"{% endif %}>
+            {% if field.emphasis != 'title' %}<span class="estimate-cover-label">{{ field.label }}</span>{% endif %}
+            <span class="estimate-cover-value">{{ field.value }}</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="estimate-cover-field estimate-cover-field-title">
+          <span class="estimate-cover-value">{{ ctx.project_summary.project_name }}</span>
+        </div>
+      {% endif %}
+    </div>
+    {% for field in ctx.cover.fields or [] %}
+      {% if field.value is not none and field.geometry %}
+      {% set geometry = field.geometry %}
+      {% set field_style = field.style or {} %}
+      <div class="estimate-cover-field estimate-cover-field-{{ field.emphasis or 'metadata' }}{% if field_style %} estimate-cover-field-styled{% endif %}" data-cover-key="{{ field.key }}" style="position:absolute;left:{{ geometry.x_pct }}%;top:{{ geometry.y_pct }}%;width:{{ geometry.width_pct }}%;{% if geometry.height_pct is defined %}height:{{ geometry.height_pct }}%;{% endif %}z-index:{{ geometry.z_index }};{% if geometry.rotation_deg is defined and geometry.rotation_deg %}transform:rotate({{ geometry.rotation_deg }}deg);transform-origin:center;{% endif %}{% if field_style.font_family is defined %}font-family:{{ field_style.font_family | tojson | forceescape }};{% endif %}{% if field_style.font_size_pt is defined %}font-size:{{ field_style.font_size_pt }}pt;{% endif %}{% if field_style.font_weight is defined %}font-weight:{{ field_style.font_weight }};{% endif %}{% if field_style.italic is defined %}font-style:{{ 'italic' if field_style.italic else 'normal' }};{% endif %}{% if field_style.color is defined %}color:{{ field_style.color }};{% endif %}{% if field_style.alignment is defined %}text-align:{{ field_style.alignment }};{% elif field_style.text_align is defined %}text-align:{{ field_style.text_align }};{% endif %}{% if field_style.line_height is defined %}line-height:{{ field_style.line_height }};{% endif %}{% if field_style.letter_spacing_pt is defined %}letter-spacing:{{ field_style.letter_spacing_pt }}pt;{% elif field_style.letter_spacing_em is defined %}letter-spacing:{{ field_style.letter_spacing_em }}em;{% endif %}{% if field_style.opacity is defined %}opacity:{{ field_style.opacity }};{% endif %}{% if field_style.background_color is defined %}background-color:{{ field_style.background_color }};{% endif %}{% if field_style.padding_mm is defined %}padding:{{ field_style.padding_mm }}mm;{% endif %}">
+        {% if field.emphasis != 'title' %}<span class="estimate-cover-label">{{ field.label }}</span>{% endif %}
+        <span class="estimate-cover-value">{{ field.value }}</span>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}
   <h1>{{ ctx.labels.title }}</h1>
 
   <div class="section-card section">

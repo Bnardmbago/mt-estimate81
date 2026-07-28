@@ -1,5 +1,6 @@
 import { apiFetch, apiJson } from "@/lib/api";
 import type {
+  ProposalCoverValues,
   ProposalDetail,
   ProposalExportRecord,
   ProposalLocale,
@@ -52,10 +53,38 @@ export async function generateProposal(body: {
   estimate_id: string;
   locale: ProposalLocale;
   include_poc: boolean;
+  theme_id?: string;
+  style_id?: string;
+  template_id?: string;
 }): Promise<ProposalDetail> {
   return apiJson<ProposalDetail>("/proposals/generate", {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export async function patchProposalPresentation(
+  id: string,
+  body: {
+    theme_id?: string;
+    style_id?: string;
+    template_id?: string;
+  },
+): Promise<ProposalDetail> {
+  return apiJson<ProposalDetail>(`/proposals/${id}/presentation`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function patchProposalCoverValues(
+  id: string,
+  locale: ProposalLocale,
+  values: Record<string, string>,
+): Promise<ProposalDetail> {
+  return apiJson<ProposalDetail>(`/proposals/${id}/cover-values`, {
+    method: "PATCH",
+    body: JSON.stringify({ locale, values }),
   });
 }
 
@@ -110,6 +139,12 @@ export async function createProposalExport(
     variant?: "full" | "assessment" | "proposal" | "poc";
     locale?: ProposalLocale;
     project_name?: string;
+    theme_id?: string;
+    style_id?: string;
+    template_id?: string;
+    include_cover?: boolean | null;
+    cover_template_id?: string | null;
+    cover_values?: ProposalCoverValues;
   },
 ): Promise<ProposalExportRecord> {
   return apiJson<ProposalExportRecord>(`/proposals/${id}/export`, {
@@ -171,3 +206,31 @@ export async function sendProposalExportsEmail(
     body: JSON.stringify(body),
   });
 }
+
+export type DestinationSendResult = {
+  destination: string;
+  external_file_id?: string | null;
+  external_url: string;
+  export_id: string;
+};
+
+export async function sendProposalExportToGoogle(
+  proposalId: string,
+  exportId: string,
+): Promise<DestinationSendResult> {
+  return apiJson(
+    `/proposals/${proposalId}/exports/${exportId}/send-to/google`,
+    { method: "POST" },
+  );
+}
+
+export async function sendProposalExportToCanva(
+  proposalId: string,
+  exportId: string,
+): Promise<DestinationSendResult> {
+  return apiJson(
+    `/proposals/${proposalId}/exports/${exportId}/send-to/canva`,
+    { method: "POST" },
+  );
+}
+

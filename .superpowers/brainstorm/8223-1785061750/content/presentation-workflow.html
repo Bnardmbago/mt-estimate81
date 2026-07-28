@@ -1,0 +1,109 @@
+<h2>Presentation preset generation and export cover controls</h2>
+<p class="subtitle">Proposed placement and workflow — review the two screens together.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Admin / Presentation / Generate from reference</div>
+    <div class="mockup-body">
+      <div class="section">
+        <div class="label">1 · Reference document</div>
+        <div class="placeholder" style="padding:28px;text-align:center">
+          Drop JPEG, PNG, or PDF here<br>
+          <small>Source is deleted after analysis</small>
+        </div>
+        <button class="mock-button" style="margin-top:10px">Analyze with AI</button>
+      </div>
+      <div class="section">
+        <div class="label">2 · Editable generated drafts</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="border:1px solid #d8dee9;border-radius:8px;padding:10px">
+            <strong>Theme</strong>
+            <div style="display:flex;gap:4px;margin:9px 0">
+              <span style="width:25px;height:25px;border-radius:5px;background:#17365d"></span>
+              <span style="width:25px;height:25px;border-radius:5px;background:#d89b2b"></span>
+              <span style="width:25px;height:25px;border-radius:5px;background:#f6f4ef"></span>
+            </div>
+            <small>Colors, fonts, logo</small>
+          </div>
+          <div style="border:1px solid #d8dee9;border-radius:8px;padding:10px">
+            <strong>Style</strong>
+            <div style="height:6px;background:#d8dee9;margin:10px 0 5px"></div>
+            <div style="height:6px;background:#d8dee9;margin:5px 0;width:82%"></div>
+            <small>Spacing, scale, density</small>
+          </div>
+          <div style="border:1px solid #d8dee9;border-radius:8px;padding:10px">
+            <strong>Template</strong>
+            <div style="border:1px solid #aeb7c4;height:42px;margin:8px 0;padding:4px">
+              <div style="height:8px;background:#17365d;width:65%"></div>
+            </div>
+            <small>Layout and cover fields</small>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="label">Ordered cover fields</div>
+        <div style="display:grid;gap:6px">
+          <div class="mock-input">☰  Document title · title · required</div>
+          <div class="mock-input">☰  Client name · metadata · auto-fill</div>
+          <div class="mock-input">☰  Confidentiality note · footer · optional</div>
+        </div>
+        <button class="mock-button" style="margin-top:8px">+ Add text field</button>
+      </div>
+      <button class="mock-button" style="width:100%">Approve and save 3 presets</button>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Proposal / Export</div>
+    <div class="mockup-body">
+      <div class="section">
+        <div class="label">Presentation</div>
+        <div class="mock-input">Theme · Client Brand</div>
+        <div class="mock-input" style="margin-top:7px">Style · Comfortable</div>
+        <div class="mock-input" style="margin-top:7px">Template · Executive Cover</div>
+      </div>
+      <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong>Include cover page</strong>
+            <div><small>Applies only to this exported document</small></div>
+          </div>
+          <div style="width:43px;height:24px;background:#2563eb;border-radius:20px;padding:3px">
+            <div style="width:18px;height:18px;background:white;border-radius:50%;margin-left:19px"></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:grid;gap:8px">
+          <label><small>Document title *</small><div class="mock-input">Digital Transformation Proposal</div></label>
+          <label><small>Client name</small><div class="mock-input">Example Corporation</div></label>
+          <label><small>Confidentiality note</small><div class="mock-input">Confidential — for intended recipient only</div></label>
+        </div>
+      </div>
+      <div class="placeholder" style="height:180px;padding:18px">
+        <div style="height:100%;background:#f6f4ef;border:1px solid #d4cec2;padding:20px;display:flex;flex-direction:column">
+          <div style="font-size:11px;color:#6b7280">EXAMPLE CORPORATION</div>
+          <div style="font-size:23px;font-weight:700;color:#17365d;margin-top:34px">Digital Transformation Proposal</div>
+          <div style="height:3px;background:#d89b2b;width:55px;margin-top:10px"></div>
+          <div style="font-size:9px;color:#6b7280;margin-top:auto">Confidential — for intended recipient only</div>
+        </div>
+      </div>
+      <button class="mock-button" style="width:100%;margin-top:12px">Export PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-workflow" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve this workflow</h3>
+      <p>Generated drafts require admin approval; cover inclusion and text are controlled for each export.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-workflow" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>

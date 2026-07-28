@@ -1,0 +1,110 @@
+<h2>Admin / Presentation — mixed cover controls</h2>
+<p class="subtitle">Discrete choices use selections; visual values use sliders with exact numeric inputs.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Template &amp; Cover / Selected asset: Decorative image</div>
+    <div class="mockup-body">
+      <div class="section">
+        <div class="label">Placement · selection controls</div>
+        <label><small>Position</small></label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:5px">
+          <button class="mock-button">Top left</button>
+          <button class="mock-button">Top center</button>
+          <button class="mock-button">Top right</button>
+          <button class="mock-button">Center left</button>
+          <button class="mock-button">Center</button>
+          <button class="mock-button" style="background:#2563eb;color:white">Center right</button>
+          <button class="mock-button">Bottom left</button>
+          <button class="mock-button">Bottom center</button>
+          <button class="mock-button">Bottom right</button>
+        </div>
+        <label style="display:block;margin-top:11px"><small>Text alignment</small></label>
+        <div style="display:flex;gap:6px;margin-top:5px">
+          <button class="mock-button" style="background:#2563eb;color:white">Left</button>
+          <button class="mock-button">Center</button>
+          <button class="mock-button">Right</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Visual adjustment · slider + exact value</div>
+        <div style="display:grid;grid-template-columns:90px 1fr 78px;gap:9px;align-items:center;margin-top:9px">
+          <small>Width</small>
+          <input type="range" min="5" max="100" value="38" style="width:100%">
+          <div class="mock-input">38 %</div>
+
+          <small>Opacity</small>
+          <input type="range" min="0" max="100" value="70" style="width:100%">
+          <div class="mock-input">70 %</div>
+
+          <small>Rotation</small>
+          <input type="range" min="-180" max="180" value="14" style="width:100%">
+          <div class="mock-input">14 °</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Dimensions and typography · value + unit</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label><small>Page padding</small><div class="mock-input">24 &nbsp; mm</div></label>
+          <label><small>Title size</small><div class="mock-input">30 &nbsp; pt</div></label>
+          <label><small>Accent width</small><div class="mock-input">48 &nbsp; mm</div></label>
+          <label><small>Corner radius</small><div class="mock-input">0 &nbsp; mm</div></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Color · picker + exact value</div>
+        <div style="display:flex;gap:9px">
+          <div style="width:42px;height:38px;border-radius:6px;background:#d89b2b;border:1px solid #aaa"></div>
+          <div class="mock-input" style="flex:1">#D89B2B</div>
+        </div>
+      </div>
+
+      <p><small>All values are constrained to safe export ranges and can be reset to the AI-generated value.</small></p>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Live cover preview</div>
+    <div class="mockup-body" style="background:#e6e9ee">
+      <div style="aspect-ratio:0.707;background:#f6f4ef;border:1px solid #ccc;box-shadow:0 7px 20px rgba(0,0,0,.12);padding:36px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+        <div style="position:absolute;width:230px;height:690px;background:linear-gradient(145deg,#17365d,#6385a8);transform:rotate(14deg);right:-125px;top:-55px;opacity:.7"></div>
+        <div style="position:absolute;width:90px;height:700px;background:#d89b2b;transform:rotate(14deg);right:-65px;top:-20px;opacity:.7"></div>
+        <div style="display:flex;align-items:center;gap:9px;position:relative">
+          <div style="width:30px;height:30px;background:#17365d;border-radius:4px"></div>
+          <strong style="font-size:11px;color:#17365d">YOUR COMPANY</strong>
+        </div>
+        <div style="margin:auto 0;position:relative;max-width:78%;text-align:left">
+          <div style="font-size:12px;letter-spacing:.08em;color:#6b7280;text-transform:uppercase">Example Corporation</div>
+          <div style="font-size:34px;line-height:1.1;font-weight:750;color:#17365d;margin-top:13px">Digital Transformation Proposal</div>
+          <div style="height:4px;background:#d89b2b;width:95px;margin-top:18px"></div>
+          <div style="font-size:12px;color:#64748b;margin-top:17px">Prepared July 2026</div>
+        </div>
+        <div style="font-size:9px;color:#6b7280;position:relative">CONFIDENTIAL — FOR INTENDED RECIPIENT ONLY</div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button class="mock-button">Reset to AI result</button>
+        <button class="mock-button" style="background:#2563eb;color:white">Save cover design</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-mixed-controls" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve mixed controls</h3>
+      <p>Selection buttons, sliders with exact values, unit-aware inputs, and color picker plus hex.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-mixed-controls" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>

@@ -1,3 +1,4 @@
+import base64
 import json
 from typing import Any, Literal
 
@@ -25,6 +26,7 @@ from app.ai.schemas import (
     ExtractedRequirements,
     GeneratedRateCardSuggestion,
 )
+from app.ai.schemas_presentation import PresentationDraftAI
 from app.ai.section_schemas import section_suggestion_model, section_tool_name
 from app.estimates.form_fields import field_metadata_for_prompt, schema_field_keys
 from app.estimates.extraction_constraints import ExtractionConstraints
@@ -41,6 +43,75 @@ class AnthropicProvider:
             return await self._client.messages.create(**kwargs)
 
         return await with_rate_limit_retry(_call)
+
+    def supports_vision(self) -> bool:
+        model = self.model.casefold()
+        return model.startswith("claude-3") or model.startswith(
+            ("claude-4", "claude-sonnet-4", "claude-opus-4", "claude-haiku-4")
+        )
+
+    async def generate_presentation_draft(
+        self,
+        *,
+        source_locale: Literal["ja", "en"],
+        signals: dict[str, Any],
+        page_images: list[dict[str, Any]],
+    ) -> PresentationDraftAI:
+        if not self.supports_vision():
+            raise ValueError(f"Model '{self.model}' does not support vision")
+        if not page_images:
+            raise ValueError("No rasterized reference pages are available")
+
+        content: list[dict[str, Any]] = []
+        for image in page_images[:10]:
+            content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": image["media_type"],
+                        "data": base64.b64encode(image["content"]).decode("ascii"),
+                    },
+                }
+            )
+        content.append(
+            {
+                "type": "text",
+                "text": (
+                    "Analyze this presentation reference and produce a cohesive Theme, "
+                    "Style, and Template draft, including page setup and cover fields. "
+                    f"Write names and labels in locale '{source_locale}'. "
+                    f"Deterministic signals: {json.dumps(signals, ensure_ascii=False)}"
+                ),
+            }
+        )
+        response = await self._create_message(
+            model=self.model,
+            system=(
+                "You are a presentation design analyst. Return safe, practical preset "
+                "recommendations grounded in the supplied reference."
+            ),
+            messages=[{"role": "user", "content": content}],
+            tools=[
+                {
+                    "name": "generate_presentation_draft",
+                    "description": "Generate structured presentation preset drafts.",
+                    "input_schema": PresentationDraftAI.model_json_schema(),
+                }
+            ],
+            tool_choice={"type": "tool", "name": "generate_presentation_draft"},
+            **anthropic_completion_kwargs(None),
+        )
+        tool_block = next(
+            (block for block in response.content if block.type == "tool_use"),
+            None,
+        )
+        if tool_block is None:
+            raise ValueError("Anthropic returned no presentation draft tool_use block")
+        payload = tool_block.input
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+        return PresentationDraftAI.model_validate(payload)
 
     async def extract_requirements(
         self,

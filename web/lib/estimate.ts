@@ -1,5 +1,6 @@
 import type {
   EstimateDetail,
+  EstimateExportRequest,
   EstimateSummary,
 } from "@/lib/estimate-types";
 import { type ApiFetchResult, serverApiJson } from "@/lib/server-api";
@@ -11,6 +12,7 @@ export type {
   EstimateDocument,
   EstimateStatusKey,
   EstimateSummary,
+  EstimateExportRequest,
   ExportRecord,
   ExtractedData,
   FeatureItem,
@@ -87,4 +89,16 @@ export async function createEstimate(
   });
 
   return result.status === "ok" ? result.data : null;
+}
+
+export async function createEstimateExport(
+  id: string,
+  request: EstimateExportRequest,
+  token: string,
+): Promise<ApiFetchResult<import("@/lib/estimate-types").ExportRecord>> {
+  return serverApiJson(`/estimates/${id}/export`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
 }

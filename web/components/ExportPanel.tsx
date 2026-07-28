@@ -5,10 +5,24 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { type CalculationResult } from "@/components/CalculationBreakdown";
 import ExportPreviewModal from "@/components/ExportPreviewModal";
+import EstimatePresentationControls, {
+  type EstimatePresentationState,
+} from "@/components/EstimatePresentationControls";
 import { apiFetch, apiJson } from "@/lib/api";
 import { formatLocalTimestamp, parseUtcTimestamp } from "@/lib/datetime";
 import type { ExportRecord } from "@/lib/estimate";
-import { isInternalFormat } from "@/lib/export-destinations";
+import type { ProposalCoverValues } from "@/lib/proposal-types";
+import {
+  ensureCanvaConnected,
+  ensureGoogleConnected,
+  formatFamilyLabel,
+  isDocxFormat,
+  isInternalFormat,
+  isPdfFormat,
+  isXlsxFormat,
+  sendEstimateExportToCanva,
+  sendEstimateExportToGoogle,
+} from "@/lib/export-destinations";
 
 type ExportFormat = "pdf" | "xlsx" | "md" | "docx";
 type PdfVersion = "pdf" | "pdf_quotation";
@@ -20,6 +34,10 @@ type ExportPanelProps = {
   estimateUpdatedAt: string;
   calculationResult: CalculationResult;
   isContactUser?: boolean;
+  initialThemeId?: string | null;
+  initialStyleId?: string | null;
+  initialTemplateId?: string | null;
+  initialCoverValues?: ProposalCoverValues;
 };
 
 const CONTACT_EXPORT_LIMIT = 3;
@@ -38,6 +56,23 @@ const FORMAT_OPTIONS: ExportFormat[] = ["pdf", "xlsx", "md", "docx"];
 const PDF_VERSION_OPTIONS: PdfVersion[] = ["pdf", "pdf_quotation"];
 
 const DOCX_VERSION_OPTIONS: DocxVersion[] = ["docx", "docx_quotation"];
+
+function bestEditedInKeyForFormat(
+  format: string,
+):
+  | "bestEditedInPdf"
+  | "bestEditedInXlsx"
+  | "bestEditedInMd"
+  | "bestEditedInDocx"
+  | null {
+  if (format === "pdf" || format === "pdf_quotation" || format === "pdf_preliminary") {
+    return "bestEditedInPdf";
+  }
+  if (format === "xlsx") return "bestEditedInXlsx";
+  if (format === "md") return "bestEditedInMd";
+  if (format === "docx" || format === "docx_quotation") return "bestEditedInDocx";
+  return null;
+}
 
 const pdfVersionLabelKey: Record<
   PdfVersion,
@@ -105,6 +140,10 @@ export default function ExportPanel({
   estimateUpdatedAt,
   calculationResult,
   isContactUser = false,
+  initialThemeId = null,
+  initialStyleId = null,
+  initialTemplateId = null,
+  initialCoverValues = {},
 }: ExportPanelProps) {
   const locale = useLocale();
   const router = useRouter();
@@ -124,6 +163,7 @@ export default function ExportPanel({
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingExportId, setDeletingExportId] = useState<string | null>(null);
+  const [sendingDestinationId, setSendingDestinationId] = useState<string | null>(null);
   const [toEmail, setToEmail] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -131,6 +171,14 @@ export default function ExportPanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [presentation, setPresentation] = useState<EstimatePresentationState>({
+    themeId: initialThemeId || "",
+    styleId: initialStyleId || "",
+    templateId: initialTemplateId || "",
+    includeCover: null,
+    coverPresetId: "",
+    coverValues: initialCoverValues,
+  });
 
   const loadExports = useCallback(async () => {
     try {
@@ -211,19 +259,41 @@ export default function ExportPanel({
       return;
     }
 
+    const colliding = exports.filter(
+      (row) =>
+        row.manually_edited_at &&
+        [...selectedFormats].some((fmt) => {
+          const exportFormat =
+            fmt === "pdf" ? pdfVersion : fmt === "docx" ? docxVersion : fmt;
+          return row.format === exportFormat;
+        }),
+    );
+    if (colliding.length > 0) {
+      window.alert(t("regenerateEditedWarn"));
+    }
+
     setExporting(true);
     setError(null);
     setEmailSuccess(null);
 
     try {
-      let lastCreated: PreviewTarget | null = null;
+      let lastPdfPreview: PreviewTarget | null = null;
 
       for (const format of selectedFormats) {
         const exportFormat =
           format === "pdf" ? pdfVersion : format === "docx" ? docxVersion : format;
         const response = await apiFetch(`/estimates/${estimateId}/export`, {
           method: "POST",
-          body: JSON.stringify({ format: exportFormat, locale: exportLocale }),
+          body: JSON.stringify({
+            format: exportFormat,
+            locale: exportLocale,
+            theme_id: presentation.themeId || undefined,
+            style_id: presentation.styleId || undefined,
+            template_id: presentation.templateId || undefined,
+            include_cover: Boolean(presentation.coverPresetId),
+            cover_template_id: presentation.coverPresetId || undefined,
+            cover_values: presentation.coverValues,
+          }),
         });
 
         if (!response.ok) {
@@ -232,7 +302,10 @@ export default function ExportPanel({
         }
 
         const record = (await response.json()) as ExportRecord;
-        lastCreated = { id: record.id, format: record.format };
+        // Auto-open preview only for PDF; DOCX/XLSX/MD go straight to the list.
+        if (isPdfFormat(record.format)) {
+          lastPdfPreview = { id: record.id, format: record.format };
+        }
       }
 
       await loadExports();
@@ -242,8 +315,8 @@ export default function ExportPanel({
         setEmailSuccess(t("contactExportEmailed", { email: toEmail }));
       }
 
-      if (lastCreated) {
-        setPreviewTarget(lastCreated);
+      if (lastPdfPreview) {
+        setPreviewTarget(lastPdfPreview);
       }
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : t("exportError"));
@@ -279,6 +352,53 @@ export default function ExportPanel({
       setError(deleteError instanceof Error ? deleteError.message : t("deleteError"));
     } finally {
       setDeletingExportId(null);
+    }
+  }
+
+
+  async function handleOpenInGoogle(record: ExportRecord) {
+    if (!isDocxFormat(record.format) && !isXlsxFormat(record.format)) {
+      return;
+    }
+    setSendingDestinationId(record.id);
+    setError(null);
+    try {
+      const connected = await ensureGoogleConnected();
+      if (!connected) {
+        return;
+      }
+      const result = await sendEstimateExportToGoogle(record.id);
+      if (result.external_url) {
+        window.open(result.external_url, "_blank", "noopener,noreferrer");
+      }
+      await loadExports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("sendToDestinationError"));
+    } finally {
+      setSendingDestinationId(null);
+    }
+  }
+
+  async function handleOpenInCanva(record: ExportRecord) {
+    if (!isPdfFormat(record.format)) {
+      return;
+    }
+    setSendingDestinationId(record.id);
+    setError(null);
+    try {
+      const connected = await ensureCanvaConnected();
+      if (!connected) {
+        return;
+      }
+      const result = await sendEstimateExportToCanva(record.id);
+      if (result.external_url) {
+        window.open(result.external_url, "_blank", "noopener,noreferrer");
+      }
+      await loadExports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("sendToDestinationError"));
+    } finally {
+      setSendingDestinationId(null);
     }
   }
 
@@ -326,6 +446,15 @@ export default function ExportPanel({
 
   const exportsRemaining = CONTACT_EXPORT_LIMIT - exports.length;
   const exportLimitReached = isContactUser && exports.length >= CONTACT_EXPORT_LIMIT;
+
+  const selectedEditHints = useMemo(() => {
+    const hints: string[] = [];
+    for (const format of selectedFormats) {
+      const key = bestEditedInKeyForFormat(format);
+      if (key) hints.push(t(key));
+    }
+    return hints;
+  }, [selectedFormats, t]);
 
   return (
     <section className="mt-8 border-t border-gray-200 pt-8">
@@ -376,6 +505,13 @@ export default function ExportPanel({
           ))}
         </div>
       </div>
+
+      <EstimatePresentationControls
+        value={presentation}
+        locale={exportLocale}
+        disabled={exporting}
+        onChange={setPresentation}
+      />
 
       <div className="mb-4">
         <p className="mb-2 text-sm font-medium text-gray-700">{t("formatsLabel")}</p>
@@ -440,6 +576,14 @@ export default function ExportPanel({
             {exporting ? t("exporting") : t("exportButton")}
           </button>
         </div>
+        {selectedEditHints.length > 0 ? (
+          <p className="mt-3 text-sm text-gray-600" role="note">
+            <span className="font-medium text-gray-700">{t("bestEditedInLabel")}: </span>
+            {t("editDestinationHintSelected", {
+              hint: selectedEditHints.join(" · "),
+            })}
+          </p>
+        ) : null}
       </div>
 
       {error && (
@@ -481,6 +625,12 @@ export default function ExportPanel({
                       aria-label={t("emailSelectLabel")}
                     />
                   ) : null}
+                  <span
+                    className="mt-0.5 inline-flex w-14 shrink-0 justify-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold tracking-wide text-gray-800"
+                    title={t("formatsLabel")}
+                  >
+                    {formatFamilyLabel(record.format)}
+                  </span>
                   <span>
                     <span className="font-medium">{exportFormatLabel(record.format, t)}</span>
                     <span className="mx-2 text-gray-400">·</span>
@@ -495,24 +645,87 @@ export default function ExportPanel({
                     <span className="text-gray-500">
                       {formatLocalTimestamp(record.generated_at, locale)}
                     </span>
+                    {(() => {
+                      const hintKey = bestEditedInKeyForFormat(record.format);
+                      return hintKey ? (
+                        <span className="mt-1 block text-xs text-gray-500">
+                          {t("bestEditedInLabel")}: {t(hintKey)}
+                        </span>
+                      ) : null;
+                    })()}
+                    {record.manually_edited_at ? (
+                      <span className="mt-1 inline-flex rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900">
+                        {t("externallyEditedBadge")}
+                      </span>
+                    ) : null}
                   </span>
                 </label>
-                <div className="flex flex-wrap items-center gap-3 sm:ml-4">
+                <div className="flex flex-wrap items-center gap-2 sm:ml-4">
                   <button
                     type="button"
                     onClick={() =>
                       setPreviewTarget({ id: record.id, format: record.format })
                     }
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                    className="header-btn text-xs"
                   >
                     {t("preview")}
                   </button>
                   <a
                     href={`/api/exports/${record.id}/download`}
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                    className="header-btn text-xs"
                   >
                     {t("download")}
                   </a>
+                  {!isContactUser && isDocxFormat(record.format) ? (
+                    <button
+                      type="button"
+                      disabled={sendingDestinationId === record.id}
+                      onClick={() => void handleOpenInGoogle(record)}
+                      className="header-btn text-xs disabled:opacity-50"
+                    >
+                      {sendingDestinationId === record.id
+                        ? t("exporting")
+                        : t("openInDocs")}
+                    </button>
+                  ) : null}
+                  {!isContactUser && isXlsxFormat(record.format) ? (
+                    <button
+                      type="button"
+                      disabled={sendingDestinationId === record.id}
+                      onClick={() => void handleOpenInGoogle(record)}
+                      className="header-btn text-xs disabled:opacity-50"
+                    >
+                      {sendingDestinationId === record.id
+                        ? t("exporting")
+                        : t("openInSheets")}
+                    </button>
+                  ) : null}
+                  {!isContactUser && isPdfFormat(record.format) ? (
+                    <button
+                      type="button"
+                      disabled={sendingDestinationId === record.id}
+                      onClick={() => void handleOpenInCanva(record)}
+                      className="header-btn text-xs disabled:opacity-50"
+                    >
+                      {sendingDestinationId === record.id
+                        ? t("exporting")
+                        : t("openInCanva")}
+                    </button>
+                  ) : null}
+                  {!isContactUser && record.external_url ? (
+                    <a
+                      href={record.external_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="header-btn text-xs"
+                    >
+                      {record.destination === "canva"
+                        ? t("openInCanva")
+                        : record.destination === "google_sheets"
+                          ? t("openInSheets")
+                          : t("openInDocs")}
+                    </a>
+                  ) : null}
                   {!isContactUser &&
                     (isConfirmingDelete ? (
                       <div className="inline-flex flex-wrap items-center gap-2">
@@ -521,7 +734,7 @@ export default function ExportPanel({
                           type="button"
                           onClick={() => setConfirmingDeleteId(null)}
                           disabled={isDeleting}
-                          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                          className="header-btn text-xs disabled:opacity-50"
                         >
                           {t("deleteCancel")}
                         </button>
@@ -529,7 +742,7 @@ export default function ExportPanel({
                           type="button"
                           onClick={() => void handleDelete(record.id)}
                           disabled={isDeleting}
-                          className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                          className="header-btn text-xs text-red-700 disabled:opacity-50"
                         >
                           {isDeleting ? t("deleting") : t("deleteConfirmAction")}
                         </button>
@@ -541,7 +754,7 @@ export default function ExportPanel({
                           setError(null);
                           setConfirmingDeleteId(record.id);
                         }}
-                        className="text-sm font-medium text-red-600 hover:text-red-800"
+                        className="header-btn text-xs text-red-700"
                       >
                         {t("delete")}
                       </button>

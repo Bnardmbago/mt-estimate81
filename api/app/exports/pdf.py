@@ -4,6 +4,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.exports.markdown import format_currency, format_effort_days, format_hours, format_person_days
+from app.presentation.background_style import cover_background_inline_css
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -24,6 +25,7 @@ def _build_template_html(
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    env.globals["cover_background_inline_css"] = cover_background_inline_css
     template = env.get_template(template_name)
     return template.render(
         show_watermark=show_watermark,

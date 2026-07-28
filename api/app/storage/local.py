@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+import shutil
 
 
 class LocalStorageBackend:
@@ -31,6 +32,33 @@ class LocalStorageBackend:
         path = self._resolve_path(storage_path)
         if await asyncio.to_thread(path.is_file):
             await asyncio.to_thread(path.unlink)
+
+    async def list_prefix(self, prefix: str) -> list[str]:
+        path = self._resolve_path(prefix)
+
+        def _list() -> list[str]:
+            if path.is_file():
+                return [path.relative_to(self._base_path.resolve()).as_posix()]
+            if not path.is_dir():
+                return []
+            return sorted(
+                candidate.relative_to(self._base_path.resolve()).as_posix()
+                for candidate in path.rglob("*")
+                if candidate.is_file()
+            )
+
+        return await asyncio.to_thread(_list)
+
+    async def delete_prefix(self, prefix: str) -> None:
+        path = self._resolve_path(prefix)
+
+        def _delete() -> None:
+            if path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                shutil.rmtree(path)
+
+        await asyncio.to_thread(_delete)
 
     async def usage(self) -> int:
         def _calc() -> int:

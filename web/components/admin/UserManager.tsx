@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import PasswordField from "@/components/PasswordField";
 import { apiFetch, apiJson } from "@/lib/api";
 
 type Currency = "JPY" | "USD" | "PHP";
@@ -180,8 +181,7 @@ function UserTable({
                 </div>
                 {showResetPassword && resettingId === user.id && (
                   <div className="mt-2 flex items-center gap-2">
-                    <input
-                      type="password"
+                    <PasswordField
                       minLength={8}
                       placeholder={t("newPassword")}
                       value={newPassword}
@@ -482,8 +482,7 @@ export default function UserManager() {
           </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-gray-700">{t("password")}</span>
-            <input
-              type="password"
+            <PasswordField
               required
               minLength={8}
               value={form.password}
@@ -637,8 +636,7 @@ export default function UserManager() {
             {editingUser?.account_type === "contact" && editForm.account_type === "full" ? (
               <label className="block text-sm sm:col-span-2">
                 <span className="mb-1 block font-medium text-gray-700">{t("upgradePassword")}</span>
-                <input
-                  type="password"
+                <PasswordField
                   minLength={8}
                   required
                   value={upgradePassword}

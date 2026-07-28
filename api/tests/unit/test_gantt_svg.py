@@ -28,6 +28,25 @@ def test_build_gantt_svg_returns_svg_markup():
     assert "development" in svg
 
 
+def test_build_gantt_svg_uses_resolved_accent_for_chart_highlights():
+    gantt = {
+        "project_start_date": "2026-06-09",
+        "project_end_date": "2026-06-10",
+        "tasks": [
+            {
+                "name": "Design",
+                "phase": "design",
+                "start_date": "2026-06-09",
+                "end_date": "2026-06-10",
+            }
+        ],
+    }
+
+    svg = build_gantt_svg(gantt, accent_color="#C026D3")
+
+    assert 'fill="#C026D3"' in svg
+
+
 def test_build_gantt_svg_escapes_task_names():
     gantt = {
         "project_start_date": "2026-06-09",

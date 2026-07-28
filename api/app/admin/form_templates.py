@@ -86,3 +86,13 @@ async def list_form_template_options(
         locale=locale,
         nature_of_work_category=nature_of_work_category,
     )
+
+
+@public_router.get("/{template_id}", response_model=FormTemplateResponse)
+async def get_form_template_for_user(
+    template_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Authenticated users can load template fields to start a local draft estimate."""
+    return await service.get_template_detail(db, template_id)

@@ -71,6 +71,7 @@ async def resolve_instructions(
     build_base_system: Callable[..., str],
     system_kwargs: dict[str, Any] | None = None,
     user_prefix_override: str | None = None,
+    parameter_defaults: dict[str, int | float] | None = None,
 ) -> ResolvedInstructions:
     layer = await get_instruction_layer(db, location, locale)
     effective = effective_prompt_fields(location, locale, layer)
@@ -93,7 +94,11 @@ async def resolve_instructions(
         stored_user = effective.get("user_prompt")
         user_prefix = stored_user if stored_user else ""
 
-    parameters = merge_parameters(location, layer.parameters if layer else None)
+    parameters = merge_parameters(
+        location,
+        layer.parameters if layer else None,
+        purpose_defaults=parameter_defaults,
+    )
 
     return ResolvedInstructions(
         system=system,
@@ -160,6 +165,7 @@ def preview_instructions(
     user_prompt: str | None = None,
     negative_prompt: str | None = None,
     parameters: dict[str, Any] | None = None,
+    parameter_defaults: dict[str, int | float] | None = None,
 ) -> ResolvedInstructions:
     system = merge_system_prompt(
         location=location,
@@ -171,5 +177,9 @@ def preview_instructions(
     return ResolvedInstructions(
         system=system,
         user_prefix=(user_prompt or "").strip(),
-        parameters=merge_parameters(location, parameters),
+        parameters=merge_parameters(
+            location,
+            parameters,
+            purpose_defaults=parameter_defaults,
+        ),
     )

@@ -33,9 +33,9 @@ InstructionLocale = Literal["en", "ja"]
 
 
 class InstructionParameters(BaseModel):
-    max_tokens: int | None = Field(default=None, ge=256, le=8192)
+    max_tokens: int | None = Field(default=None, ge=256, le=16384)
     temperature: float | None = Field(default=None, ge=0.0, le=1.0)
-    timeout_seconds: int | None = Field(default=None, ge=30, le=120)
+    timeout_seconds: int | None = Field(default=None, ge=30, le=180)
     max_document_chars: int | None = Field(default=None, ge=5000, le=80000)
 
 
@@ -116,6 +116,7 @@ def _build_response(
     layer_data: dict[str, Any],
     *,
     row: Any | None = None,
+    purpose_defaults: dict[str, int | float] | None = None,
 ) -> InstructionLayerResponse:
     defaults = get_prompt_defaults(location, locale)
     effective = effective_prompt_fields(location, locale, row)
@@ -192,6 +193,7 @@ def _build_response(
             user_prompt=effective.get("user_prompt"),
             negative_prompt=effective.get("negative_prompt"),
             parameters=layer_data["parameters"],
+            parameter_defaults=purpose_defaults,
         )
     from app.admin.ai_instruction_config import PARAMETER_BOUNDS
 
@@ -206,9 +208,24 @@ def _build_response(
             user_prefix=resolved.user_prefix,
             parameters=resolved.parameters,
         ),
-        parameter_defaults=get_default_parameters(location),
+        parameter_defaults=get_default_parameters(location, purpose_defaults=purpose_defaults),
         parameter_bounds={key: [low, high] for key, (low, high) in PARAMETER_BOUNDS.items()},
     )
+
+
+async def _purpose_defaults_for_location(
+    db: AsyncSession,
+    location: InstructionLocation,
+) -> dict[str, int | float] | None:
+    from app.admin.proposal_ai_config import get_proposal_ai_settings
+    from app.proposals.generation_presets import LOCATION_TO_PART, budget_parameters, purpose_for_part
+
+    part = LOCATION_TO_PART.get(location)
+    if part is None:
+        return None
+    settings = await get_proposal_ai_settings(db)
+    purpose = purpose_for_part(settings, part)
+    return budget_parameters(purpose)
 
 
 @router.get("", response_model=InstructionLayerListResponse)
@@ -237,7 +254,10 @@ async def get_layer(
 ):
     loc, lang = _validate_path_params(location, locale)
     row = await get_instruction_layer(db, loc, lang)
-    return _build_response(loc, lang, layer_to_dict(row), row=row)
+    purpose_defaults = await _purpose_defaults_for_location(db, loc)
+    return _build_response(
+        loc, lang, layer_to_dict(row), row=row, purpose_defaults=purpose_defaults
+    )
 
 
 @router.patch("/{location}/{locale}", response_model=InstructionLayerResponse)
@@ -292,7 +312,10 @@ async def patch_layer(
             detail={"error": str(exc), "code": "INVALID_INSTRUCTION_LAYER"},
         ) from exc
 
-    return _build_response(loc, lang, layer_to_dict(row), row=row)
+    purpose_defaults = await _purpose_defaults_for_location(db, loc)
+    return _build_response(
+        loc, lang, layer_to_dict(row), row=row, purpose_defaults=purpose_defaults
+    )
 
 
 @router.delete("/{location}/{locale}", response_model=InstructionLayerResponse)
@@ -304,4 +327,7 @@ async def delete_layer(
 ):
     loc, lang = _validate_path_params(location, locale)
     await reset_instruction_layer(db, loc, lang)
-    return _build_response(loc, lang, layer_to_dict(None), row=None)
+    purpose_defaults = await _purpose_defaults_for_location(db, loc)
+    return _build_response(
+        loc, lang, layer_to_dict(None), row=None, purpose_defaults=purpose_defaults
+    )

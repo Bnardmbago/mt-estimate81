@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import PasswordField from "@/components/PasswordField";
+import ProposalAiSettingsSection from "@/components/admin/ProposalAiSettingsSection";
 import { apiJson } from "@/lib/api";
 
 type AISettings = {
@@ -227,6 +229,7 @@ export default function AiSettingsPanel() {
   }
 
   return (
+    <div className="space-y-8">
     <form className="space-y-6" onSubmit={handleSave}>
       <p className="text-sm text-gray-600">{t("description")}</p>
 
@@ -270,8 +273,7 @@ export default function AiSettingsPanel() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="block text-sm">
           <label className="mb-1 block font-medium text-gray-700">{t("openaiApiKey")}</label>
-          <input
-            type="password"
+          <PasswordField
             value={openaiApiKey}
             onChange={(event) => {
               setOpenaiApiKey(event.target.value);
@@ -299,8 +301,7 @@ export default function AiSettingsPanel() {
 
         <div className="block text-sm">
           <label className="mb-1 block font-medium text-gray-700">{t("anthropicApiKey")}</label>
-          <input
-            type="password"
+          <PasswordField
             value={anthropicApiKey}
             onChange={(event) => {
               setAnthropicApiKey(event.target.value);
@@ -347,5 +348,7 @@ export default function AiSettingsPanel() {
         {saving ? t("saving") : t("save")}
       </button>
     </form>
+    <ProposalAiSettingsSection />
+    </div>
   );
 }

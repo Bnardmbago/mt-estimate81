@@ -6,9 +6,38 @@
   <style>
     {% include '_export_theme.css.j2' %}
 
+    {% set cover_page_size = ctx.page.size if ctx.page and ctx.page.size else 'A4' %}
+    {% if cover_page_size == 'A3' %}
+      {% set cover_page_width_mm = 297 %}
+      {% set cover_page_height_mm = 420 %}
+    {% elif cover_page_size == 'Letter' %}
+      {% set cover_page_width_mm = 215.9 %}
+      {% set cover_page_height_mm = 279.4 %}
+    {% elif cover_page_size == 'Legal' %}
+      {% set cover_page_width_mm = 215.9 %}
+      {% set cover_page_height_mm = 355.6 %}
+    {% else %}
+      {% set cover_page_width_mm = 210 %}
+      {% set cover_page_height_mm = 297 %}
+    {% endif %}
+    {% if ctx.page and ctx.page.orientation == 'landscape' %}
+      {% set portrait_page_width_mm = cover_page_width_mm %}
+      {% set cover_page_width_mm = cover_page_height_mm %}
+      {% set cover_page_height_mm = portrait_page_width_mm %}
+    {% endif %}
+
     @page {
-      size: A4;
+      size: {{ ctx.page.css_size if ctx.page and ctx.page.css_size else 'A4 portrait' }};
       margin: 14mm 12mm 16mm 12mm;
+    }
+    @page cover {
+      size: {{ ctx.page.css_size if ctx.page and ctx.page.css_size else 'A4 portrait' }};
+      margin: 0;
+    }
+
+    :root {
+      --cover-page-width: {{ cover_page_width_mm }}mm;
+      --cover-page-height: {{ cover_page_height_mm }}mm;
     }
 
     @font-face {
@@ -28,6 +57,65 @@
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
+
+    .estimate-cover {
+      page: cover;
+      width: var(--cover-page-width);
+      height: var(--cover-page-height);
+      color: var(--export-text-on-primary);
+      background: {{ ctx.cover.background_color if ctx.cover and ctx.cover.background_color else 'var(--export-primary)' }};
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+    .cover-accent-art {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+    /* Keep SVG intrinsic mm size — WeasyPrint drops fills when forced to 100%. */
+    .cover-accent-art svg { display: block; max-width: none; max-height: none; }
+    .estimate-cover-content {
+      position: relative;
+      z-index: 3;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: {{ ctx.cover.design.padding_mm if ctx.cover and ctx.cover.design and ctx.cover.design.padding_mm else 24 }}mm;
+      text-align: {{ (ctx.cover.design.alignment if ctx.cover and ctx.cover.design and ctx.cover.design.alignment else 'left') }};
+    }
+    .estimate-cover-field { position: relative; z-index: 3; margin-bottom: 8pt; }
+    .estimate-cover-label { display: block; font-size: 8pt; opacity: 0.8; }
+    .estimate-cover-value {
+      display: block;
+      font-size: {{ (ctx.cover.design.typography.metadata_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography and ctx.cover.design.typography.metadata_pt else 10) }}pt;
+      font-weight: 600;
+    }
+    .estimate-cover-field-title .estimate-cover-value {
+      font-size: {{ (ctx.cover.design.typography.title_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography else 30) }}pt;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+    .estimate-cover-field-styled .estimate-cover-value {
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      font-style: inherit;
+      color: inherit;
+      text-align: inherit;
+      line-height: inherit;
+      letter-spacing: inherit;
+    }
+    .estimate-cover-asset { position: absolute; z-index: 2; object-fit: contain; }
+    .estimate-cover-asset-background {
+      /* Position/size come from asset.background_css (focal-point pan/zoom). */
+      z-index: 0;
+      pointer-events: none;
+    }
+    .estimate-cover-asset-logo { top: 18mm; right: 18mm; max-width: 48mm; max-height: 24mm; }
+    .estimate-cover-asset-decorative { right: 0; bottom: 0; max-width: 45%; max-height: 45%; }
 
     .num { text-align: right; white-space: nowrap; }
 
@@ -324,6 +412,59 @@
 <body>
   {% if show_watermark %}
   <div class="contact-watermark">{{ watermark_text }}</div>
+  {% endif %}
+  {% if ctx.include_cover %}
+  <section class="estimate-cover">
+    {% for asset in ctx.cover.assets or [] %}
+      {% if asset.url and (asset.region or 'decorative') == 'background' %}
+      <img
+        class="estimate-cover-asset estimate-cover-asset-{{ asset.region or 'decorative' }}"
+        src="{{ asset.url }}"
+        alt="{{ asset.alt or asset.region or '' }}"
+        style="{{ asset.background_css or cover_background_inline_css(asset) }}"
+      />
+      {% endif %}
+    {% endfor %}
+    {% include '_cover_accent_svg.html.j2' %}
+    {% for asset in ctx.cover.assets or [] %}
+      {% if asset.url and (asset.region or 'decorative') != 'background' %}
+      {% set asset_geometry = asset.geometry or {} %}
+      <img
+        class="estimate-cover-asset estimate-cover-asset-{{ asset.region or 'decorative' }}"
+        src="{{ asset.url }}"
+        alt="{{ asset.alt or asset.region or '' }}"
+        style="opacity:{{ asset.opacity if asset.opacity is defined else 1 }};{% if asset_geometry.x_pct is defined %}left:{{ asset_geometry.x_pct }}%;right:auto;{% elif asset.x_pct is defined %}left:{{ asset.x_pct }}%;right:auto;{% elif asset.x is defined %}left:{{ asset.x }}%;right:auto;{% endif %}{% if asset_geometry.y_pct is defined %}top:{{ asset_geometry.y_pct }}%;bottom:auto;{% elif asset.y_pct is defined %}top:{{ asset.y_pct }}%;bottom:auto;{% elif asset.y is defined %}top:{{ asset.y }}%;bottom:auto;{% endif %}{% if asset_geometry.width_pct is defined %}width:{{ asset_geometry.width_pct }}%;max-width:none;{% elif asset.width_pct is defined %}width:{{ asset.width_pct }}%;max-width:none;{% endif %}{% if asset_geometry.height_pct is defined %}height:{{ asset_geometry.height_pct }}%;max-height:none;{% elif asset.height_pct is defined %}height:{{ asset.height_pct }}%;max-height:none;{% endif %}{% if asset_geometry.z_index is defined %}z-index:{{ asset_geometry.z_index }};{% elif asset.z_index is defined %}z-index:{{ asset.z_index }};{% endif %}{% set asset_rotation = asset_geometry.rotation_deg if asset_geometry.rotation_deg is defined else asset.rotation %}{% if asset_rotation %}transform:rotate({{ asset_rotation }}deg);transform-origin:center;{% endif %}"
+      />
+      {% endif %}
+    {% endfor %}
+    <div class="estimate-cover-content">
+      {% if ctx.cover.fields %}
+        {% for field in ctx.cover.fields %}
+          {% if field.value is not none and not field.geometry %}
+          {% set field_style = field.style or {} %}
+          <div class="estimate-cover-field estimate-cover-field-{{ field.emphasis or 'metadata' }}{% if field_style %} estimate-cover-field-styled{% endif %}" data-cover-key="{{ field.key }}"{% if field_style %} style="{% if field_style.font_family is defined %}font-family:{{ field_style.font_family | tojson | forceescape }};{% endif %}{% if field_style.font_size_pt is defined %}font-size:{{ field_style.font_size_pt }}pt;{% endif %}{% if field_style.font_weight is defined %}font-weight:{{ field_style.font_weight }};{% endif %}{% if field_style.italic is defined %}font-style:{{ 'italic' if field_style.italic else 'normal' }};{% endif %}{% if field_style.color is defined %}color:{{ field_style.color }};{% endif %}{% if field_style.alignment is defined %}text-align:{{ field_style.alignment }};{% elif field_style.text_align is defined %}text-align:{{ field_style.text_align }};{% endif %}{% if field_style.line_height is defined %}line-height:{{ field_style.line_height }};{% endif %}{% if field_style.letter_spacing_pt is defined %}letter-spacing:{{ field_style.letter_spacing_pt }}pt;{% elif field_style.letter_spacing_em is defined %}letter-spacing:{{ field_style.letter_spacing_em }}em;{% endif %}{% if field_style.opacity is defined %}opacity:{{ field_style.opacity }};{% endif %}{% if field_style.background_color is defined %}background-color:{{ field_style.background_color }};{% endif %}{% if field_style.padding_mm is defined %}padding:{{ field_style.padding_mm }}mm;{% endif %}"{% endif %}>
+            {% if field.emphasis != 'title' %}<span class="estimate-cover-label">{{ field.label }}</span>{% endif %}
+            <span class="estimate-cover-value">{{ field.value }}</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="estimate-cover-field estimate-cover-field-title">
+          <span class="estimate-cover-value">{{ ctx.project_name }}</span>
+        </div>
+      {% endif %}
+    </div>
+    {% for field in ctx.cover.fields or [] %}
+      {% if field.value is not none and field.geometry %}
+      {% set geometry = field.geometry %}
+      {% set field_style = field.style or {} %}
+      <div class="estimate-cover-field estimate-cover-field-{{ field.emphasis or 'metadata' }}{% if field_style %} estimate-cover-field-styled{% endif %}" data-cover-key="{{ field.key }}" style="position:absolute;left:{{ geometry.x_pct }}%;top:{{ geometry.y_pct }}%;width:{{ geometry.width_pct }}%;{% if geometry.height_pct is defined %}height:{{ geometry.height_pct }}%;{% endif %}z-index:{{ geometry.z_index }};{% if geometry.rotation_deg is defined and geometry.rotation_deg %}transform:rotate({{ geometry.rotation_deg }}deg);transform-origin:center;{% endif %}{% if field_style.font_family is defined %}font-family:{{ field_style.font_family | tojson | forceescape }};{% endif %}{% if field_style.font_size_pt is defined %}font-size:{{ field_style.font_size_pt }}pt;{% endif %}{% if field_style.font_weight is defined %}font-weight:{{ field_style.font_weight }};{% endif %}{% if field_style.italic is defined %}font-style:{{ 'italic' if field_style.italic else 'normal' }};{% endif %}{% if field_style.color is defined %}color:{{ field_style.color }};{% endif %}{% if field_style.alignment is defined %}text-align:{{ field_style.alignment }};{% elif field_style.text_align is defined %}text-align:{{ field_style.text_align }};{% endif %}{% if field_style.line_height is defined %}line-height:{{ field_style.line_height }};{% endif %}{% if field_style.letter_spacing_pt is defined %}letter-spacing:{{ field_style.letter_spacing_pt }}pt;{% elif field_style.letter_spacing_em is defined %}letter-spacing:{{ field_style.letter_spacing_em }}em;{% endif %}{% if field_style.opacity is defined %}opacity:{{ field_style.opacity }};{% endif %}{% if field_style.background_color is defined %}background-color:{{ field_style.background_color }};{% endif %}{% if field_style.padding_mm is defined %}padding:{{ field_style.padding_mm }}mm;{% endif %}">
+        {% if field.emphasis != 'title' %}<span class="estimate-cover-label">{{ field.label }}</span>{% endif %}
+        <span class="estimate-cover-value">{{ field.value }}</span>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </section>
   {% endif %}
 
   <div class="quotation-header">

@@ -1,4 +1,5 @@
 import type { FormFieldSchema } from "@/lib/formSchema";
+import type { ProposalCoverValues } from "@/lib/proposal-types";
 
 export type EstimateDocument = {
   id: string;
@@ -166,8 +167,23 @@ export type ExportRecord = {
   locale: string;
   quotation_number?: string | null;
   registration_number?: string | null;
+  destination?: string | null;
+  external_file_id?: string | null;
+  external_url?: string | null;
+  manually_edited_at?: string | null;
   generated_at: string;
   generated_by: string;
+};
+
+export type EstimateExportRequest = {
+  format: string;
+  locale?: "ja" | "en";
+  theme_id?: string;
+  style_id?: string;
+  template_id?: string;
+  include_cover?: boolean | null;
+  cover_template_id?: string | null;
+  cover_values?: Record<string, unknown>;
 };
 
 export type Actuals = {
@@ -216,6 +232,10 @@ export type EstimateDetail = {
   rate_card_tune_recommended?: boolean;
   rate_card_auto_tune_enabled?: boolean;
   project_start_date: string | null;
+  theme_id: string | null;
+  style_id: string | null;
+  template_id: string | null;
+  cover_values: ProposalCoverValues;
   feature_items: FeatureItem[];
   documents: EstimateDocument[];
   actuals: Actuals | null;

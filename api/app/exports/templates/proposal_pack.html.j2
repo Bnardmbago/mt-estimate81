@@ -3,28 +3,58 @@
 <head>
   <meta charset="utf-8" />
   <title>{{ ctx.project_name }} — {{ ctx.labels.title }}</title>
+  {% set cover_page_size = ctx.page.size if ctx.page and ctx.page.size else 'A4' %}
+  {% if cover_page_size == 'A3' %}
+    {% set cover_page_width_mm = 297 %}
+    {% set cover_page_height_mm = 420 %}
+  {% elif cover_page_size == 'Letter' %}
+    {% set cover_page_width_mm = 215.9 %}
+    {% set cover_page_height_mm = 279.4 %}
+  {% elif cover_page_size == 'Legal' %}
+    {% set cover_page_width_mm = 215.9 %}
+    {% set cover_page_height_mm = 355.6 %}
+  {% else %}
+    {% set cover_page_width_mm = 210 %}
+    {% set cover_page_height_mm = 297 %}
+  {% endif %}
+  {% if ctx.page and ctx.page.orientation == 'landscape' %}
+    {% set portrait_page_width_mm = cover_page_width_mm %}
+    {% set cover_page_width_mm = cover_page_height_mm %}
+    {% set cover_page_height_mm = portrait_page_width_mm %}
+  {% endif %}
   <style>
     @page {
-      size: A4;
-      margin: 25mm;
+      size: {{ (ctx.page.css_size if ctx.page and ctx.page.css_size else 'A4 portrait') }};
+      margin: {{ (ctx.style.margins.top_mm if ctx.style and ctx.style.margins else 18) }}mm
+             {{ (ctx.style.margins.right_mm if ctx.style and ctx.style.margins else 16) }}mm
+             {{ (ctx.style.margins.bottom_mm if ctx.style and ctx.style.margins else 18) }}mm
+             {{ (ctx.style.margins.left_mm if ctx.style and ctx.style.margins else 16) }}mm;
       @top-left {
         content: string(doc-title);
-        font-size: 8pt;
+        font-size: {{ (ctx.style.header_footer_font_size_pt if ctx.style else 8) }}pt;
         color: #{{ ctx.theme.text_muted }};
         font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
       }
       @top-right {
         content: string(part-title);
-        font-size: 8pt;
+        font-size: {{ (ctx.style.header_footer_font_size_pt if ctx.style else 8) }}pt;
         color: #{{ ctx.theme.text_muted }};
         font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
       }
       @bottom-center {
         content: "{{ ctx.labels.title }} · " counter(page);
-        font-size: 8pt;
+        font-size: {{ (ctx.style.header_footer_font_size_pt if ctx.style else 8) }}pt;
         color: #{{ ctx.theme.text_muted }};
         font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
       }
+    }
+    /* Full-bleed cover page — geometry % match Admin Cover canvas (full page). */
+    @page cover {
+      size: {{ (ctx.page.css_size if ctx.page and ctx.page.css_size else 'A4 portrait') }};
+      margin: 0;
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-center { content: none; }
     }
     @page :first {
       @top-left { content: none; }
@@ -35,25 +65,52 @@
       --primary: #{{ ctx.theme.primary }};
       --primary-light: #{{ ctx.theme.primary_light }};
       --accent: #{{ ctx.theme.accent }};
+      --callout: #{{ ctx.theme.callout if ctx.theme.callout is defined else ctx.theme.accent }};
+      --table-highlight: #{{ ctx.theme.table_highlight if ctx.theme.table_highlight is defined else ctx.theme.accent }};
       --surface: #{{ ctx.theme.surface }};
       --border: #{{ ctx.theme.border }};
       --text-body: #{{ ctx.theme.text_body }};
       --text-muted: #{{ ctx.theme.text_muted }};
       --on-primary: #{{ ctx.theme.text_on_primary }};
+      --cover-page-width: {{ cover_page_width_mm }}mm;
+      --cover-page-height: {{ cover_page_height_mm }}mm;
     }
 
     * { box-sizing: border-box; }
 
     body {
       font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
-      font-size: 10pt;
+      font-size: {{ (ctx.style.base_font_size_pt if ctx.style else 10) }}pt;
       font-weight: 400;
-      line-height: 1.15;
+      line-height: {{ (ctx.style.line_spacing if ctx.style else 1.15) }};
       color: var(--text-body);
       margin: 0;
       padding: 0;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+    }
+
+    body.layout-executive-cover .cover-extra {
+      display: block;
+    }
+    body.layout-two-column .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12pt;
+    }
+    body.chrome-cards .section-block {
+      border: 1pt solid var(--border);
+      border-radius: 4pt;
+      padding: 10pt 12pt;
+      margin-bottom: 10pt;
+      background: var(--surface);
+    }
+    body.chrome-minimal h3.section {
+      border-bottom: none;
+    }
+    body.chrome-ruled h3.section {
+      border-bottom: 1pt solid var(--accent);
+      padding-bottom: 4pt;
     }
 
     /* Document title — 24pt bold */
@@ -67,17 +124,81 @@
     }
 
     .cover {
-      background: var(--primary);
-      color: var(--on-primary);
-      padding: 28pt 24pt;
-      margin: -8pt -8pt 18pt;
+      page: cover;
+      background: {{ ctx.cover.background_color if ctx.cover and ctx.cover.background_color else '#FFFFFF' }};
+      color: {{ ctx.cover.text_color if ctx.cover and ctx.cover.text_color else '#334155' }};
+      margin: 0;
       border-radius: 0;
+      width: var(--cover-page-width);
+      height: var(--cover-page-height);
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+      text-align: {{ (ctx.cover.design.alignment if ctx.cover and ctx.cover.design and ctx.cover.design.alignment else 'left') }};
     }
     .cover .meta {
       font-size: 11pt;
-      color: #dbe4f0;
+      color: {{ ctx.cover.text_color if ctx.cover and ctx.cover.text_color else '#334155' }};
+      opacity: 0.85;
       margin: 0;
     }
+    .cover .doc-title {
+      color: {{ ctx.cover.title_color if ctx.cover and ctx.cover.title_color else '#1E3A5F' }};
+      font-size: {{ (ctx.cover.design.typography.title_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography else 30) }}pt;
+      font-weight: 700;
+      margin: 0;
+    }
+    /* Padding only for auto-stacked fields — absolute geometry is page-relative.
+       Vertically centered to match the Admin Cover canvas auto-layout. */
+    .cover-content {
+      position: relative;
+      z-index: 3;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: {{ (ctx.cover.design.padding_mm if ctx.cover and ctx.cover.design and ctx.cover.design.padding_mm else 24) }}mm;
+    }
+    .cover-content .cover-field + .cover-field { margin-top: 8pt; }
+    .cover-accent-art {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+    /* Keep SVG intrinsic mm size — WeasyPrint drops fills when forced to 100%. */
+    .cover-accent-art svg { display: block; max-width: none; max-height: none; }
+    .cover-field { position: relative; z-index: 3; margin: 0; }
+    .cover-field-label { display: block; font-size: 8pt; opacity: 0.8; }
+    .cover-field-value {
+      display: block;
+      font-size: {{ (ctx.cover.design.typography.metadata_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography and ctx.cover.design.typography.metadata_pt else 10) }}pt;
+    }
+    .cover-field-title .cover-field-value {
+      display: block;
+      font-size: {{ (ctx.cover.design.typography.title_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography else 30) }}pt;
+      font-weight: 700;
+      line-height: 1.15;
+      color: {{ ctx.cover.title_color if ctx.cover and ctx.cover.title_color else '#1E3A5F' }};
+    }
+    .cover-field-styled .cover-field-value {
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      font-style: inherit;
+      color: inherit;
+      text-align: inherit;
+      line-height: inherit;
+      letter-spacing: inherit;
+    }
+    .cover-asset { position: absolute; z-index: 2; object-fit: contain; }
+    .cover-asset-background {
+      /* Position/size come from asset.background_css (focal-point pan/zoom). */
+      z-index: 0;
+      pointer-events: none;
+    }
+    .cover-asset-logo { top: 18mm; right: 18mm; max-width: 48mm; max-height: 24mm; }
+    .cover-asset-decorative { right: 0; bottom: 0; max-width: 45%; max-height: 45%; }
 
     /* Chapter headers — 18pt bold */
     h2.chapter {
@@ -192,14 +313,13 @@
 
     .cost-box, .poc-box, .brief-box {
       border: 1pt solid var(--border);
-      border-left: 4pt solid var(--primary);
+      border-left: 4pt solid var(--callout);
       padding: 12pt 14pt;
       margin: 0 0 14pt;
       background: var(--surface);
       page-break-inside: avoid;
     }
     .brief-box {
-      border-left-color: var(--accent);
       background: var(--primary-light);
     }
     .brief-box dl { margin: 0; }
@@ -245,6 +365,7 @@
       text-align: left;
       padding: 6pt 8pt;
       font-weight: 600;
+      border-bottom: 2pt solid var(--table-highlight);
     }
     table.data td {
       border: 1pt solid var(--border);
@@ -280,11 +401,58 @@
     .muted { color: var(--text-muted); font-size: 9pt; }
   </style>
 </head>
-<body>
+<body class="layout-{{ (ctx.layout.layout if ctx.layout else 'linear') | replace('_', '-') }} chrome-{{ ctx.layout.section_chrome if ctx.layout else 'ruled' }}">
+  {% if ctx.include_cover %}
   <div class="cover">
-    <h1 class="doc-title">{{ ctx.project_name }}</h1>
-    <p class="meta">{{ ctx.client_name }} · {{ ctx.labels.title }}</p>
+    {% for asset in ctx.cover.assets or [] %}
+      {% if asset.url and (asset.region or 'decorative') == 'background' %}
+      <img
+        class="cover-asset cover-asset-{{ asset.region or 'decorative' }}"
+        src="{{ asset.url }}"
+        alt="{{ asset.alt or asset.region or '' }}"
+        style="{{ asset.background_css or cover_background_inline_css(asset) }}"
+      />
+      {% endif %}
+    {% endfor %}
+    {% include '_cover_accent_svg.html.j2' %}
+    {% for asset in ctx.cover.assets or [] %}
+      {% if asset.url and (asset.region or 'decorative') != 'background' %}
+      {% set asset_geometry = asset.geometry or {} %}
+      <img
+        class="cover-asset cover-asset-{{ asset.region or 'decorative' }}"
+        src="{{ asset.url }}"
+        alt="{{ asset.alt or asset.region or '' }}"
+        style="opacity:{{ asset.opacity if asset.opacity is defined else 1 }};{% if asset_geometry.x_pct is defined %}left:{{ asset_geometry.x_pct }}%;right:auto;{% elif asset.x_pct is defined %}left:{{ asset.x_pct }}%;right:auto;{% elif asset.x is defined %}left:{{ asset.x }}%;right:auto;{% endif %}{% if asset_geometry.y_pct is defined %}top:{{ asset_geometry.y_pct }}%;bottom:auto;{% elif asset.y_pct is defined %}top:{{ asset.y_pct }}%;bottom:auto;{% elif asset.y is defined %}top:{{ asset.y }}%;bottom:auto;{% endif %}{% if asset_geometry.width_pct is defined %}width:{{ asset_geometry.width_pct }}%;max-width:none;{% elif asset.width_pct is defined %}width:{{ asset.width_pct }}%;max-width:none;{% endif %}{% if asset_geometry.height_pct is defined %}height:{{ asset_geometry.height_pct }}%;max-height:none;{% elif asset.height_pct is defined %}height:{{ asset.height_pct }}%;max-height:none;{% endif %}{% if asset_geometry.z_index is defined %}z-index:{{ asset_geometry.z_index }};{% elif asset.z_index is defined %}z-index:{{ asset.z_index }};{% endif %}{% set asset_rotation = asset_geometry.rotation_deg if asset_geometry.rotation_deg is defined else asset.rotation %}{% if asset_rotation %}transform:rotate({{ asset_rotation }}deg);transform-origin:center;{% endif %}"
+      />
+      {% endif %}
+    {% endfor %}
+    <div class="cover-content">
+      {% if ctx.cover.fields %}
+        {% for field in ctx.cover.fields %}
+          {% if field.value is not none and not field.geometry %}
+          {% set field_style = field.style or {} %}
+          <div class="cover-field cover-field-{{ field.emphasis or 'metadata' }}{% if field_style %} cover-field-styled{% endif %}" data-cover-key="{{ field.key }}"{% if field_style %} style="{% if field_style.font_family is defined %}font-family:{{ field_style.font_family | tojson | forceescape }};{% endif %}{% if field_style.font_size_pt is defined %}font-size:{{ field_style.font_size_pt }}pt;{% endif %}{% if field_style.font_weight is defined %}font-weight:{{ field_style.font_weight }};{% endif %}{% if field_style.italic is defined %}font-style:{{ 'italic' if field_style.italic else 'normal' }};{% endif %}{% if field_style.color is defined %}color:{{ field_style.color }};{% endif %}{% if field_style.alignment is defined %}text-align:{{ field_style.alignment }};{% elif field_style.text_align is defined %}text-align:{{ field_style.text_align }};{% endif %}{% if field_style.line_height is defined %}line-height:{{ field_style.line_height }};{% endif %}{% if field_style.letter_spacing_pt is defined %}letter-spacing:{{ field_style.letter_spacing_pt }}pt;{% elif field_style.letter_spacing_em is defined %}letter-spacing:{{ field_style.letter_spacing_em }}em;{% endif %}{% if field_style.opacity is defined %}opacity:{{ field_style.opacity }};{% endif %}{% if field_style.background_color is defined %}background-color:{{ field_style.background_color }};{% endif %}{% if field_style.padding_mm is defined %}padding:{{ field_style.padding_mm }}mm;{% endif %}"{% endif %}>
+            {% if field.emphasis != 'title' %}<span class="cover-field-label">{{ field.label }}</span>{% endif %}
+            <span class="cover-field-value">{{ field.value }}</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <h1 class="doc-title">{{ ctx.project_name }}</h1>
+      {% endif %}
+    </div>
+    {% for field in ctx.cover.fields or [] %}
+      {% if field.value is not none and field.geometry %}
+      {% set geometry = field.geometry %}
+      {% set field_style = field.style or {} %}
+      <div class="cover-field cover-field-{{ field.emphasis or 'metadata' }}{% if field_style %} cover-field-styled{% endif %}" data-cover-key="{{ field.key }}" style="position:absolute;left:{{ geometry.x_pct }}%;top:{{ geometry.y_pct }}%;width:{{ geometry.width_pct }}%;{% if geometry.height_pct is defined %}height:{{ geometry.height_pct }}%;{% endif %}z-index:{{ geometry.z_index }};{% if geometry.rotation_deg is defined and geometry.rotation_deg %}transform:rotate({{ geometry.rotation_deg }}deg);transform-origin:center;{% endif %}{% if field_style.font_family is defined %}font-family:{{ field_style.font_family | tojson | forceescape }};{% endif %}{% if field_style.font_size_pt is defined %}font-size:{{ field_style.font_size_pt }}pt;{% endif %}{% if field_style.font_weight is defined %}font-weight:{{ field_style.font_weight }};{% endif %}{% if field_style.italic is defined %}font-style:{{ 'italic' if field_style.italic else 'normal' }};{% endif %}{% if field_style.color is defined %}color:{{ field_style.color }};{% endif %}{% if field_style.alignment is defined %}text-align:{{ field_style.alignment }};{% elif field_style.text_align is defined %}text-align:{{ field_style.text_align }};{% endif %}{% if field_style.line_height is defined %}line-height:{{ field_style.line_height }};{% endif %}{% if field_style.letter_spacing_pt is defined %}letter-spacing:{{ field_style.letter_spacing_pt }}pt;{% elif field_style.letter_spacing_em is defined %}letter-spacing:{{ field_style.letter_spacing_em }}em;{% endif %}{% if field_style.opacity is defined %}opacity:{{ field_style.opacity }};{% endif %}{% if field_style.background_color is defined %}background-color:{{ field_style.background_color }};{% endif %}{% if field_style.padding_mm is defined %}padding:{{ field_style.padding_mm }}mm;{% endif %}">
+        {% if field.emphasis != 'title' %}<span class="cover-field-label">{{ field.label }}</span>{% endif %}
+        <span class="cover-field-value">{{ field.value }}</span>
+      </div>
+      {% endif %}
+    {% endfor %}
   </div>
+  {% endif %}
 
   <nav class="toc" id="toc">
     <div class="toc-title">{{ ctx.labels.toc }}</div>
@@ -298,7 +466,7 @@
   </nav>
 
   {% if ctx.cost_summary and ctx.variant in ['full', 'proposal'] %}
-  <div class="cost-box">
+  <div class="cost-box summary-grid">
     <div><strong>{{ ctx.labels.one_time }}:</strong> {{ ctx.cost_summary.one_time_project_cost_jpy }} JPY</div>
     <div><strong>{{ ctx.labels.monthly }}:</strong> {{ ctx.cost_summary.monthly_recurring_cost_jpy }} JPY</div>
     <div><strong>{{ ctx.labels.first_year }}:</strong> {{ ctx.cost_summary.first_year_total_jpy }} JPY</div>

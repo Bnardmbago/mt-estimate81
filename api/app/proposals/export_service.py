@@ -10,8 +10,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import AppError
-from app.models.proposal import Proposal, ProposalExport, ProposalExportFormat
+from app.exports.cover_render import embed_cover_asset_data
+from app.models.proposal import ProposalExport, ProposalExportFormat
 from app.models.user import User
+from app.presentation.resolver import resolve_presentation
+from app.presentation.service import assert_preset_ids_exist
 from app.proposals.export_context import build_proposal_export_context
 from app.proposals.export_formats import (
     generate_proposal_docx,
@@ -20,6 +23,7 @@ from app.proposals.export_formats import (
     generate_proposal_xlsx,
 )
 from app.proposals.service import get_proposal_or_404
+from app.proposals.service import merge_cover_values
 from app.storage.factory import get_storage_backend
 
 FORMAT_EXTENSIONS = {
@@ -69,6 +73,10 @@ def _generate_bytes(fmt: str, ctx: dict) -> bytes:
     raise AppError(f"Unsupported proposal export format: {fmt}", code="UNSUPPORTED_FORMAT")
 
 
+# Backwards-compatible alias for unit tests that import the private name.
+_embed_cover_asset_data = embed_cover_asset_data
+
+
 async def export_proposal(
     db: AsyncSession,
     user: User,
@@ -78,6 +86,12 @@ async def export_proposal(
     variant: str = "full",
     locale: str | None = None,
     project_name: str | None = None,
+    theme_id: str | None = None,
+    style_id: str | None = None,
+    template_id: str | None = None,
+    include_cover: bool | None = None,
+    cover_template_id: str | None = None,
+    cover_values: dict | None = None,
 ) -> ProposalExport:
     proposal = await get_proposal_or_404(db, proposal_id, user)
     if not proposal.assessment or not proposal.proposal_body:
@@ -85,13 +99,55 @@ async def export_proposal(
     if variant == "poc" and (not proposal.include_poc or not proposal.poc):
         raise AppError("Proof of Concept is not available", code="POC_NOT_AVAILABLE", status_code=400)
 
+    await assert_preset_ids_exist(
+        db,
+        theme_id=theme_id,
+        style_id=style_id,
+        template_id=template_id,
+        cover_template_id=cover_template_id,
+    )
+
+    effective_theme = theme_id or proposal.theme_id
+    effective_style = style_id or proposal.style_id
+    effective_template = template_id or proposal.template_id
+    bundle = await resolve_presentation(
+        db,
+        effective_theme,
+        effective_style,
+        effective_template,
+        cover_template_id=cover_template_id,
+    )
+
     loc = locale or proposal.locale
+    effective_cover_values = (
+        merge_cover_values(proposal.cover_values, loc, cover_values)
+        if cover_values is not None
+        else proposal.cover_values
+    )
     ctx = build_proposal_export_context(
         proposal,
         locale=loc,
         variant=variant,
         project_name=project_name,
+        presentation=bundle,
+        include_cover=include_cover,
+        cover_values=effective_cover_values,
     )
+    if ctx["include_cover"]:
+        missing_keys = [
+            field["key"]
+            for field in ctx["cover"]["fields"]
+            if field.get("required") and field.get("source") == "missing"
+        ]
+        if missing_keys:
+            raise AppError(
+                "Required cover values are missing",
+                code="COVER_VALUES_REQUIRED",
+                status_code=400,
+                details={"missing_keys": missing_keys},
+            )
+    storage = get_storage_backend()
+    await embed_cover_asset_data(ctx, storage)
     content = _generate_bytes(format, ctx)
 
     result = await db.execute(
@@ -100,7 +156,6 @@ async def export_proposal(
     revision = int(result.scalar_one() or 0) + 1
 
     ext = FORMAT_EXTENSIONS[format]
-    storage = get_storage_backend()
     path = f"proposals/{proposal.id}/{revision}_{variant}.{ext}"
     await storage.save(path, content)
 
@@ -111,6 +166,9 @@ async def export_proposal(
         storage_path=path,
         locale=loc,
         revision=revision,
+        theme_id=bundle.theme_id,
+        style_id=bundle.style_id,
+        template_id=bundle.template_id,
         generated_by=user.id,
         generated_at=datetime.utcnow(),
     )

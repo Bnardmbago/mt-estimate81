@@ -12,6 +12,9 @@ InstructionLocation = Literal[
     "extraction_client_constraints",
     "rate_card_generation",
     "rate_card_section",
+    "proposal_assessment",
+    "proposal_body",
+    "proposal_poc",
 ]
 
 InstructionLocale = Literal["en", "ja"]
@@ -22,6 +25,9 @@ INSTRUCTION_LOCATIONS: tuple[InstructionLocation, ...] = (
     "extraction_client_constraints",
     "rate_card_generation",
     "rate_card_section",
+    "proposal_assessment",
+    "proposal_body",
+    "proposal_poc",
 )
 
 INSTRUCTION_LOCALES: tuple[InstructionLocale, ...] = ("en", "ja")

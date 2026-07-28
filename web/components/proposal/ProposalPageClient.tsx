@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { apiJson } from "@/lib/api";
@@ -20,6 +20,7 @@ import { proposalDocLabels } from "@/lib/proposal-doc-labels";
 import type {
   EstimatePickerItem,
   ProposalDetail,
+  ProposalExportRecord,
   ProposalLocale,
   ProposalProjectBrief,
   ProposalSummary,
@@ -68,6 +69,16 @@ export default function ProposalPageClient() {
     setRecent(proposalRows);
   }, []);
 
+  const handleExported = useCallback((row: ProposalExportRecord) => {
+    setProposal((prev) =>
+      prev ? { ...prev, exports: [row, ...(prev.exports || [])] } : prev,
+    );
+  }, []);
+
+  const handleExportsChanged = useCallback((rows: ProposalExportRecord[]) => {
+    setProposal((prev) => (prev ? { ...prev, exports: rows } : prev));
+  }, []);
+
   function formatUpdated(value: string): string {
     if (!value) {
       return "—";
@@ -103,6 +114,23 @@ export default function ProposalPageClient() {
     }
   }
 
+  async function handleToggleRecentProposal(row: ProposalSummary) {
+    if (proposal?.id === row.id) {
+      setProposal(null);
+      return;
+    }
+    setError(null);
+    try {
+      const detail = await fetchProposal(row.id);
+      setProposal(detail);
+      setEstimateId(detail.estimate_id);
+      setIncludePoc(detail.include_poc);
+      setDocLocale(detail.locale as ProposalLocale);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("loadFailed"));
+    }
+  }
+
   useEffect(() => {
     void loadLists().catch((err) =>
       setError(err instanceof Error ? err.message : t("loadFailed")),
@@ -127,15 +155,19 @@ export default function ProposalPageClient() {
     })();
   }, [presetEstimate, docLocale]);
 
+  // Poll by id/status only — depending on the whole proposal object restarts the
+  // interval on every meta/export update and can prevent the 2s tick from firing.
+  const generatingId =
+    proposal?.status === "generating" ? proposal.id : null;
   useEffect(() => {
-    if (!proposal || proposal.status !== "generating") {
+    if (!generatingId) {
       return;
     }
     const timer = window.setInterval(() => {
-      void fetchProposalStatus(proposal.id)
+      void fetchProposalStatus(generatingId)
         .then(async (status) => {
           if (status.status !== "generating") {
-            const fresh = await fetchProposal(proposal.id);
+            const fresh = await fetchProposal(generatingId);
             setProposal(fresh);
           } else {
             setProposal((prev) =>
@@ -144,12 +176,11 @@ export default function ProposalPageClient() {
                     ...prev,
                     status: status.status,
                     generation_meta: status.generation_meta,
-                    assessment: status.assessment_ready ? prev.assessment : prev.assessment,
                   }
                 : prev,
             );
             if (status.assessment_ready || status.proposal_ready) {
-              const fresh = await fetchProposal(proposal.id);
+              const fresh = await fetchProposal(generatingId);
               setProposal(fresh);
             }
           }
@@ -157,7 +188,7 @@ export default function ProposalPageClient() {
         .catch(() => undefined);
     }, 2000);
     return () => window.clearInterval(timer);
-  }, [proposal]);
+  }, [generatingId]);
 
   const partStatus = useMemo(() => {
     const parts = proposal?.generation_meta?.parts || {};
@@ -294,9 +325,14 @@ export default function ProposalPageClient() {
 
   const costs = proposal?.source_snapshot?.costs;
   const docLabels = proposal ? proposalDocLabels(proposal.locale) : proposalDocLabels(docLocale);
+  const presentationStyle = proposal?.presentation_css_vars || undefined;
+  const layoutClass = proposal?.presentation_layout_class || "proposal-layout-linear";
 
   return (
-    <div className="proposal-theme proposal-print space-y-6">
+    <div
+      className={`proposal-theme proposal-print space-y-6 ${layoutClass}`}
+      style={presentationStyle as CSSProperties | undefined}
+    >
       <header className="print:hidden">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
           {t("pageTitle")}
@@ -429,19 +465,19 @@ export default function ProposalPageClient() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800/60">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                     {t("columnProject")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                     {t("columnClient")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                     {t("columnStatus")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-1.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                     {t("columnUpdated")}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-1.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
                     {t("columnActions")}
                   </th>
                 </tr>
@@ -450,40 +486,35 @@ export default function ProposalPageClient() {
                 {recent.slice(0, 8).map((row) => {
                   const isConfirming = confirmingDeleteId === row.id;
                   const isDeleting = deletingId === row.id;
+                  const isOpen = proposal?.id === row.id;
                   return (
                     <tr
                       key={row.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800/40"
                     >
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-3 py-1.5 text-sm">
                         <button
                           type="button"
-                          className="proposal-link text-left font-medium hover:underline"
-                          onClick={() =>
-                            void fetchProposal(row.id).then((detail) => {
-                              setProposal(detail);
-                              setEstimateId(detail.estimate_id);
-                              setIncludePoc(detail.include_poc);
-                              setDocLocale(detail.locale as ProposalLocale);
-                            })
-                          }
+                          className={`proposal-link inline-flex items-center gap-1.5 text-left font-medium hover:underline ${isOpen ? "font-semibold" : ""}`}
+                          aria-expanded={isOpen}
+                          onClick={() => void handleToggleRecentProposal(row)}
                         >
-                          {row.project_name || "—"}
+                          <span>{row.project_name || "—"}</span>
+                          <span className="text-xs font-normal text-gray-500">
+                            {row.locale.toUpperCase()}
+                          </span>
                         </button>
-                        <div className="mt-0.5 text-xs text-gray-500">
-                          {row.locale.toUpperCase()}
-                        </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
                         {row.client_name || "—"}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
                         {row.status}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300">
                         {formatUpdated(row.updated_at)}
                       </td>
-                      <td className="px-4 py-3 text-right text-sm">
+                      <td className="px-3 py-1.5 text-right text-sm">
                         {isConfirming ? (
                           <div className="inline-flex flex-col items-end gap-2 sm:flex-row sm:items-center">
                             <span className="max-w-xs text-left text-xs text-gray-600 dark:text-gray-300">
@@ -494,7 +525,7 @@ export default function ProposalPageClient() {
                                 type="button"
                                 onClick={() => setConfirmingDeleteId(null)}
                                 disabled={isDeleting}
-                                className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                                className="rounded border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
                               >
                                 {t("deleteCancel")}
                               </button>
@@ -502,7 +533,7 @@ export default function ProposalPageClient() {
                                 type="button"
                                 onClick={() => void handleDeleteProposal(row)}
                                 disabled={isDeleting}
-                                className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                                className="rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
                               >
                                 {isDeleting ? t("deleting") : t("deleteConfirmAction")}
                               </button>
@@ -512,17 +543,11 @@ export default function ProposalPageClient() {
                           <div className="inline-flex gap-2">
                             <button
                               type="button"
-                              className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
-                              onClick={() =>
-                                void fetchProposal(row.id).then((detail) => {
-                                  setProposal(detail);
-                                  setEstimateId(detail.estimate_id);
-                                  setIncludePoc(detail.include_poc);
-                                  setDocLocale(detail.locale as ProposalLocale);
-                                })
-                              }
+                              className="rounded border border-gray-300 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                              aria-expanded={isOpen}
+                              onClick={() => void handleToggleRecentProposal(row)}
                             >
-                              {t("open")}
+                              {isOpen ? t("collapse") : t("open")}
                             </button>
                             <button
                               type="button"
@@ -530,7 +555,7 @@ export default function ProposalPageClient() {
                                 setError(null);
                                 setConfirmingDeleteId(row.id);
                               }}
-                              className="rounded border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40"
+                              className="rounded border border-red-200 px-2 py-0.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/40"
                             >
                               {t("delete")}
                             </button>
@@ -667,6 +692,16 @@ export default function ProposalPageClient() {
               {activeTab === "proposal" ? (
                 <>
                   <ProposalGantt proposal={proposal} />
+                  {(proposal.proposal_body?.tables || []).length ? (
+                    <div className="mt-4">
+                      <h3 className="proposal-doc-heading text-base font-semibold">
+                        {docLabels.pocTables}
+                      </h3>
+                      {(proposal.proposal_body?.tables || []).map((table) => (
+                        <ProposalDataTable key={table.id} table={table} />
+                      ))}
+                    </div>
+                  ) : null}
                   {proposal.diagrams.map((diagram) => (
                     <ProposalMermaid
                       key={diagram.id}
@@ -748,16 +783,9 @@ export default function ProposalPageClient() {
 
           <ProposalExportPanel
             proposal={proposal}
-            onExported={(row) =>
-              setProposal((prev) =>
-                prev
-                  ? { ...prev, exports: [row, ...(prev.exports || [])] }
-                  : prev,
-              )
-            }
-            onExportsChanged={(rows) =>
-              setProposal((prev) => (prev ? { ...prev, exports: rows } : prev))
-            }
+            onProposalUpdated={setProposal}
+            onExported={handleExported}
+            onExportsChanged={handleExportsChanged}
           />
         </>
       ) : null}

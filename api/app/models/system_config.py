@@ -3,6 +3,7 @@ from datetime import datetime
 from datetime import date
 
 from sqlalchemy import Boolean, BigInteger, Date, DateTime, Float, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -41,4 +42,26 @@ class SystemConfig(Base):
     quotation_number_prefix: Mapped[str] = mapped_column(String(10), default="BAI")
     quotation_number_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     quotation_number_sequence: Mapped[int] = mapped_column(Integer, default=0)
+    proposal_ai_settings: Mapped[dict] = mapped_column(
+        JSONB,
+        default=lambda: {
+            "assessment_purpose": "standard",
+            "proposal_purpose": "detailed",
+            "poc_purpose": "detailed",
+        },
+        nullable=False,
+    )
+    google_oauth_client_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    google_oauth_client_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    google_oauth_redirect_uri: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    canva_client_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    canva_client_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    canva_redirect_uri: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    canva_template_proposal_en: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    canva_template_proposal_ja: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    canva_template_poc_en: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    canva_template_poc_ja: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    presentation_default_cover_template_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

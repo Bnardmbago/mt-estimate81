@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import AppHeaderNav from "@/components/AppHeaderNav";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import LogoutButton from "@/components/LogoutButton";
@@ -42,7 +43,12 @@ export default async function AppHeader({
           <ThemeToggle />
           <LocaleSwitcher />
           {isAuthenticated && (
-            <LogoutButton locale={locale} accountType={accountType} />
+            <>
+              <Link href={`/${locale}/settings`} className="header-btn">
+                {t("settings")}
+              </Link>
+              <LogoutButton locale={locale} accountType={accountType} />
+            </>
           )}
         </div>
       </div>

@@ -12,6 +12,17 @@ body {
   .dark textarea {
     @apply border-gray-600 bg-gray-900 text-gray-100;
   }
+
+  /*
+   * Password mask bullets: Tailwind Preflight sets font-family: inherit on inputs,
+   * which on macOS/WebKit skips the system-font password disc and falls back to a
+   * tiny U+2022 glyph — looking like an endless dotted line. Verdana has a
+   * properly sized bullet across browsers.
+   */
+  input[type="password"] {
+    font-family: Verdana, Geneva, sans-serif;
+    letter-spacing: 0.125em;
+  }
 }
 
 @layer components {
@@ -37,7 +48,7 @@ body {
   }
 }
 
-/* Proposal pack theme — aligned with api/app/exports/theme.py */
+/* Proposal pack theme — defaults; runtime overrides via presentation_css_vars */
 .proposal-theme {
   --proposal-primary: #1e3a5f;
   --proposal-primary-light: #e8eef4;
@@ -47,6 +58,21 @@ body {
   --proposal-text: #1e293b;
   --proposal-muted: #64748b;
   --proposal-on-primary: #ffffff;
+  --proposal-callout: #e8eef4;
+  --proposal-font-heading: "Noto Sans JP", Helvetica, Arial, sans-serif;
+  --proposal-font-body: "Noto Sans JP", Helvetica, Arial, sans-serif;
+  --proposal-base-size: 10pt;
+  --proposal-line-height: 1.4;
+}
+
+.proposal-layout-two-column .proposal-cost-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.proposal-layout-executive-cover .proposal-doc-heading {
+  letter-spacing: 0.02em;
 }
 
 .proposal-theme .proposal-btn-primary {
@@ -97,6 +123,243 @@ body {
   border-color: var(--proposal-border);
   border-left: 4px solid var(--proposal-primary);
   background-color: var(--proposal-surface);
+}
+
+/* Admin presentation cover designer */
+.presentation-cover-preview-frame {
+  display: flex;
+  max-height: 72vh;
+  min-height: 24rem;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.presentation-cover-preview-page {
+  position: relative;
+  isolation: isolate;
+  /* Width (incl. the 68vh height-derived cap) and aspect ratio are set inline
+     so the box always preserves the page aspect ratio; see coverPreviewWidthCss.
+     Do not add an independent max-height here — it would clamp height while the
+     width stays fixed and break the aspect ratio on short viewports. */
+  overflow: hidden;
+  border: 1px solid rgb(203 213 225);
+  box-sizing: border-box;
+  box-shadow: 0 16px 36px rgb(15 23 42 / 0.18);
+  touch-action: none;
+  user-select: none;
+}
+
+.presentation-cover-preview-page:focus-visible {
+  outline: 2px solid rgb(37 99 235);
+  outline-offset: 3px;
+}
+
+.presentation-cover-preview-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(37 99 235 / 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(37 99 235 / 0.12) 1px, transparent 1px);
+  background-size: 2% 2%;
+}
+
+.presentation-cover-preview-background {
+  /* Position/size come from coverBackgroundImageStyle (focal-point pan/zoom). */
+  z-index: -2;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.presentation-cover-preview-accent-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.presentation-cover-preview-shape-layer {
+  background: transparent;
+}
+
+.presentation-cover-preview-shape-layer.is-locked {
+  cursor: default;
+}
+
+.presentation-cover-preview-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.presentation-cover-preview-auto-field {
+  position: relative;
+  cursor: move;
+  white-space: pre-wrap;
+}
+
+.presentation-cover-preview-auto-field.is-selected {
+  outline: 1px dashed rgb(37 99 235);
+  outline-offset: 2px;
+}
+
+.presentation-cover-preview-layer {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+}
+
+.presentation-cover-preview-text-layer {
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.presentation-cover-preview-asset-layer {
+  display: grid;
+  place-items: center;
+}
+
+.presentation-cover-preview-asset-layer.is-legacy {
+  z-index: 3;
+  width: 24%;
+  height: 16%;
+}
+
+.presentation-cover-preview-asset {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: center;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.presentation-cover-preview-background + .presentation-cover-preview-content {
+  text-shadow: 0 1px 2px rgb(255 255 255 / 0.45);
+}
+
+.presentation-cover-preview-guide {
+  position: absolute;
+  z-index: 1001;
+  pointer-events: none;
+  background: rgb(14 165 233 / 0.9);
+}
+
+.presentation-cover-preview-guide-x {
+  inset-block: 0;
+  width: 1px;
+}
+
+.presentation-cover-preview-guide-y {
+  inset-inline: 0;
+  height: 1px;
+}
+
+.presentation-cover-preview-selection {
+  position: absolute;
+  z-index: 1000 !important;
+  box-sizing: border-box;
+  border: 1px solid rgb(37 99 235);
+  pointer-events: none;
+}
+
+.presentation-cover-resize-handle {
+  position: absolute;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1px solid white;
+  border-radius: 9999px;
+  background: rgb(37 99 235);
+  box-shadow: 0 0 0 1px rgb(37 99 235);
+  pointer-events: auto;
+}
+
+.handle-north,
+.handle-south {
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: ns-resize;
+}
+
+.handle-east,
+.handle-west {
+  top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: ew-resize;
+}
+
+.handle-north-west,
+.handle-north-east,
+.handle-south-west,
+.handle-south-east {
+  transform: translate(-50%, -50%);
+}
+
+.handle-north,
+.handle-north-west,
+.handle-north-east {
+  top: 0;
+}
+
+.handle-south,
+.handle-south-west,
+.handle-south-east {
+  top: 100%;
+}
+
+.handle-west,
+.handle-north-west,
+.handle-south-west {
+  left: 0;
+}
+
+.handle-east,
+.handle-north-east,
+.handle-south-east {
+  left: 100%;
+}
+
+.handle-north-west,
+.handle-south-east {
+  cursor: nwse-resize;
+}
+
+.handle-north-east,
+.handle-south-west {
+  cursor: nesw-resize;
+}
+
+.presentation-cover-rotate-handle {
+  position: absolute;
+  left: 50%;
+  top: -1.6rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  transform: translateX(-50%);
+  border: 1px solid white;
+  border-radius: 9999px;
+  background: rgb(14 165 233);
+  box-shadow: 0 0 0 1px rgb(14 165 233);
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.presentation-cover-rotate-handle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 1rem;
+  transform: translateX(-50%);
+  background: rgb(14 165 233);
 }
 
 @layer utilities {

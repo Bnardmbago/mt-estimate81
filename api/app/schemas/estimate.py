@@ -24,6 +24,10 @@ class EstimateUpdate(BaseModel):
     form_template_id: uuid.UUID | None = None
     project_start_date: date | None = None
     rate_card_id: uuid.UUID | None = None
+    theme_id: str | None = Field(default=None, max_length=64)
+    style_id: str | None = Field(default=None, max_length=64)
+    template_id: str | None = Field(default=None, max_length=64)
+    cover_values: dict[str, Any] | None = None
 
 
 class CalculateEstimateRequest(BaseModel):
@@ -138,6 +142,10 @@ class EstimateDetail(EstimateSummary):
     rate_card_tune_recommended: bool = False
     rate_card_auto_tune_enabled: bool = True
     project_start_date: date | None
+    theme_id: str | None = None
+    style_id: str | None = None
+    template_id: str | None = None
+    cover_values: dict[str, Any] = Field(default_factory=dict)
     feature_items: list[FeatureItemResponse]
     documents: list[EstimateDocumentResponse]
     actuals: ActualsResponse | None = None

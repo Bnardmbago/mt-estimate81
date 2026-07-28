@@ -12,6 +12,7 @@ from app.exports.pricing_summary import (
 )
 from app.exports.report_context import build_report_context
 from app.models.estimate import Estimate
+from app.presentation.resolver import PresentationBundle
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
@@ -188,6 +189,9 @@ def _build_quotation_base(
     logo_src: str | None = None,
     logo_bytes: bytes | None = None,
     logo_ext: str | None = None,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
@@ -200,6 +204,9 @@ def _build_quotation_base(
         rate_card_version_number=rate_card_version_number,
         rate_card_effective_date=rate_card_effective_date,
         export_revision=export_revision,
+        presentation=presentation,
+        include_cover=include_cover,
+        cover_values=cover_values,
     )
 
     resolved_tax_rate = tax_rate if tax_rate is not None else DEFAULT_TAX_RATE
@@ -289,6 +296,13 @@ def _build_quotation_base(
         "pricing_summary": report.get("pricing_summary") or {},
         "nrc_line_items": report.get("calculation", {}).get("nrc_line_items") or [],
         "template_dir": str(TEMPLATE_DIR),
+        "theme": report["theme"],
+        "style": report["style"],
+        "layout": report["layout"],
+        "page": report["page"],
+        "include_cover": report["include_cover"],
+        "cover": report["cover"],
+        "presentation": report["presentation"],
     }
 
 
@@ -307,6 +321,9 @@ def build_quotation_context(
     logo_src: str | None = None,
     logo_bytes: bytes | None = None,
     logo_ext: str | None = None,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return build_formal_quotation_context(
         estimate,
@@ -322,6 +339,9 @@ def build_quotation_context(
         logo_src=logo_src,
         logo_bytes=logo_bytes,
         logo_ext=logo_ext,
+        presentation=presentation,
+        include_cover=include_cover,
+        cover_values=cover_values,
         quotation_number="",
         registration_number="",
     )
@@ -463,6 +483,9 @@ def build_formal_quotation_context(
     quotation_number: str = "",
     registration_number: str = "",
     contact_person: str | None = None,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
@@ -480,6 +503,9 @@ def build_formal_quotation_context(
         logo_src=logo_src,
         logo_bytes=logo_bytes,
         logo_ext=logo_ext,
+        presentation=presentation,
+        include_cover=include_cover,
+        cover_values=cover_values,
     )
 
     labels = FORMAL_QUOTATION_LABELS[locale]

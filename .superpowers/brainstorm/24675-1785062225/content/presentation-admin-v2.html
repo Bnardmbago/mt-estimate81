@@ -1,0 +1,97 @@
+<h2>Admin / Presentation — preset generation only</h2>
+<p class="subtitle">This page creates and manages presentation presets. It does not export documents.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Admin / Presentation / Generate from reference</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:0.8fr 1.2fr;gap:18px">
+      <div>
+        <div class="section">
+          <div class="label">1 · Reference document</div>
+          <div class="placeholder" style="padding:36px 20px;text-align:center">
+            Drop JPEG, PNG, or PDF here<br>
+            <small>Source is deleted after analysis</small>
+          </div>
+          <button class="mock-button" style="width:100%;margin-top:10px">Analyze and generate drafts</button>
+        </div>
+
+        <div class="section">
+          <div class="label">Generated preset set</div>
+          <div class="mock-input">Name · Client Brand Presentation</div>
+          <div class="mock-input" style="margin-top:7px">ID prefix · client-brand</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section">
+          <div class="label">2 · Review generated drafts</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <div style="border:1px solid #d8dee9;border-radius:8px;padding:11px">
+              <strong>Theme</strong>
+              <div style="display:flex;gap:5px;margin:10px 0">
+                <span style="width:28px;height:28px;border-radius:5px;background:#17365d"></span>
+                <span style="width:28px;height:28px;border-radius:5px;background:#d89b2b"></span>
+                <span style="width:28px;height:28px;border-radius:5px;background:#f6f4ef;border:1px solid #ddd"></span>
+              </div>
+              <small>Colors, fonts, logo</small>
+            </div>
+            <div style="border:1px solid #d8dee9;border-radius:8px;padding:11px">
+              <strong>Style</strong>
+              <div style="height:6px;background:#d8dee9;margin:11px 0 5px"></div>
+              <div style="height:6px;background:#d8dee9;margin:5px 0;width:82%"></div>
+              <small>Spacing, scale, density</small>
+            </div>
+            <div style="border:2px solid #2563eb;border-radius:8px;padding:10px">
+              <strong>Template</strong>
+              <div style="border:1px solid #aeb7c4;height:45px;margin:8px 0;padding:5px">
+                <div style="height:9px;background:#17365d;width:67%"></div>
+                <div style="height:3px;background:#d89b2b;width:30%;margin-top:5px"></div>
+              </div>
+              <small>Layout and cover definition</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>Cover page in this Template</strong>
+              <div><small>Default behavior when this preset is selected</small></div>
+            </div>
+            <div style="width:43px;height:24px;background:#2563eb;border-radius:20px;padding:3px">
+              <div style="width:18px;height:18px;background:white;border-radius:50%;margin-left:19px"></div>
+            </div>
+          </div>
+
+          <div class="label" style="margin-top:16px">Ordered variable text fields</div>
+          <div style="display:grid;gap:7px;margin-top:7px">
+            <div class="mock-input">☰ &nbsp; Document title · title · required</div>
+            <div class="mock-input">☰ &nbsp; Client name · metadata · auto-fill</div>
+            <div class="mock-input">☰ &nbsp; Confidentiality note · footer · optional</div>
+          </div>
+          <button class="mock-button" style="margin-top:9px">+ Add text field</button>
+        </div>
+
+        <button class="mock-button" style="width:100%">Approve and save Theme, Style, and Template</button>
+        <p style="text-align:center;margin:9px 0 0"><small>No document export action appears on this page.</small></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-admin-v2" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve Admin / Presentation</h3>
+      <p>Preset generation defines the Template cover default and its variable fields; exporting remains elsewhere.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-admin-v2" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>

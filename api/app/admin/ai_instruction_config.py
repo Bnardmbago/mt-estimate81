@@ -15,9 +15,9 @@ from app.models.ai_instruction_layer import (
 MAX_PROMPT_LENGTH = 32_000
 
 PARAMETER_BOUNDS: dict[str, tuple[int | float, int | float]] = {
-    "max_tokens": (256, 8192),
+    "max_tokens": (256, 16384),
     "temperature": (0.0, 1.0),
-    "timeout_seconds": (30, 120),
+    "timeout_seconds": (30, 180),
     "max_document_chars": (5_000, 80_000),
 }
 
@@ -127,19 +127,41 @@ def validate_parameters(
     return validated or None
 
 
-def get_default_parameters(location: InstructionLocation) -> dict[str, int | float]:
+def get_default_parameters(
+    location: InstructionLocation,
+    *,
+    purpose_defaults: dict[str, int | float] | None = None,
+) -> dict[str, int | float]:
+    if purpose_defaults is not None:
+        params = dict(DEFAULT_PARAMETERS)
+        params.update(purpose_defaults)
+        return params
     params = dict(DEFAULT_PARAMETERS)
     if location == "extraction":
         params["max_document_chars"] = EXTRACTION_DEFAULT_MAX_DOCUMENT_CHARS
         params["timeout_seconds"] = 120
+    if location in ("proposal_assessment", "proposal_body", "proposal_poc"):
+        # Fallback when purpose settings are unavailable (preview without DB).
+        from app.proposals.generation_presets import (
+            DEFAULT_PROPOSAL_AI_SETTINGS,
+            LOCATION_TO_PART,
+            budget_parameters,
+            purpose_for_part,
+        )
+
+        part = LOCATION_TO_PART[location]
+        purpose = purpose_for_part(DEFAULT_PROPOSAL_AI_SETTINGS, part)
+        params.update(budget_parameters(purpose))
     return params
 
 
 def merge_parameters(
     location: InstructionLocation,
     stored: dict[str, Any] | None,
+    *,
+    purpose_defaults: dict[str, int | float] | None = None,
 ) -> dict[str, int | float]:
-    merged = get_default_parameters(location)
+    merged = get_default_parameters(location, purpose_defaults=purpose_defaults)
     if stored:
         validated = validate_parameters(stored, location=location)
         if validated:

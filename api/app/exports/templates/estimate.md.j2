@@ -1,3 +1,14 @@
+{% if ctx.include_cover -%}
+# {{ ctx.project_summary.project_name }}
+{% for field in ctx.cover.fields or [] -%}
+{% if field.value is not none -%}
+**{{ field.label }}:** {{ field.value }}
+{% endif -%}
+{% endfor %}
+
+---
+
+{% endif -%}
 # {{ ctx.labels.title }}
 
 ## {{ ctx.labels.project_summary }}

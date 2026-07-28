@@ -59,5 +59,17 @@ class Settings(BaseSettings):
     contact_magic_link_rate_limit_per_email: int = 3
     contact_magic_link_rate_limit_per_ip: int = 10
 
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    google_oauth_redirect_uri: str = "http://localhost:8000/integrations/google/callback"
+
+    canva_client_id: str = ""
+    canva_client_secret: str = ""
+    canva_redirect_uri: str = "http://localhost:8000/integrations/canva/callback"
+    canva_template_proposal_en: str = ""
+    canva_template_proposal_ja: str = ""
+    canva_template_poc_en: str = ""
+    canva_template_poc_ja: str = ""
+
 
 settings = Settings()

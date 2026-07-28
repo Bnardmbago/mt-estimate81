@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import NewEstimateForm from "@/components/NewEstimateForm";
 import { contactUrl } from "@/lib/authRedirect";
-import { createEstimate, fetchEstimates } from "@/lib/estimate";
+import { fetchEstimates } from "@/lib/estimate";
 import type { UserProfile } from "@/lib/user-types";
 
 export default async function NewEstimatePage({
@@ -34,13 +34,7 @@ export default async function NewEstimatePage({
   }
 
   if (template) {
-    const estimate = await createEstimate(locale, token.value, template);
-
-    if (!estimate) {
-      redirect(`/${locale}/estimates`);
-    }
-
-    redirect(`/${locale}/estimates/${estimate.id}`);
+    redirect(`/${locale}/estimates/new/draft?template=${encodeURIComponent(template)}`);
   }
 
   const t = await getTranslations("estimates");

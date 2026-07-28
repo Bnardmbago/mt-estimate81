@@ -10,10 +10,17 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.ai_config import get_ai_config
+from app.admin.proposal_ai_config import get_proposal_ai_settings
 from app.ai.adapter_instructions import AI_TIMEOUT_SECONDS, anthropic_completion_kwargs
+from app.ai.instruction_resolver import merge_user_message, resolve_instructions
 from app.ai.openai_schema import build_openai_strict_schema
 from app.ai.rate_limit_retry import with_rate_limit_retry
 from app.database import SessionLocal
+from app.proposals.generation_presets import (
+    GenerationPurpose,
+    budget_parameters,
+    purpose_for_part,
+)
 from app.proposals.prompts import (
     build_assessment_system_prompt,
     build_assessment_user_prompt,
@@ -32,6 +39,8 @@ logger = logging.getLogger(__name__)
 
 Locale = Literal["ja", "en"]
 T = TypeVar("T", bound=BaseModel)
+
+_DEFAULT_MAX_TOKENS = 8192
 
 
 def _section_to_dict(section: Any) -> dict[str, Any]:
@@ -65,7 +74,18 @@ def _assessment_to_storage(model: ProposalAssessmentAI) -> dict[str, Any]:
 def _proposal_to_storage(
     model: ProposalBodyAI,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
-    body = {"sections": [_section_to_dict(s) for s in model.sections]}
+    body = {
+        "sections": [_section_to_dict(s) for s in model.sections],
+        "tables": [
+            {
+                "id": t.id,
+                "title": t.title,
+                "headers": list(t.headers or []),
+                "rows": [list(row) for row in (t.rows or [])],
+            }
+            for t in (model.tables or [])
+        ],
+    }
     diagrams = [
         {
             "id": d.id,
@@ -121,6 +141,14 @@ def _poc_to_storage(model: ProposalPocAI) -> dict[str, Any]:
     }
 
 
+def _budget_from_parameters(parameters: dict[str, int | float]) -> tuple[int, float, float | None]:
+    max_tokens = int(parameters.get("max_tokens") or _DEFAULT_MAX_TOKENS)
+    timeout_seconds = float(parameters.get("timeout_seconds") or AI_TIMEOUT_SECONDS)
+    temperature = parameters.get("temperature")
+    temp_value = float(temperature) if temperature is not None else None
+    return max_tokens, timeout_seconds, temp_value
+
+
 async def _complete_openai(
     *,
     model: str,
@@ -129,19 +157,22 @@ async def _complete_openai(
     user: str,
     schema_model: type[T],
     schema_name: str,
+    max_tokens: int = _DEFAULT_MAX_TOKENS,
+    timeout_seconds: float = AI_TIMEOUT_SECONDS,
+    temperature: float | None = None,
 ) -> T:
     from openai import AsyncOpenAI
 
-    client = AsyncOpenAI(api_key=api_key, timeout=AI_TIMEOUT_SECONDS)
+    client = AsyncOpenAI(api_key=api_key, timeout=timeout_seconds)
 
     async def _call():
-        return await client.chat.completions.create(
-            model=model,
-            messages=[
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            response_format={
+            "response_format": {
                 "type": "json_schema",
                 "json_schema": {
                     "name": schema_name,
@@ -149,8 +180,11 @@ async def _complete_openai(
                     "strict": True,
                 },
             },
-            max_tokens=8192,
-        )
+            "max_tokens": max_tokens,
+        }
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        return await client.chat.completions.create(**kwargs)
 
     response = await with_rate_limit_retry(_call)
     content = response.choices[0].message.content
@@ -168,12 +202,19 @@ async def _complete_anthropic(
     schema_model: type[T],
     tool_name: str,
     tool_description: str,
+    max_tokens: int = _DEFAULT_MAX_TOKENS,
+    timeout_seconds: float = AI_TIMEOUT_SECONDS,
+    temperature: float | None = None,
 ) -> T:
     from anthropic import AsyncAnthropic
 
-    client = AsyncAnthropic(api_key=api_key, timeout=AI_TIMEOUT_SECONDS)
+    client = AsyncAnthropic(api_key=api_key, timeout=timeout_seconds)
 
     async def _call():
+        kwargs = anthropic_completion_kwargs(None)
+        kwargs["max_tokens"] = max_tokens
+        if temperature is not None:
+            kwargs["temperature"] = temperature
         return await client.messages.create(
             model=model,
             system=system,
@@ -186,7 +227,7 @@ async def _complete_anthropic(
                 }
             ],
             tool_choice={"type": "tool", "name": tool_name},
-            **anthropic_completion_kwargs(None),
+            **kwargs,
         )
 
     response = await with_rate_limit_retry(_call)
@@ -210,6 +251,9 @@ async def _complete(
     schema_model: type[T],
     schema_name: str,
     tool_description: str,
+    max_tokens: int = _DEFAULT_MAX_TOKENS,
+    timeout_seconds: float = AI_TIMEOUT_SECONDS,
+    temperature: float | None = None,
 ) -> T:
     config = await get_ai_config(db)
     if config.ai_provider == "anthropic":
@@ -223,6 +267,9 @@ async def _complete(
             schema_model=schema_model,
             tool_name=schema_name,
             tool_description=tool_description,
+            max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
+            temperature=temperature,
         )
     if not config.openai_api_key:
         raise ValueError("OpenAI API key is not configured")
@@ -233,19 +280,46 @@ async def _complete(
         user=user,
         schema_model=schema_model,
         schema_name=schema_name,
+        max_tokens=max_tokens,
+        timeout_seconds=timeout_seconds,
+        temperature=temperature,
     )
+
+
+async def _resolve_purpose(db: AsyncSession, part: Literal["assessment", "proposal", "poc"]) -> GenerationPurpose:
+    settings = await get_proposal_ai_settings(db)
+    return purpose_for_part(settings, part)
 
 
 async def generate_assessment(snapshot: dict[str, Any], locale: Locale) -> dict[str, Any] | None:
     try:
         async with SessionLocal() as db:
+            purpose = await _resolve_purpose(db, "assessment")
+            instructions = await resolve_instructions(
+                db,
+                "proposal_assessment",
+                locale,
+                build_base_system=build_assessment_system_prompt,
+                system_kwargs={"locale": locale, "purpose": purpose},
+                parameter_defaults=budget_parameters(purpose),
+            )
+            user = merge_user_message(
+                instructions.user_prefix,
+                build_assessment_user_prompt(snapshot, locale, purpose=purpose),
+            )
+            max_tokens, timeout_seconds, temperature = _budget_from_parameters(
+                instructions.parameters
+            )
             model = await _complete(
                 db,
-                system=build_assessment_system_prompt(locale),
-                user=build_assessment_user_prompt(snapshot, locale),
+                system=instructions.system,
+                user=user,
                 schema_model=ProposalAssessmentAI,
                 schema_name="proposal_assessment",
-                tool_description="Produce a detailed stakeholder project assessment.",
+                tool_description="Produce a stakeholder project assessment.",
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+                temperature=temperature,
             )
         return _assessment_to_storage(model)
     except Exception:
@@ -260,13 +334,35 @@ async def generate_proposal(
 ) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]] | None:
     try:
         async with SessionLocal() as db:
+            purpose = await _resolve_purpose(db, "proposal")
+            instructions = await resolve_instructions(
+                db,
+                "proposal_body",
+                locale,
+                build_base_system=build_proposal_system_prompt,
+                system_kwargs={"locale": locale, "purpose": purpose},
+                parameter_defaults=budget_parameters(purpose),
+            )
+            user = merge_user_message(
+                instructions.user_prefix,
+                build_proposal_user_prompt(snapshot, assessment, locale, purpose=purpose),
+            )
+            max_tokens, timeout_seconds, temperature = _budget_from_parameters(
+                instructions.parameters
+            )
             model = await _complete(
                 db,
-                system=build_proposal_system_prompt(locale),
-                user=build_proposal_user_prompt(snapshot, assessment, locale),
+                system=instructions.system,
+                user=user,
                 schema_model=ProposalBodyAI,
                 schema_name="proposal_body",
-                tool_description="Produce a detailed stakeholder project proposal.",
+                tool_description=(
+                    "Produce a stakeholder project proposal with sections, tables, "
+                    "and mermaid diagrams."
+                ),
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+                temperature=temperature,
             )
         return _proposal_to_storage(model)
     except Exception:
@@ -281,13 +377,34 @@ async def generate_poc(
 ) -> dict[str, Any] | None:
     try:
         async with SessionLocal() as db:
+            purpose = await _resolve_purpose(db, "poc")
+            instructions = await resolve_instructions(
+                db,
+                "proposal_poc",
+                locale,
+                build_base_system=build_poc_system_prompt,
+                system_kwargs={"locale": locale, "purpose": purpose},
+                parameter_defaults=budget_parameters(purpose),
+            )
+            user = merge_user_message(
+                instructions.user_prefix,
+                build_poc_user_prompt(snapshot, assessment, locale, purpose=purpose),
+            )
+            max_tokens, timeout_seconds, temperature = _budget_from_parameters(
+                instructions.parameters
+            )
             model = await _complete(
                 db,
-                system=build_poc_system_prompt(locale),
-                user=build_poc_user_prompt(snapshot, assessment, locale),
+                system=instructions.system,
+                user=user,
                 schema_model=ProposalPocAI,
                 schema_name="proposal_poc",
-                tool_description="Produce a detailed Proof of Concept plan.",
+                tool_description=(
+                    "Produce a Proof of Concept plan with sections, tables, and mermaid diagrams."
+                ),
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+                temperature=temperature,
             )
         return _poc_to_storage(model)
     except Exception:

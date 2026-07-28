@@ -19,6 +19,7 @@ from app.estimates.service import get_estimate_for_user
 from app.audit.service import log_change
 from app.email.smtp import EmailAttachment, send_email_with_attachments
 from app.exceptions import AppError
+from app.exports.cover_render import embed_cover_asset_data
 from app.exports.excel import generate_excel
 from app.exports.internal_dossier import (
     generate_internal_docx,
@@ -37,6 +38,9 @@ from app.rate_cards.defaults import DEFAULT_RATE_CARD_SETTINGS
 from app.models.estimate import Estimate, EstimateStatus, Export, ExportFormat
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.presentation.resolver import PresentationBundle, resolve_presentation
+from app.presentation.service import assert_preset_ids_exist
+from app.proposals.service import merge_cover_values
 from app.config import settings
 from app.storage.factory import get_storage_backend
 from app.users.access import is_contact_user
@@ -136,7 +140,7 @@ async def _get_estimate_for_export(
     return result.scalar_one()
 
 
-def _generate_content(
+async def _generate_content(
     estimate: Estimate,
     export_format: str,
     locale: str,
@@ -158,6 +162,9 @@ def _generate_content(
     registration_number: str | None = None,
     contact_person: str | None = None,
     internal_ctx: dict[str, Any] | None = None,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> bytes:
     if export_format == ExportFormat.MD_INTERNAL.value:
         return generate_internal_markdown(internal_ctx or {}).encode("utf-8")
@@ -166,9 +173,13 @@ def _generate_content(
         return generate_internal_xlsx(internal_ctx or {})
 
     if export_format == ExportFormat.PDF_INTERNAL.value:
+        if internal_ctx:
+            await embed_cover_asset_data(internal_ctx, get_storage_backend())
         return generate_internal_pdf(internal_ctx or {})
 
     if export_format == ExportFormat.DOCX_INTERNAL.value:
+        if internal_ctx:
+            await embed_cover_asset_data(internal_ctx, get_storage_backend())
         return generate_internal_docx(internal_ctx or {})
 
     report_context = build_report_context(
@@ -180,7 +191,26 @@ def _generate_content(
         rate_card_effective_date=rate_card_effective_date,
         export_revision=export_revision,
         export_user_display_name=export_user_display_name,
+        presentation=presentation,
+        include_cover=include_cover,
+        cover_values=cover_values,
     )
+    if report_context["include_cover"]:
+        missing_keys = [
+            field["key"]
+            for field in report_context["cover"]["fields"]
+            if field.get("required") and field.get("source") == "missing"
+        ]
+        if missing_keys:
+            raise AppError(
+                "Required cover values are missing",
+                "COVER_VALUES_REQUIRED",
+                status_code=400,
+                details={"missing_keys": missing_keys},
+            )
+
+    storage = get_storage_backend()
+    await embed_cover_asset_data(report_context, storage)
 
     if export_format == ExportFormat.MD.value:
         content = generate_markdown(report_context)
@@ -220,7 +250,11 @@ def _generate_content(
             quotation_number=quotation_number,
             registration_number=registration_number or "",
             contact_person=contact_person,
+            presentation=presentation,
+            include_cover=include_cover,
+            cover_values=cover_values,
         )
+        await embed_cover_asset_data(quotation_context, storage)
         return generate_quotation_formal_pdf(quotation_context, show_watermark=show_watermark)
 
     if export_format == ExportFormat.DOCX.value:
@@ -254,7 +288,11 @@ def _generate_content(
             quotation_number=quotation_number,
             registration_number=registration_number or "",
             contact_person=contact_person,
+            presentation=presentation,
+            include_cover=include_cover,
+            cover_values=cover_values,
         )
+        await embed_cover_asset_data(quotation_context, storage)
         return generate_quotation_formal_docx(quotation_context)
 
     raise AppError(
@@ -321,6 +359,13 @@ async def export_estimate(
     export_format: str,
     locale: str | None,
     user: User,
+    *,
+    theme_id: str | None = None,
+    style_id: str | None = None,
+    template_id: str | None = None,
+    include_cover: bool | None = None,
+    cover_template_id: str | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> Export:
     require_admin_for_internal_format(export_format, user)
 
@@ -355,6 +400,30 @@ async def export_estimate(
     resolved_locale = locale or estimate.locale
     if resolved_locale not in ("ja", "en"):
         raise AppError("Locale must be ja or en", "INVALID_LOCALE", details={"locale": resolved_locale})
+
+    await assert_preset_ids_exist(
+        db,
+        theme_id=theme_id,
+        style_id=style_id,
+        template_id=template_id,
+        cover_template_id=cover_template_id,
+    )
+    presentation = await resolve_presentation(
+        db,
+        theme_id or estimate.theme_id,
+        style_id or estimate.style_id,
+        template_id or estimate.template_id,
+        cover_template_id=cover_template_id,
+    )
+    effective_cover_values = (
+        merge_cover_values(estimate.cover_values, resolved_locale, cover_values)
+        if cover_values is not None
+        else estimate.cover_values
+    )
+    estimate.theme_id = presentation.theme_id
+    estimate.style_id = presentation.style_id
+    estimate.template_id = presentation.template_id
+    estimate.cover_values = effective_cover_values or {}
 
     rate_card_name, rate_card_version_number, rate_card_effective_date, tax_rate = (
         await _get_rate_card_version(db, estimate.rate_card_version_id)
@@ -396,7 +465,14 @@ async def export_estimate(
 
     internal_ctx: dict[str, Any] | None = None
     if is_internal_format(export_format):
-        internal_ctx = await load_internal_export_parts(db, estimate, resolved_locale)
+        internal_ctx = await load_internal_export_parts(
+            db,
+            estimate,
+            resolved_locale,
+            presentation=presentation,
+            include_cover=include_cover,
+            cover_values=effective_cover_values,
+        )
 
     if export_format in REPORT_FORMATS:
         try:
@@ -421,7 +497,7 @@ async def export_estimate(
             )
 
     try:
-        content = _generate_content(
+        content = await _generate_content(
             estimate,
             export_format,
             resolved_locale,
@@ -442,6 +518,9 @@ async def export_estimate(
             registration_number=registration_number,
             contact_person=contact_person,
             internal_ctx=internal_ctx,
+            presentation=presentation,
+            include_cover=include_cover,
+            cover_values=effective_cover_values,
         )
         storage = get_storage_backend()
         await storage.save(storage_path, content)

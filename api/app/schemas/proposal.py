@@ -15,10 +15,24 @@ class ProposalGenerateRequest(BaseModel):
     estimate_id: UUID
     locale: ProposalLocale = "en"
     include_poc: bool = False
+    theme_id: str | None = Field(default=None, max_length=64)
+    style_id: str | None = Field(default=None, max_length=64)
+    template_id: str | None = Field(default=None, max_length=64)
 
 
 class ProposalRegenerateRequest(BaseModel):
     part: ProposalPart = "all"
+
+
+class ProposalPresentationPatch(BaseModel):
+    theme_id: str | None = Field(default=None, max_length=64)
+    style_id: str | None = Field(default=None, max_length=64)
+    template_id: str | None = Field(default=None, max_length=64)
+
+
+class ProposalCoverValuesPatch(BaseModel):
+    locale: ProposalLocale
+    values: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProposalSectionPatch(BaseModel):
@@ -39,6 +53,12 @@ class ProposalExportRequest(BaseModel):
     variant: ProposalExportVariantLiteral = "full"
     locale: ProposalLocale | None = None
     project_name: str | None = Field(default=None, max_length=255)
+    theme_id: str | None = Field(default=None, max_length=64)
+    style_id: str | None = Field(default=None, max_length=64)
+    template_id: str | None = Field(default=None, max_length=64)
+    include_cover: bool | None = None
+    cover_template_id: str | None = Field(default=None, max_length=64)
+    cover_values: dict[str, Any] | None = None
 
 
 class ProposalExportRecord(BaseModel):
@@ -48,6 +68,13 @@ class ProposalExportRecord(BaseModel):
     locale: str
     revision: int
     generated_at: datetime
+    theme_id: str | None = None
+    style_id: str | None = None
+    template_id: str | None = None
+    destination: str | None = None
+    external_file_id: str | None = None
+    external_url: str | None = None
+    manually_edited_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -62,6 +89,9 @@ class ProposalSummary(BaseModel):
     status: str
     updated_at: datetime
     source_stale: bool = False
+    theme_id: str | None = None
+    style_id: str | None = None
+    template_id: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -90,6 +120,16 @@ class ProposalDetail(BaseModel):
     generation_meta: dict[str, Any] = Field(default_factory=dict)
     source_fingerprint: str = ""
     source_stale: bool = False
+    theme_id: str | None = None
+    style_id: str | None = None
+    template_id: str | None = None
+    theme_name: str | None = None
+    style_name: str | None = None
+    template_name: str | None = None
+    presentation_meta: dict[str, Any] = Field(default_factory=dict)
+    presentation_css_vars: dict[str, str] = Field(default_factory=dict)
+    presentation_layout_class: str = "proposal-layout-linear"
+    cover_values: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
     finalized_at: datetime | None = None

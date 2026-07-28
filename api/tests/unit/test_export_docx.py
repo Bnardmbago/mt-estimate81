@@ -7,6 +7,7 @@ from app.exports.docx import (
     generate_quotation_formal_docx,
     generate_report_docx,
 )
+from app.proposals.svg_raster import svg_to_png_bytes
 from tests.unit.export_fixtures import (
     sample_estimate_with_discount,
     sample_formal_quotation_context,
@@ -49,6 +50,84 @@ def _docx_text(content: bytes) -> str:
 def test_report_docx_is_valid_docx_zip():
     content = generate_report_docx(sample_report_context())
     assert content[:2] == b"PK"
+
+
+def test_report_docx_rasterizes_accent_before_cover_text(monkeypatch):
+    accent_svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="355.6mm" height="215.9mm">'
+        '<circle cx="80" cy="80" r="50" fill="#2563eb" fill-opacity=".5"/></svg>'
+    )
+    png = svg_to_png_bytes(accent_svg)
+    assert png is not None
+    calls: list[tuple[str, float]] = []
+
+    def rasterize(svg: str, *, scale: float = 1.5):
+        calls.append((svg, scale))
+        return png
+
+    monkeypatch.setattr("app.exports.docx.svg_to_png_bytes", rasterize, raising=False)
+    ctx = sample_report_context(include_cover=True)
+    ctx["page"] = {"size": "Legal", "orientation": "landscape"}
+    ctx["cover"] = {
+        "fields": [
+            {
+                "key": "title",
+                "label": "Title",
+                "value": "Estimate Cover",
+                "emphasis": "title",
+            }
+        ],
+        "assets": [{"region": "logo", "url": "data:image/png;base64,unused"}],
+        "accent_svg": accent_svg,
+        "warnings": [],
+    }
+
+    content = generate_report_docx(ctx)
+
+    document = Document(BytesIO(content))
+    assert calls == [(accent_svg, 1.5)]
+    assert len(document.inline_shapes) == 1
+    assert document.inline_shapes[0].width > document.inline_shapes[0].height
+    assert document.sections[0].page_width.mm == 355.6
+    assert document.sections[0].page_height.mm == 215.9
+    assert document._element.xml.index("<w:drawing>") < document._element.xml.index(
+        "Estimate Cover"
+    )
+    assert "Estimate Cover" in _docx_text(content)
+    assert ctx["cover"]["assets"][0]["region"] == "logo"
+
+
+def test_report_docx_omits_failed_accent_and_adds_fidelity_warning(monkeypatch):
+    monkeypatch.setattr(
+        "app.exports.docx.svg_to_png_bytes",
+        lambda _svg, **_kwargs: None,
+        raising=False,
+    )
+    ctx = sample_report_context(include_cover=True)
+    ctx["cover"] = {
+        "fields": [
+            {
+                "key": "title",
+                "label": "Title",
+                "value": "Fallback Estimate",
+                "emphasis": "title",
+            }
+        ],
+        "assets": [],
+        "accent_svg": "<svg xmlns='http://www.w3.org/2000/svg'/>",
+        "warnings": [],
+    }
+
+    content = generate_report_docx(ctx)
+
+    document = Document(BytesIO(content))
+    assert content[:2] == b"PK"
+    assert len(document.inline_shapes) == 0
+    assert "Fallback Estimate" in _docx_text(content)
+    assert (
+        "DOCX uses flow-based Cover layout; exact positioning may differ from PDF."
+        in ctx["cover"]["warnings"]
+    )
 
 
 def test_report_docx_contains_project_and_cost_sections():

@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:cover": "tsx --test tests/cover-geometry.test.ts tests/cover-accent-shapes.test.ts tests/cover-preview-size.test.ts tests/cover-background-style.test.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -26,6 +27,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   }
 }

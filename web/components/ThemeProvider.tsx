@@ -6,6 +6,7 @@ type Theme = "light" | "dark";
 
 type ThemeContextValue = {
   theme: Theme;
+  setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   mounted: boolean;
 };
@@ -30,18 +31,24 @@ function readInitialTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const initial = readInitialTheme();
-    setTheme(initial);
+    setThemeState(initial);
     applyTheme(initial);
     setMounted(true);
   }, []);
 
+  const setTheme = useCallback((next: Theme) => {
+    window.localStorage.setItem("theme", next);
+    applyTheme(next);
+    setThemeState(next);
+  }, []);
+
   const toggleTheme = useCallback(() => {
-    setTheme((current) => {
+    setThemeState((current) => {
       const next: Theme = current === "dark" ? "light" : "dark";
       window.localStorage.setItem("theme", next);
       applyTheme(next);
@@ -50,7 +57,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, mounted }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, mounted }}>
       {children}
     </ThemeContext.Provider>
   );

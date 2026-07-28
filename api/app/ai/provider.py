@@ -11,10 +11,21 @@ from app.ai.schemas import (
     RateCardPhasesSectionSuggestion,
     RateCardRolesSectionSuggestion,
 )
+from app.ai.schemas_presentation import PresentationDraftAI
 from app.schemas.rate_card import RateCardAiSection
 
 
 class AIProvider(Protocol):
+    def supports_vision(self) -> bool: ...
+
+    async def generate_presentation_draft(
+        self,
+        *,
+        source_locale: Literal["ja", "en"],
+        signals: dict[str, Any],
+        page_images: list[dict[str, Any]],
+    ) -> PresentationDraftAI: ...
+
     async def extract_requirements(
         self,
         form_data: dict[str, Any],

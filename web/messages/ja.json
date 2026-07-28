@@ -1,4 +1,8 @@
 {
+  "common": {
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す"
+  },
   "nav": {
     "estimates": "見積一覧",
     "rateCards": "レートカード",
@@ -8,6 +12,7 @@
     "contact": "お問い合わせ見積",
     "help": "ヘルプ",
     "logout": "ログアウト",
+    "settings": "設定",
     "openMenu": "メニューを開く",
     "closeMenu": "メニューを閉じる"
   },
@@ -41,19 +46,46 @@
     "statusError": "失敗",
     "statusSkipped": "スキップ",
     "generateFailed": "提案を生成できませんでした",
+    "presentationUpdateFailed": "体裁設定を更新できませんでした",
+    "presentation": {
+      "theme": "テーマ",
+      "style": "スタイル",
+      "template": "テンプレート",
+      "coverPreset": "表紙プリセット",
+      "noCover": "表紙なし",
+      "themeHelp": "ブランド・配色",
+      "styleHelp": "余白・文字の密度",
+      "templateHelp": "ページ構成（段組・装飾）",
+      "coverPresetHelp": "作成済みの表紙デザイン。選択すると表紙ページが含まれます"
+    },
+    "cover": {
+      "title": "表紙フィールド",
+      "description": "ここで保存した値は、この文書の {locale} エクスポートに使用されます。",
+      "autoFillHint": "空欄の場合は、テンプレートが文書から取得した値を使用します。",
+      "save": "表紙フィールドを保存",
+      "saving": "保存中…",
+      "saveFailed": "表紙フィールドを保存できませんでした"
+    },
+    "exportLocale": {
+      "label": "エクスポート言語",
+      "ja": "日本語",
+      "en": "英語",
+      "defaultHint": "初期値は文書の言語です。変更は今回のエクスポートにのみ適用されます。"
+    },
     "loadFailed": "提案を読み込めませんでした",
     "regenAssessment": "評価を再生成",
     "regenProposal": "提案を再生成",
     "regenPoc": "概念実証を再生成",
     "finalize": "確定",
     "progress": "評価: {assessment} · 提案: {proposal} · 概念実証: {poc}",
-    "recent": "最近の提案",
+    "recent": "提案一覧",
     "columnProject": "プロジェクト",
     "columnClient": "顧客",
     "columnStatus": "ステータス",
     "columnUpdated": "更新日",
     "columnActions": "操作",
     "open": "開く",
+    "collapse": "閉じる",
     "deleteCancel": "キャンセル",
     "deleteConfirmAction": "削除する",
     "deleting": "削除中…",
@@ -86,6 +118,12 @@
     "suggestedWindow": "推奨する検証期間",
     "exportTitle": "エクスポート",
     "exportHint": "プレビューしてからダウンロード・削除・メール送信できます（見積エクスポートと同じ流れです）。",
+    "editDestinationAssessment": "Word / Pages で開くか、Google ドキュメントで開いてください。",
+    "editDestinationProposal": "Canva で開く（ダウンロードまたは OAuth）。公式費用はアプリ内エクスポートを正とします。",
+    "editDestinationPoc": "Canva で開く（ダウンロードまたは OAuth）。公式 POC 費用はアプリ側が正です。",
+    "editDestinationFull": "アセスメントは Word/Pages または Docs。提案/POC は Canva。公式費用はアプリ側が正です。",
+    "editDestinationMd": "Markdown は社内用のみ—IDE で開いてください。",
+    "editDestinationOfficialCostNote": "公式 POC 費用および見積番号は常にアプリ（または再生成）が正であり、Canva だけでは確定しません。",
     "exportProjectName": "エクスポート上のプロジェクト名",
     "exportProjectNamePlaceholder": "例: Marui-A Outlet Inspection System",
     "format": "形式",
@@ -149,8 +187,12 @@
     "creating": "作成中…",
     "createError": "見積の作成に失敗しました",
     "noTemplatesForLocale": "この言語で利用できるフォームテンプレートがありません。",
+    "draftLoading": "見積フォームを読み込み中…",
+    "draftNotSavedHint": "この見積はまだ一覧に追加されていません。保存すると作成されます。ドキュメントのアップロード、AI機能、計算は保存後に利用できます。",
+    "leaveUnsavedConfirm": "未保存の変更があります。このページを離れ、変更を破棄しますか？",
     "status": {
       "draft": "下書き",
+      "unsavedDraft": "未保存",
       "extracting": "抽出中",
       "constraint_paused": "確認待ち",
       "review": "レビュー",
@@ -182,10 +224,6 @@
     "projectBrief": "プロジェクト概要",
     "pocRecommendedBadge": "POC推奨",
     "proposalLocaleSwitcher": "提案書の言語",
-    "exportSectionTitle": "出力",
-    "exportEmpty": "出力はまだありません",
-    "exportDescription": "社内限定の出力形式です（クライアントには表示されません）。言語と形式を選択して出力してください。",
-    "exportCalculationRequiredHint": "出力する前に見積の計算を実行してください。",
     "disclosureTitle": "内部開示情報",
     "disclosureCostDrivers": "コスト要因",
     "disclosureRisks": "リスク",
@@ -198,7 +236,11 @@
     "disclosureEstimateExclusions": "見積の除外事項",
     "disclosureConfidence": "確信度",
     "disclosureConfidenceScore": "スコア: {score}。",
-    "disclosureQuestionnaire": "質問票"
+    "disclosureQuestionnaire": "質問票",
+    "exportSectionTitle": "出力",
+    "exportEmpty": "出力はまだありません",
+    "exportDescription": "社内限定の出力形式です（クライアントには表示されません）。言語と形式を選択して出力してください。",
+    "exportCalculationRequiredHint": "出力する前に見積の計算を実行してください。"
   },
   "documents": {
     "title": "ドキュメント",
@@ -397,6 +439,7 @@
     "localeLabel": "エクスポート言語",
     "localeJa": "日本語",
     "localeEn": "英語",
+    "presentationTitle": "プレゼンテーションと表紙",
     "formatsLabel": "形式",
     "formatPdf": "PDF",
     "formatXlsx": "Excel",
@@ -442,11 +485,28 @@
     "deleteConfirmAction": "削除する",
     "deleteCancel": "キャンセル",
     "deleteError": "エクスポートの削除に失敗しました",
-    "destinationsUnavailable": "クラウド連携は利用できないか未設定です。ダウンロードしてローカルで開いてください。",
     "contactExportsRemaining": "この見積のエクスポート残り {remaining}/{limit} 回",
     "contactExportLimitReached": "エクスポート上限（{limit}回）に達しました",
     "contactAutoEmailNote": "エクスポートは認証済みメールアドレスに自動送信されます。",
-    "contactExportEmailed": "{email} にエクスポートを送信しました"
+    "contactExportEmailed": "{email} にエクスポートを送信しました",
+    "bestEditedInLabel": "編集におすすめ",
+    "bestEditedInDocx": "ローカルは Word / Pages、クラウドは Google ドキュメント",
+    "bestEditedInXlsx": "ローカルは Excel / Numbers、クラウドは Google スプレッドシート",
+    "bestEditedInMd": "IDE — Markdown は社内用のみ（クライアント提出不可）",
+    "bestEditedInPdf": "PDF は納品用。正式見積は DOCX。提案/POC は Canva（ダウンロードまたは Open in Canva）",
+    "editDestinationHintSelected": "選択中の形式: {hint}",
+    "externallyEditedBadge": "外部編集済み",
+    "regenerateEditedWarn": "この形式には外部編集済みのエクスポートがあります。編集済みコピーを残すため、新しいエクスポートを作成します。",
+    "downloadOpenWithDocx": "ダウンロードして Word / Pages で開く",
+    "downloadOpenWithXlsx": "ダウンロードして Excel / Numbers で開く",
+    "downloadOpenWithMd": "ダウンロードして IDE で開く",
+    "downloadOpenWithCanva": "ダウンロードして Canva で開く",
+    "downloadPdf": "PDF をダウンロード",
+    "openInDocs": "Docs で開く",
+    "openInSheets": "Sheets で開く",
+    "openInCanva": "Canva で開く",
+    "destinationsUnavailable": "クラウド連携は利用できないか未設定です。ダウンロードしてローカルで開いてください。",
+    "sendToDestinationError": "外部ツールで開けませんでした"
   },
   "calculation": {
     "title": "計算結果",
@@ -614,208 +674,208 @@
     "pageTitle": "レートカード管理",
     "pageDescription": "見積計算に使用するレートカードを作成・管理します。",
     "loading": "レートカードを読み込み中…",
-      "loadError": "レートカードの読み込みに失敗しました",
-      "saveCard": "カードを保存",
-      "saveCardInUseConfirm": "このレートカードは既存の見積で使用されています。保存しますか？",
-      "saveCardConfirmYes": "保存する",
-      "saveCardConfirmNo": "キャンセル",
-      "cardActionsTitle": "レートカード",
-      "saving": "保存中…",
-      "saved": "保存しました",
-      "saveError": "レートカードの保存に失敗しました",
-      "phaseSumWarning": "フェーズ割合の合計は100%である必要があります（現在 {percent}%）",
-      "roles": "ロール",
-      "roleName": "ロール",
-      "hourlyRate": "時間単価（{symbol}）",
-      "dailyRate": "日単価（{symbol}）",
-      "phases": "フェーズ",
-      "phaseName": "フェーズ",
-      "percentage": "割合（%）",
-      "phaseMeaning": "意味",
-      "phaseMeanings": {
-        "requirement": "要件の収集と整理",
-        "design": "アーキテクチャ、UI/UX、技術設計",
-        "development": "実装・コーディング",
-        "testing": "QA、UAT、バグ修正",
-        "deployment": "リリース、本番投入、引き渡し"
-      },
-      "phaseLabels": {
-        "requirement": "要件定義",
-        "design": "設計",
-        "development": "開発",
-        "testing": "テスト",
-        "deployment": "リリース"
-      },
-      "roleNames": {
-        "pm": "PM",
-        "project_manager": "プロジェクトマネージャー",
-        "developer": "開発者",
-        "senior_developer": "シニア開発者",
-        "frontend_developer": "フロントエンド開発者",
-        "backend_developer": "バックエンド開発者",
-        "full_stack_developer": "フルスタック開発者",
-        "qa": "QA",
-        "qa_engineer": "QAエンジニア",
-        "designer": "デザイナー",
-        "ui_designer": "UIデザイナー",
-        "ux_designer": "UXデザイナー",
-        "architect": "アーキテクト",
-        "devops": "DevOps",
-        "business_analyst": "ビジネスアナリスト",
-        "tech_lead": "テックリード"
-      },
-      "setupItemNames": {
-        "infrastructure": "インフラ",
-        "tooling": "ツール",
-        "third_party": "第三者サービス"
-      },
-      "contingency": "予備費（%）",
-      "overhead": "間接費（%）",
-      "tax": "税率（%）",
-      "setupCosts": "セットアップ費用（NRC）",
-      "setupCostsHint": "これらの初期費用は見積計算時にNRCに含まれます。",
-      "setupTotal": "セットアップ費用合計",
-      "monthlyRcHint": "これらの項目が月次の経常コストを定義します。見積計算時、サポート時間×ロール単価が入力額を上回る場合、メンテナンスとサポートの金額が引き上げられることがあります。",
-      "monthlyRcSubtotal": "項目小計",
-      "monthlyRcTotal": "月額合計",
-      "annualRcTotal": "年額合計",
-      "defaultMaintenance": "保守費用",
-      "linkedEstimateBanner": "このレートカードは見積「{projectName}」に紐づいています。",
-      "frozenVersionBanner": "この見積はこのレートカードの旧バージョンで計算されています（表示中はバージョン {latestVersion}）。最新レートを反映するには再計算してください。",
-      "addItem": "項目を追加",
-      "removeItem": "削除",
-      "cardName": "レートカード名",
-      "selectCard": "レートカード",
-      "activeCard": "有効",
-      "systemDefault": "レートカードシステム標準",
-      "systemDefaultCardName": "レートカードデフォルト",
-      "createCard": "カードを作成",
-      "createCardConfirm": "作成",
-      "createCardCancel": "キャンセル",
-      "creatingCard": "作成中…",
-      "createCardError": "レートカードの作成に失敗しました",
-      "switchCardError": "レートカードの切り替えに失敗しました",
-      "newCardName": "新しいカード名",
-      "newCardDefaultName": "新規レートカード",
-      "noCards": "レートカードがありません。作成して開始してください。",
-      "loadVersion": "バージョンを読み込み",
-      "versionOption": "バージョン {number}{label}",
-      "versionLabel": "バージョンラベル",
-      "versionLabelPlaceholder": "例：2026年Q3 クライアント向け",
-      "unsavedChanges": "未保存の変更あり",
-      "dailyRateFormula": "時間単価 × 8",
-      "resetDailyRate": "時間単価から再計算",
-      "monthlyRcItems": "月額RC項目",
-      "itemName": "項目",
-      "amount": "金額（{symbol}）",
-      "regionLabel": "地域（標準レート）",
-      "regionJapan": "日本",
-      "regionPhilippines": "フィリピン",
-      "regionUsa": "アメリカ",
-      "currencyLabel": "通貨",
-      "currencyJPY": "JPY (¥)",
-      "currencyUSD": "USD ($)",
-      "currencyPHP": "PHP (₱)",
-      "applyRegionalRates": "地域標準レートを適用",
-      "applyRegionalRatesConfirm": "選択した地域の標準レートを適用しますか？既存のロール時間単価は上書きされます。",
-      "applyingRegionalRates": "適用中…",
-      "applyRegionalRatesError": "地域標準レートの適用に失敗しました",
-      "applyRegionalRatesNoMatch": "地域標準レートに一致するロール名がありません。PM、developer、QA など標準的なロール名に変更してください。",
-      "applyRegionalRatesPartial": "{count} 件のロールを更新しました。一部のカスタムロール名は標準レートに一致しませんでした。",
-      "fxLastUpdated": "為替レート最終更新: {date}",
-      "fxLastUpdatedUnknown": "為替レート最終更新: 不明",
-      "deleteCard": "カードを削除",
-      "deleteCardConfirm": "「{name}」を削除しますか？元に戻せません。",
-      "deleteCardConfirmYes": "削除する",
-      "deleteCardConfirmNo": "キャンセル",
-      "deletingCard": "削除中…",
-      "deleteCardError": "レートカードの削除に失敗しました",
-      "deleteCardInUse": "削除できません：このレートカードは見積で使用されています。",
-      "deleteLastCardHint": "少なくとも1つのレートカードが必要です。",
-      "deleteSystemCardHint": "レートカードシステム標準はシステムレートカードのため削除できません。",
-      "estimateCountBadge": "{count}件の見積",
-      "lockedBanner": "このレートカードは{count}件の出力済みまたは完了見積で使用されているため編集できません。変更するには複製してください。",
-      "lockedSaveError": "このレートカードはロックされています。変更するには複製してください。",
-      "duplicateCard": "カードを複製",
-      "duplicateModalTitle": "レートカードを複製",
-      "duplicateModalDescription": "新しい名前で編集可能なコピーを作成します。コピーが新規見積の有効レートカードになります。",
-      "duplicateOriginalName": "元の名前",
-      "duplicateNewName": "新しい名前",
-      "duplicateDefaultName": "{name}（コピー）",
-      "duplicateConfirm": "複製",
-      "duplicateCancel": "キャンセル",
-      "duplicating": "複製中…",
-      "duplicateError": "レートカードの複製に失敗しました",
-      "usageTitle": "このレートカードを使用している見積",
-      "usageLoading": "見積を読み込み中…",
-      "usageEmpty": "このレートカードを使用した見積はまだありません。",
-      "usageProject": "プロジェクト",
-      "usageClient": "クライアント",
-      "usageStatus": "ステータス",
-      "usageUpdated": "最終更新",
-      "ai": {
-        "suggest": "AI提案",
-        "noEstimatesHint": "プロジェクト固有の文脈を使う場合は、このレートカードにプロジェクトを紐づけてください。",
-        "noLinkOption": "紐づけなし — 自由入力",
-        "modalTitle": "AI提案 — {section}",
-        "modalDescription": "プロジェクトを紐づけると見積データを参照できます。紐づけなしを選ぶとプロンプトのみで自由に提案します。",
-        "estimateLabel": "紐づいたプロジェクト",
-        "promptLabel": "プロンプト",
-        "promptPlaceholder": "例: 連携要件に基づきクラウド基盤向けのDevOpsロールを追加",
-        "generate": "提案を生成",
-        "generating": "生成中…",
-        "apply": "提案を適用",
-        "cancel": "キャンセル",
-        "error": "AI提案に失敗しました。再試行するかAI認証情報を確認してください。",
-        "previewTitle": "{project} 向けの提案",
-        "previewTitleNoLink": "自由入力の提案",
-        "noSuggestions": "追加する新規項目がありません。別のプロンプトまたはプロジェクトをお試しください。",
-        "replaceAllPhasesHint": "この提案はフェーズ比率をすべて置き換えます。適用すると現在のフェーズ表が上書きされます。",
-        "sections": {
-          "roles": "ロール",
-          "phases": "フェーズ",
-          "setup_cost_items": "セットアップ費用（NRC）",
-          "monthly_rc_items": "月次RC項目"
-        }
-      },
-      "developmentApproach": "開発アプローチ",
-      "developmentApproachHint": "見積計算時に工数・チーム規模・人件費に反映される係数として適用されます。",
-      "developmentApproachOptions": {
-        "traditional": {
-          "label": "従来型開発",
-          "description": "AI支援を最小限とした手作業によるソフトウェア開発。"
-        },
-        "ai_assisted": {
-          "label": "AI支援開発",
-          "description": "GitHub Copilot、Cursor AI、Claude Code などのAIコーディングツールを主に活用した開発。"
-        },
-        "hybrid": {
-          "label": "ハイブリッド開発",
-          "description": "従来型開発とAI支援開発を組み合わせた開発。"
-        },
-        "low_code": {
-          "label": "ローコード / ノーコード開発",
-          "description": "ローコードまたはノーコードプラットフォームを用い、カスタムコーディングを最小限にした開発。"
-        }
-      },
-      "allCardsList": {
-        "title": "すべてのレートカード",
-        "description": "レートカード名をクリックして詳細を表示・編集します。",
-        "loading": "レートカードを読み込み中…",
-        "empty": "レートカードがありません。",
-        "name": "レートカード名",
-        "developmentApproach": "開発アプローチ",
-        "status": "ステータス",
-        "estimates": "見積数",
-        "estimateCount": "{count}",
-        "statusActive": "有効",
-        "statusInactive": "無効",
-        "statusLocked": "ロック中",
-        "systemDefault": "レートカードシステム標準",
-        "backToList": "← すべてのレートカード",
-        "detailTitle": "レートカード詳細",
-        "detailDescription": "ロール、単価、コスト前提を表示・編集します。"
+    "loadError": "レートカードの読み込みに失敗しました",
+    "saveCard": "カードを保存",
+    "saveCardInUseConfirm": "このレートカードは既存の見積で使用されています。保存しますか？",
+    "saveCardConfirmYes": "保存する",
+    "saveCardConfirmNo": "キャンセル",
+    "cardActionsTitle": "レートカード",
+    "saving": "保存中…",
+    "saved": "保存しました",
+    "saveError": "レートカードの保存に失敗しました",
+    "phaseSumWarning": "フェーズ割合の合計は100%である必要があります（現在 {percent}%）",
+    "roles": "ロール",
+    "roleName": "ロール",
+    "hourlyRate": "時間単価（{symbol}）",
+    "dailyRate": "日単価（{symbol}）",
+    "phases": "フェーズ",
+    "phaseName": "フェーズ",
+    "percentage": "割合（%）",
+    "phaseMeaning": "意味",
+    "phaseMeanings": {
+      "requirement": "要件の収集と整理",
+      "design": "アーキテクチャ、UI/UX、技術設計",
+      "development": "実装・コーディング",
+      "testing": "QA、UAT、バグ修正",
+      "deployment": "リリース、本番投入、引き渡し"
+    },
+    "phaseLabels": {
+      "requirement": "要件定義",
+      "design": "設計",
+      "development": "開発",
+      "testing": "テスト",
+      "deployment": "リリース"
+    },
+    "roleNames": {
+      "pm": "PM",
+      "project_manager": "プロジェクトマネージャー",
+      "developer": "開発者",
+      "senior_developer": "シニア開発者",
+      "frontend_developer": "フロントエンド開発者",
+      "backend_developer": "バックエンド開発者",
+      "full_stack_developer": "フルスタック開発者",
+      "qa": "QA",
+      "qa_engineer": "QAエンジニア",
+      "designer": "デザイナー",
+      "ui_designer": "UIデザイナー",
+      "ux_designer": "UXデザイナー",
+      "architect": "アーキテクト",
+      "devops": "DevOps",
+      "business_analyst": "ビジネスアナリスト",
+      "tech_lead": "テックリード"
+    },
+    "setupItemNames": {
+      "infrastructure": "インフラ",
+      "tooling": "ツール",
+      "third_party": "第三者サービス"
+    },
+    "contingency": "予備費（%）",
+    "overhead": "間接費（%）",
+    "tax": "税率（%）",
+    "setupCosts": "セットアップ費用（NRC）",
+    "setupCostsHint": "これらの初期費用は見積計算時にNRCに含まれます。",
+    "setupTotal": "セットアップ費用合計",
+    "monthlyRcHint": "これらの項目が月次の経常コストを定義します。見積計算時、サポート時間×ロール単価が入力額を上回る場合、メンテナンスとサポートの金額が引き上げられることがあります。",
+    "monthlyRcSubtotal": "項目小計",
+    "monthlyRcTotal": "月額合計",
+    "annualRcTotal": "年額合計",
+    "defaultMaintenance": "保守費用",
+    "linkedEstimateBanner": "このレートカードは見積「{projectName}」に紐づいています。",
+    "frozenVersionBanner": "この見積はこのレートカードの旧バージョンで計算されています（表示中はバージョン {latestVersion}）。最新レートを反映するには再計算してください。",
+    "addItem": "項目を追加",
+    "removeItem": "削除",
+    "cardName": "レートカード名",
+    "selectCard": "レートカード",
+    "activeCard": "有効",
+    "systemDefault": "レートカードシステム標準",
+    "systemDefaultCardName": "レートカードデフォルト",
+    "createCard": "カードを作成",
+    "createCardConfirm": "作成",
+    "createCardCancel": "キャンセル",
+    "creatingCard": "作成中…",
+    "createCardError": "レートカードの作成に失敗しました",
+    "switchCardError": "レートカードの切り替えに失敗しました",
+    "newCardName": "新しいカード名",
+    "newCardDefaultName": "新規レートカード",
+    "noCards": "レートカードがありません。作成して開始してください。",
+    "loadVersion": "バージョンを読み込み",
+    "versionOption": "バージョン {number}{label}",
+    "versionLabel": "バージョンラベル",
+    "versionLabelPlaceholder": "例：2026年Q3 クライアント向け",
+    "unsavedChanges": "未保存の変更あり",
+    "dailyRateFormula": "時間単価 × 8",
+    "resetDailyRate": "時間単価から再計算",
+    "monthlyRcItems": "月額RC項目",
+    "itemName": "項目",
+    "amount": "金額（{symbol}）",
+    "regionLabel": "地域（標準レート）",
+    "regionJapan": "日本",
+    "regionPhilippines": "フィリピン",
+    "regionUsa": "アメリカ",
+    "currencyLabel": "通貨",
+    "currencyJPY": "JPY (¥)",
+    "currencyUSD": "USD ($)",
+    "currencyPHP": "PHP (₱)",
+    "applyRegionalRates": "地域標準レートを適用",
+    "applyRegionalRatesConfirm": "選択した地域の標準レートを適用しますか？既存のロール時間単価は上書きされます。",
+    "applyingRegionalRates": "適用中…",
+    "applyRegionalRatesError": "地域標準レートの適用に失敗しました",
+    "applyRegionalRatesNoMatch": "地域標準レートに一致するロール名がありません。PM、developer、QA など標準的なロール名に変更してください。",
+    "applyRegionalRatesPartial": "{count} 件のロールを更新しました。一部のカスタムロール名は標準レートに一致しませんでした。",
+    "fxLastUpdated": "為替レート最終更新: {date}",
+    "fxLastUpdatedUnknown": "為替レート最終更新: 不明",
+    "deleteCard": "カードを削除",
+    "deleteCardConfirm": "「{name}」を削除しますか？元に戻せません。",
+    "deleteCardConfirmYes": "削除する",
+    "deleteCardConfirmNo": "キャンセル",
+    "deletingCard": "削除中…",
+    "deleteCardError": "レートカードの削除に失敗しました",
+    "deleteCardInUse": "削除できません：このレートカードは見積で使用されています。",
+    "deleteLastCardHint": "少なくとも1つのレートカードが必要です。",
+    "deleteSystemCardHint": "レートカードシステム標準はシステムレートカードのため削除できません。",
+    "estimateCountBadge": "{count}件の見積",
+    "lockedBanner": "このレートカードは{count}件の出力済みまたは完了見積で使用されているため編集できません。変更するには複製してください。",
+    "lockedSaveError": "このレートカードはロックされています。変更するには複製してください。",
+    "duplicateCard": "カードを複製",
+    "duplicateModalTitle": "レートカードを複製",
+    "duplicateModalDescription": "新しい名前で編集可能なコピーを作成します。コピーが新規見積の有効レートカードになります。",
+    "duplicateOriginalName": "元の名前",
+    "duplicateNewName": "新しい名前",
+    "duplicateDefaultName": "{name}（コピー）",
+    "duplicateConfirm": "複製",
+    "duplicateCancel": "キャンセル",
+    "duplicating": "複製中…",
+    "duplicateError": "レートカードの複製に失敗しました",
+    "usageTitle": "このレートカードを使用している見積",
+    "usageLoading": "見積を読み込み中…",
+    "usageEmpty": "このレートカードを使用した見積はまだありません。",
+    "usageProject": "プロジェクト",
+    "usageClient": "クライアント",
+    "usageStatus": "ステータス",
+    "usageUpdated": "最終更新",
+    "ai": {
+      "suggest": "AI提案",
+      "noEstimatesHint": "プロジェクト固有の文脈を使う場合は、このレートカードにプロジェクトを紐づけてください。",
+      "noLinkOption": "紐づけなし — 自由入力",
+      "modalTitle": "AI提案 — {section}",
+      "modalDescription": "プロジェクトを紐づけると見積データを参照できます。紐づけなしを選ぶとプロンプトのみで自由に提案します。",
+      "estimateLabel": "紐づいたプロジェクト",
+      "promptLabel": "プロンプト",
+      "promptPlaceholder": "例: 連携要件に基づきクラウド基盤向けのDevOpsロールを追加",
+      "generate": "提案を生成",
+      "generating": "生成中…",
+      "apply": "提案を適用",
+      "cancel": "キャンセル",
+      "error": "AI提案に失敗しました。再試行するかAI認証情報を確認してください。",
+      "previewTitle": "{project} 向けの提案",
+      "previewTitleNoLink": "自由入力の提案",
+      "noSuggestions": "追加する新規項目がありません。別のプロンプトまたはプロジェクトをお試しください。",
+      "replaceAllPhasesHint": "この提案はフェーズ比率をすべて置き換えます。適用すると現在のフェーズ表が上書きされます。",
+      "sections": {
+        "roles": "ロール",
+        "phases": "フェーズ",
+        "setup_cost_items": "セットアップ費用（NRC）",
+        "monthly_rc_items": "月次RC項目"
       }
+    },
+    "developmentApproach": "開発アプローチ",
+    "developmentApproachHint": "見積計算時に工数・チーム規模・人件費に反映される係数として適用されます。",
+    "developmentApproachOptions": {
+      "traditional": {
+        "label": "従来型開発",
+        "description": "AI支援を最小限とした手作業によるソフトウェア開発。"
+      },
+      "ai_assisted": {
+        "label": "AI支援開発",
+        "description": "GitHub Copilot、Cursor AI、Claude Code などのAIコーディングツールを主に活用した開発。"
+      },
+      "hybrid": {
+        "label": "ハイブリッド開発",
+        "description": "従来型開発とAI支援開発を組み合わせた開発。"
+      },
+      "low_code": {
+        "label": "ローコード / ノーコード開発",
+        "description": "ローコードまたはノーコードプラットフォームを用い、カスタムコーディングを最小限にした開発。"
+      }
+    },
+    "allCardsList": {
+      "title": "すべてのレートカード",
+      "description": "レートカード名をクリックして詳細を表示・編集します。",
+      "loading": "レートカードを読み込み中…",
+      "empty": "レートカードがありません。",
+      "name": "レートカード名",
+      "developmentApproach": "開発アプローチ",
+      "status": "ステータス",
+      "estimates": "見積数",
+      "estimateCount": "{count}",
+      "statusActive": "有効",
+      "statusInactive": "無効",
+      "statusLocked": "ロック中",
+      "systemDefault": "レートカードシステム標準",
+      "backToList": "← すべてのレートカード",
+      "detailTitle": "レートカード詳細",
+      "detailDescription": "ロール、単価、コスト前提を表示・編集します。"
+    }
   },
   "admin": {
     "title": "管理",
@@ -823,9 +883,11 @@
     "loadError": "管理ページを読み込めませんでした。",
     "tabs": {
       "users": "ユーザー",
-      "formTemplates": "フォームテンプレート",
+      "formTemplates": "アンケート",
       "discountSettings": "割引とマークアップ",
       "quotationSettings": "見積書設定",
+      "presentation": "テーマとデザイン",
+      "oauthApps": "OAuth アプリ",
       "aiSettings": "AI認証情報",
       "aiInstructionLayers": "AI指示レイヤー",
       "smtpSettings": "SMTP設定",
@@ -958,6 +1020,27 @@
       "statusOk": "正常",
       "statusIssue": "問題あり"
     },
+    "proposalAiSettings": {
+      "title": "提案生成の用途",
+      "description": "Assessment・Proposal・Proof of Concept の文章の詳しさ、図表の目安、トークン上限、タイムアウトを用途プリセットで切り替えます。詳細なプロンプト上書きは AI指示レイヤー（proposal_*）で行います。",
+      "advancedHint": "AI指示レイヤータブで proposal_assessment / proposal_body / proposal_poc のプロンプトや max tokens・timeout を上書きできます。",
+      "loading": "提案生成設定を読み込み中…",
+      "loadError": "提案生成設定の読み込みに失敗しました",
+      "save": "用途設定を保存",
+      "saving": "保存中…",
+      "saved": "提案生成の用途を保存しました",
+      "saveError": "提案生成設定の保存に失敗しました",
+      "assessment": "アセスメント",
+      "proposal": "提案",
+      "poc": "概念実証（Proof of Concept）",
+      "purposes": {
+        "concise": "簡潔",
+        "standard": "標準",
+        "detailed": "詳細"
+      },
+      "summaryAssessment": "{tokens} トークン · タイムアウト {timeout}秒",
+      "summaryVisual": "{tokens} トークン · {timeout}秒 · 図≥{diagrams} · 表≥{tables}"
+    },
     "aiInstructionLayers": {
       "title": "AI生成指示レイヤー",
       "loading": "指示レイヤーを読み込み中…",
@@ -971,7 +1054,10 @@
         "extraction": "AI抽出",
         "extraction_client_constraints": "抽出クライアント制約",
         "rate_card_generation": "レートカード生成",
-        "rate_card_section": "レートカードセクションAI"
+        "rate_card_section": "レートカードセクションAI",
+        "proposal_assessment": "提案アセスメント",
+        "proposal_body": "提案本文",
+        "proposal_poc": "提案・概念実証（Proof of Concept）"
       },
       "systemPrompt": "システムプロンプト",
       "systemPromptHint": "このフローの主要なシステム指示です。組み込みの既定値が事前入力されています。保存すると上書きされます。",
@@ -983,7 +1069,10 @@
         "extraction": "アンケートと文書の構造化コンテンツの前に追加する任意の接頭辞です。",
         "extraction_client_constraints": "抽出ユーザープロンプトの Client Constraints セクション用テンプレート。プレースホルダ: {client_budget_jpy}, {max_labor_jpy}, {blended_hourly_rate_jpy}, {max_hours_budget}, {delivery_schedule_label}, {target_working_days}, {max_hours_schedule}, {max_hours}, {binding_constraint_label}, {budget_section}, {schedule_section}。",
         "rate_card_generation": "プロジェクト文脈の構造化コンテンツの前に追加する任意の接頭辞です。",
-        "rate_card_section": "ユーザーが入力したセクションAIプロンプトの前に付与します。"
+        "rate_card_section": "ユーザーが入力したセクションAIプロンプトの前に付与します。",
+        "proposal_assessment": "アセスメント用ファクトプロンプトの前に追加する任意の接頭辞です。",
+        "proposal_body": "提案本文用ファクトプロンプトの前に追加する任意の接頭辞です。",
+        "proposal_poc": "概念実証用ファクトプロンプトの前に追加する任意の接頭辞です。"
       },
       "negativePrompt": "ネガティブプロンプト",
       "negativePromptHint": "システムプロンプトに「禁止事項」セクションとして追加する任意の制約です。",
@@ -1040,6 +1129,359 @@
       "saving": "保存中…",
       "saved": "割引・マークアップ設定を保存しました",
       "saveError": "割引・マークアップ設定の保存に失敗しました"
+    },
+    "presentation": {
+      "title": "デザイン管理",
+      "description": "提案書のテーマ・スタイル・テンプレートを管理します。生成時に未指定の軸や AI 推薦失敗時に使うシステム既定値を選べます。",
+      "loading": "体裁プリセットを読み込み中…",
+      "loadError": "体裁プリセットの読み込みに失敗しました",
+      "defaultsTitle": "システム既定値",
+      "defaultTheme": "既定テーマ",
+      "defaultStyle": "既定スタイル",
+      "defaultTemplate": "既定テンプレート",
+      "defaultCover": "既定表紙",
+      "defaultCoverNone": "表紙なし",
+      "saveDefaults": "既定値を保存",
+      "saving": "保存中…",
+      "saved": "既定値を保存しました",
+      "saveError": "既定値の保存に失敗しました",
+      "themesTitle": "テーマ",
+      "stylesTitle": "スタイル",
+      "templatesTitle": "テンプレート",
+      "defaultBadge": "既定",
+      "inactiveBadge": "無効",
+      "setDefault": "既定にする",
+      "activate": "有効化",
+      "deactivate": "無効化",
+      "logoUpload": "ロゴをアップロード",
+      "logoReset": "ロゴを削除",
+      "logoHint": "テーマ用ロゴ（任意、PNG/JPG/SVG/WebP、最大 2MB）。",
+      "createTitle": "プリセットを作成",
+      "createKind": "種類",
+      "slugId": "スラッグ ID",
+      "name": "名前",
+      "descriptionLabel": "説明",
+      "configJson": "設定 JSON",
+      "create": "作成",
+      "created": "プリセットを作成しました",
+      "createError": "プリセットの作成に失敗しました",
+      "createRequired": "スラッグ ID と名前は必須です",
+      "invalidConfigJson": "設定は有効な JSON である必要があります",
+      "edit": "編集",
+      "cancelEdit": "キャンセル",
+      "saveEdit": "変更を保存",
+      "updated": "プリセットを更新しました",
+      "delete": "削除",
+      "deleteConfirm": "プリセット「{name}」を削除しますか？",
+      "deleted": "プリセットを削除しました",
+      "deleteError": "プリセットの削除に失敗しました",
+      "cannotDeleteDefault": "削除する前に別のプリセットを既定にしてください",
+      "retry": "再試行",
+      "selectPreset": "プリセットを選択",
+      "newPreset": "新規プリセット",
+      "advancedJson": "詳細 JSON",
+      "applyJson": "JSON を適用",
+      "defaultsDescription": "提案書で体裁が指定されていない場合に使用するテーマ・スタイル・テンプレート・表紙を選択します。",
+      "tabs": {
+        "theme": "テーマ",
+        "style": "スタイル",
+        "template": "テンプレート",
+        "cover": "表紙",
+        "defaults": "既定値"
+      },
+      "createSetTitle": "プリセットを作成",
+      "createSetDescription": "空のドラフトから始めるか、参考資料からドラフトを生成します。",
+      "createBlank": "空のドラフトを作成",
+      "generateFromReference": "参考資料から生成",
+      "referenceHint": "PNG、JPEG、PDF をアップロードできます。生成にはヘッダーで選択中の言語を使用します。",
+      "presetSetsTitle": "Preset Sets",
+      "noDrafts": "体裁ドラフトはまだありません。",
+      "untitledDraft": "無題の体裁ドラフト",
+      "updatedAt": "更新日時: {value}",
+      "draftWarnings": "{count} 件の警告",
+      "preview": "プレビュー",
+      "setPreviewTitle": "プリセットセットのプレビュー",
+      "approve": "承認",
+      "discard": "破棄",
+      "discardDraftConfirm": "この体裁ドラフトを破棄しますか？",
+      "deleteSetConfirm": "このプリセットセットを一覧から削除しますか？承認済みセットから作成されたテーマ／スタイル／テンプレートのカタログ項目は残ります。",
+      "coverTitle": "表紙デザイナー",
+      "cover": {
+        "title": "表紙デザイナー",
+        "savedTitle": "保存済み表紙プリセット",
+        "savedHelp": "表紙が有効なテンプレートを選んで編集するか、新しい表紙プリセットを作成します。",
+        "noSavedCovers": "表紙プリセットはまだありません",
+        "emptyHelp": "新しい表紙プリセットを作成するか、下の参考資料から生成してください。",
+        "createFromReferenceTitle": "空のドラフトまたは参考資料から生成",
+        "createFromReferenceHelp": "ドラフトセットにはテーマ・スタイル・表紙をまとめて含められます。承認すると各カタログに保存されます。",
+        "generateFromReferenceTitle": "参考資料から表紙を生成",
+        "generateFromReferenceHelp": "PNG、JPEG、PDF をアップロードして表紙デザインを再現します。結果は新しい表紙プリセットとして開き、確認して保存できます。",
+        "generatingFromReference": "参考資料から表紙を生成中…",
+        "referenceReady": "表紙の下書きができました。下のデザインを確認して保存してください。",
+        "draftCreated": "ドラフトを作成しました。下で表紙を編集し、確認して承認してください。",
+        "editDraft": "編集",
+        "editing": "編集中",
+        "saveBeforeUpload": "アセットをアップロードする前に表紙プリセットを保存してください。",
+        "draft": "体裁ドラフト",
+        "untitled": "無題のドラフト",
+        "coverState": "表紙",
+        "templateDefault": "テンプレート既定値",
+        "enabled": "有効",
+        "disabled": "無効",
+        "layout": "レイアウトと文字",
+        "alignment": "コンテンツ配置",
+        "alignments": {
+          "left": "左",
+          "center": "中央",
+          "right": "右"
+        },
+        "padding": "ページ余白",
+        "titleFont": "タイトル文字サイズ",
+        "metadataFont": "メタデータ文字サイズ",
+        "accentEnabled": "アクセント領域を表示",
+        "accentWidth": "アクセント幅",
+        "colors": {
+          "background": "背景色",
+          "title": "タイトル色",
+          "text": "文字色",
+          "accent": "アクセント色"
+        },
+        "accent": {
+          "title": "アクセント図形",
+          "shapeType": "図形の種類",
+          "edge": "辺",
+          "addShape": "図形を追加",
+          "addEdge": "エッジ帯を追加",
+          "shapeTypes": {
+            "rectangle": "長方形",
+            "line": "線",
+            "circle": "円",
+            "ellipse": "楕円",
+            "triangle": "三角形",
+            "polygon": "多角形"
+          },
+          "edges": {
+            "left": "左の帯",
+            "right": "右の帯",
+            "top": "上の帯",
+            "bottom": "下の帯"
+          },
+          "empty": "アクセント図形はまだありません。図形またはエッジ帯を追加してください。",
+          "countWarning": "アクセント図形が {max} を超えると、編集やエクスポートの性能が低下する場合があります。",
+          "layerName": "レイヤー名",
+          "show": "図形を表示",
+          "hide": "図形を非表示",
+          "lock": "図形をロック",
+          "unlock": "図形のロックを解除",
+          "duplicate": "図形を複製",
+          "delete": "図形を削除",
+          "deleteConfirm": "このアクセント図形を削除しますか？",
+          "moveUp": "図形を上へ",
+          "moveDown": "図形を下へ",
+          "hidden": "非表示",
+          "lockedBadge": "ロック中",
+          "appearance": "外観",
+          "fillMode": "塗り",
+          "fillModes": {
+            "theme": "テーマアクセント",
+            "custom": "カスタム色",
+            "linear": "線形グラデーション",
+            "radial": "放射グラデーション"
+          },
+          "fillColor": "塗りの色",
+          "gradientStart": "グラデーション開始色",
+          "gradientEnd": "グラデーション終了色",
+          "gradientAngle": "グラデーション角度",
+          "gradientCenterX": "グラデーション中心 X",
+          "gradientCenterY": "グラデーション中心 Y",
+          "opacity": "不透明度",
+          "pattern": "パターン",
+          "patternTypes": {
+            "none": "なし",
+            "stripes": "ストライプ",
+            "dots": "ドット",
+            "grid": "グリッド",
+            "diagonal_hatch": "斜めハッチ"
+          },
+          "patternColor": "パターン色",
+          "patternScale": "パターンの大きさ",
+          "patternSpacing": "パターン間隔",
+          "patternOpacity": "パターンの不透明度",
+          "borderEnabled": "枠線を表示",
+          "borderColor": "枠線の色",
+          "borderWidth": "枠線の太さ",
+          "borderStyle": "枠線のスタイル",
+          "borderStyles": {
+            "solid": "実線",
+            "dashed": "破線",
+            "dotted": "点線"
+          },
+          "borderRadius": "角の丸み",
+          "rotation": "回転",
+          "lineThickness": "線の太さ",
+          "lineCap": "線端",
+          "lineCaps": {
+            "butt": "フラット",
+            "round": "丸",
+            "square": "スクエア"
+          },
+          "resetStyle": "スタイルをリセット",
+          "resetGeometry": "位置とサイズをリセット",
+          "rotateHandle": "図形を回転"
+        },
+        "assets": "表紙アセット",
+        "assetRoles": {
+          "logo": "ロゴ",
+          "background": "背景画像",
+          "decorative": "装飾画像"
+        },
+        "noAsset": "アセット未選択",
+        "storedAsset": "保存済みドラフトアセット",
+        "upload": "アップロード",
+        "replace": "置換",
+        "remove": "削除",
+        "position": "配置",
+        "positions": {
+          "custom": "カスタム",
+          "top-left": "左上",
+          "top-right": "右上",
+          "center": "中央",
+          "bottom-left": "左下",
+          "bottom-right": "右下"
+        },
+        "fit": "画像の合わせ方",
+        "fitOptions": {
+          "cover": "領域を覆う",
+          "contain": "全体を収める",
+          "fill": "領域に合わせる"
+        },
+        "xPosition": "横位置",
+        "yPosition": "縦位置",
+        "zoom": "ズーム",
+        "opacity": "不透明度",
+        "rotation": "回転",
+        "coverFields": "表紙フィールドの順序",
+        "fieldLocaleHint": "現在のヘッダー言語に従い、{locale} を編集中です。",
+        "addField": "フィールドを追加",
+        "noFields": "表紙フィールドはありません。提案情報を表示するフィールドを追加してください。",
+        "newFieldLabel": "新しいフィールド",
+        "fieldKey": "フィールドキー",
+        "fieldLabel": "ラベル",
+        "defaultText": "既定テキスト",
+        "autoFill": "自動入力パス",
+        "autoFillPlaceholder": "例: client.name",
+        "required": "必須",
+        "moveUp": "フィールドを上へ",
+        "moveDown": "フィールドを下へ",
+        "removeField": "フィールドを削除",
+        "removeFieldConfirm": "この表紙フィールドを削除しますか？",
+        "textStyle": "文字スタイル",
+        "fontFamily": "フォント",
+        "fontFamilyPlaceholder": "例: Noto Sans JP",
+        "fontSize": "文字サイズ",
+        "fontWeight": "文字の太さ",
+        "textAlignment": "文字揃え",
+        "textColor": "文字色",
+        "lineHeight": "行の高さ",
+        "letterSpacing": "文字間隔",
+        "fieldOpacity": "文字の不透明度",
+        "italic": "斜体",
+        "fieldBackground": "フィールド背景",
+        "backgroundColor": "フィールド背景色",
+        "fieldPadding": "フィールド余白",
+        "geometry": "位置とサイズ",
+        "resetAutomaticLayout": "自動レイアウトに戻す",
+        "positionManually": "手動配置にする",
+        "zIndex": "レイヤー",
+        "automaticLayoutHint": "このフィールドは順序付き自動レイアウトに従います。キャンバス上でドラッグすると手動配置になります。",
+        "livePreview": "ライブプレビュー",
+        "setPreview": "表紙プレビュー",
+        "portrait": "縦",
+        "landscape": "横",
+        "sampleTitle": "提案書タイトル",
+        "disabledPreview": "表紙は無効です",
+        "disabledBadge": "無効 — エクスポートには含まれません",
+        "enableCover": "表紙を有効化",
+        "snap": "スナップ",
+        "bringForward": "前面へ",
+        "sendBackward": "背面へ",
+        "bringToFront": "最前面へ",
+        "sendToBack": "最背面へ",
+        "canvasLabel": "操作可能な表紙キャンバス",
+        "resizeHandle": "{handle} 方向にサイズ変更",
+        "pageInherited": "プレビューはテンプレートのページ設定を使用します: {size} · {orientation}。",
+        "saveDraft": "ドラフトを保存",
+        "saving": "保存中…",
+        "saved": "表紙ドラフトを保存しました",
+        "saveError": "表紙ドラフトの更新に失敗しました",
+        "checkConsistency": "整合性を確認",
+        "reviewApprove": "レビューして承認",
+        "consistencyTitle": "テーマ・スタイルとの整合性",
+        "consistencyHint": "提案は決定論的に生成され、自動適用されることはありません。",
+        "consistencyClear": "表紙、テーマ、スタイルは整合しています。",
+        "checkAgain": "再確認",
+        "applyAll": "すべて適用",
+        "applySelected": "選択を適用（{count}）",
+        "suggestionsApplied": "選択した整合性変更を適用しました",
+        "dismiss": "閉じる",
+        "reset": "提案をリセット",
+        "bilingualReviewTitle": "日英アクティベーションレビュー",
+        "bilingualReviewHint": "このプリセットセットを承認・有効化する前に、日本語と英語の内容を確認してください。",
+        "translationPending": "必須値が {count} 件不足しています。承認時に自動翻訳し、翻訳に失敗した場合は停止します。",
+        "translationsReady": "必要な日本語・英語コンテンツが揃っています。",
+        "sourceNamesRequired": "有効化の前に、ドラフト言語でテーマ・スタイル・テンプレートの名前が必要です。下の欄に入力してから承認してください。",
+        "axisNamesTitle": "プリセット名（{locale}）",
+        "axisNamesHint": "名前は必須です。未入力の日英の値は承認時に自動翻訳されます。",
+        "name": "名前",
+        "description": "説明",
+        "reviewItem": "内容",
+        "reviewAxes": {
+          "theme": "テーマ",
+          "style": "スタイル",
+          "template": "テンプレート"
+        },
+        "reviewField": "表紙: {key}",
+        "missing": "未入力",
+        "close": "閉じる",
+        "cancel": "キャンセル",
+        "approving": "翻訳・承認中…",
+        "approveAndActivate": "承認して有効化"
+      },
+      "fields": {
+        "primaryColor": "プライマリカラー",
+        "accentColor": "アクセントカラー",
+        "surfaceColor": "背景色",
+        "bodyColor": "本文色",
+        "headingFont": "見出しフォント",
+        "bodyFont": "本文フォント",
+        "watermark": "透かしを有効化",
+        "marginTop": "上余白（mm）",
+        "marginRight": "右余白（mm）",
+        "marginBottom": "下余白（mm）",
+        "marginLeft": "左余白（mm）",
+        "paragraphSpacing": "段落間隔（em）",
+        "lineSpacing": "行間",
+        "baseFontSize": "基本文字サイズ（pt）",
+        "h1Scale": "H1 文字倍率",
+        "h2Scale": "H2 文字倍率",
+        "h3Scale": "H3 文字倍率",
+        "layout": "レイアウト",
+        "layoutLinear": "リニア",
+        "layoutExecutive": "エグゼクティブ",
+        "layoutTwoColumn": "2 段組",
+        "coverEnabled": "表紙を含める",
+        "sectionChrome": "セクション装飾",
+        "chromeNone": "なし",
+        "chromeRuled": "罫線",
+        "chromeBoxed": "ボックス",
+        "pageSize": "用紙サイズ",
+        "orientation": "向き",
+        "portrait": "縦",
+        "landscape": "横",
+        "columns": "段数",
+        "headerSlot": "ヘッダー内容",
+        "footerSlot": "フッター内容"
+      }
     },
     "quotationSettings": {
       "loading": "見積書設定を読み込み中…",
@@ -1176,7 +1618,7 @@
     },
     "formulas": {
       "title": "計算式リファレンス",
-      "intro": "見積、レートカード、差異、KPIの計算方法のリファレンスです。クライアント予算・納期はAI抽出時の制約および計算後の比較に使用されます。コンタクトユーザー（マジックリンクアクセス）はシステムレートカードを自動使用します。フルユーザーは見積に指定されたレートカードバージョン、未指定時はアクティブなレートカードを使用します。管理者はすべてのレートカードにアクセスできます。",
+      "intro": "見積、レートカード、差異、KPI、正式見積の税、エクスポートのプレゼンテーションの計算・解決方法のリファレンスです。クライアント予算・納期はAI抽出時の制約および計算後の比較に使用されます。コンタクトユーザー（マジックリンクアクセス）はシステムレートカードを自動使用します。フルユーザーは見積に指定されたレートカードバージョン、未指定時はアクティブなレートカードを使用します。カバープリセットとテーマ／スタイル／テンプレートはエクスポートの体裁のみに影響し、NRC/RC計算には入りません。管理者はすべてのレートカードにアクセスできます。",
       "columns": {
         "metric": "項目",
         "formula": "計算式",
@@ -1311,7 +1753,7 @@
           {
             "metric": "NRC合計",
             "formula": "labor + setup + contingency + overhead",
-            "notes": "tax_rateは保存されますが計算には未使用"
+            "notes": "レートカードの tax_rate は正式見積エクスポート用に保持。calculate_estimate 内では未適用（正式見積セクション参照）"
           }
         ]
       },
@@ -1482,7 +1924,7 @@
       },
       "contactAccess": {
         "title": "コンタクト見積アクセス",
-        "description": "マジックリンクのコンタクトユーザー（account_type = contact）のルール。",
+        "description": "マジックリンクのコンタクトユーザー（account_type = contact）のルール。エクスポート上限とプレゼンテーション選択を含む。",
         "rows": [
           {
             "metric": "アカウント種別",
@@ -1512,7 +1954,17 @@
           {
             "metric": "PDF透かし",
             "formula": "PDFエクスポートに「Draft Estimate」透かし",
-            "notes": "Excel・Markdownには透かしなし"
+            "notes": "Excel・Markdownには透かしなし。DOCXは該当する場合PDFと同様のドラフト表示ルール"
+          },
+          {
+            "metric": "エクスポート形式",
+            "formula": "pdf | pdf_quotation | docx | docx_quotation | xlsx | md",
+            "notes": "成功したエクスポートは上限にカウント"
+          },
+          {
+            "metric": "エクスポートのプレゼンテーション",
+            "formula": "テーマ・スタイル・テンプレート・カバーは任意",
+            "notes": "フルユーザーと同じ選択。PDFではカバーアセットを埋め込み"
           }
         ]
       },
@@ -1546,11 +1998,93 @@
             "notes": "各項目ごとに差異行を生成"
           }
         ]
+      },
+      "quotation": {
+        "title": "正式見積（PDF/DOCX）",
+        "description": "正式見積エクスポート時に適用。計算エンジンのNRCは税抜で、正式見積で消費税を加算して合計を出します。レートカードの tax_rate は calculate_estimate 内では適用されません。",
+        "rows": [
+          {
+            "metric": "見積小計",
+            "formula": "round(NRC total_jpy)  # 割引後のクライアント表示額",
+            "notes": "executive_summary.nrc_total_jpy / 特別価格のベースと同じ"
+          },
+          {
+            "metric": "税率",
+            "formula": "rate_card.tax_rate（未設定時 0.10）",
+            "notes": "DEFAULT_TAX_RATE = 10%"
+          },
+          {
+            "metric": "税額",
+            "formula": "round(subtotal_jpy × tax_rate)",
+            "notes": "整数円"
+          },
+          {
+            "metric": "合計",
+            "formula": "subtotal_jpy + tax_jpy",
+            "notes": "正式見積PDF/DOCXに表示"
+          },
+          {
+            "metric": "特記事項（割引時）",
+            "formula": "テンプレートを {issue_date}, {special_price}, {original_price}, {discount_percent}, {discount_amount} で展開",
+            "notes": "管理 → 見積設定。has_discount が false のときは省略"
+          },
+          {
+            "metric": "期間限定割引表示",
+            "formula": "discount_rate_applied > 0 のとき pricing_summary から生成",
+            "notes": "元NRC vs 割引後NRC。RCは不変"
+          }
+        ]
+      },
+      "presentationExport": {
+        "title": "プレゼンテーション＆カバー（エクスポート）",
+        "description": "エクスポートの見た目はテーマ・スタイル・テンプレートと任意のカバープリセットで解決します。コスト計算には含まれず、文書の体裁と表紙描画を制御します。",
+        "rows": [
+          {
+            "metric": "テーマ／スタイル／テンプレート解決",
+            "formula": "リクエストID → 見積／提案書の保存ID → 管理者デフォルト",
+            "notes": "無効・不明IDは警告付きでフォールバック"
+          },
+          {
+            "metric": "カバー有無",
+            "formula": "include_cover または cover_template_id 選択",
+            "notes": "カバーなしで表紙を省略"
+          },
+          {
+            "metric": "カバー元",
+            "formula": "cover_template_id があればそれ、なければ文書テンプレートの cover 設定",
+            "notes": "カバープリセット指定時は cover_design / cover_fields / page を上書き"
+          },
+          {
+            "metric": "カバー項目値",
+            "formula": "上書き → auto_fill(document_facts) → default_text",
+            "notes": "cover_fields の順。必須欠落は COVER_VALUES_REQUIRED"
+          },
+          {
+            "metric": "カバー面の色",
+            "formula": "cover_design.colors.{background,title,text} を #RRGGBB 正規化",
+            "notes": "既定 #ffffff / #1e3a5f / #334155"
+          },
+          {
+            "metric": "アクセント形状",
+            "formula": "render_accent_svg(accent_shapes, theme_accent)",
+            "notes": "テーマアクセント塗り。PDFはSVGのmmサイズを維持"
+          },
+          {
+            "metric": "カバーアセット",
+            "formula": "storage_path → data: URI 埋め込み後に PDF/DOCX HTML 描画",
+            "notes": "logo / background / decorative。背景はフォーカルパン／ズームCSS"
+          },
+          {
+            "metric": "アセット／項目の配置",
+            "formula": "position:absolute; left/top/width/height = ページ全体の *_pct",
+            "notes": "管理画面テーマ＆デザインのカバーキャンバス（フルブリード @page cover）と一致"
+          }
+        ]
       }
     },
     "help": {
       "title": "リソース",
-      "description": "コンタクト見積アクセス（マジックリンク）、フルユーザーワークフロー、AI抽出、コスト計算、日英エクスポートに関するガイド・FAQ・リファレンスをご覧ください。",
+      "description": "コンタクト見積アクセス（マジックリンク）、フルユーザーワークフロー、AI抽出、コスト計算、提案書、プレゼンテーションカバー、日英エクスポートに関するガイド・FAQ・リファレンスをご覧ください。",
       "search": {
         "placeholder": "ガイド、FAQ、ドキュメントを検索…",
         "clear": "検索をクリア",
@@ -1567,10 +2101,10 @@
       "pipeline": {
         "eyebrow": "システムパイプライン",
         "title": "見積処理パイプライン",
-        "intro": "すべての見積は、アクセスからエクスポートまで同じコア段階をたどります。管理者は計算とクライアント向け成果物に適用される入力を設定します。",
+        "intro": "すべての見積は、アクセスからブランド付きエクスポートまで同じコア段階をたどります。フルユーザーは計算後に提案書パックも生成できます。管理者は計算とクライアント向け成果物に適用される入力を設定します。",
         "flowLabel": "コアフロー",
         "adminLabel": "管理者設定",
-        "adminIntro": "これらの管理パネルは、パイプライン実行時に適用されるデフォルト、価格ルール、エクスポート内容を制御します。",
+        "adminIntro": "これらの管理パネルは、パイプライン実行時に適用されるデフォルト、価格ルール、プレゼンテーション、エクスポート内容を制御します。",
         "stages": [
           {
             "id": "access",
@@ -1580,7 +2114,7 @@
           {
             "id": "form",
             "title": "プロジェクトフォーム",
-            "description": "見積に保存される21項目のクライアント・スコープテンプレート。"
+            "description": "見積に保存されるクライアント・スコープテンプレート。"
           },
           {
             "id": "upload",
@@ -1603,9 +2137,14 @@
             "description": "確定的エンジンがレートカード、割引、マークアップを適用。"
           },
           {
+            "id": "proposal",
+            "title": "提案書",
+            "description": "計算済み見積から任意でAIアセスメント・提案書・PoCを生成。"
+          },
+          {
             "id": "export",
             "title": "エクスポート",
-            "description": "PDF/DOCX（詳細レポートまたは正式見積）、Excel、Markdown（日英）。"
+            "description": "PDF/DOCX（詳細レポートまたは正式見積）、Excel、Markdown。テーマ・スタイル・テンプレート・カバー付き。"
           }
         ],
         "adminItems": [
@@ -1622,7 +2161,7 @@
           {
             "id": "ai",
             "title": "AI認証情報",
-            "description": "文書抽出用のプロバイダー、モデル、APIキー。"
+            "description": "文書抽出と提案書生成用のプロバイダー、モデル、APIキー。"
           },
           {
             "id": "discount",
@@ -1638,13 +2177,28 @@
             "id": "templates",
             "title": "フォームテンプレート",
             "description": "見積作成時に使用するプロジェクトフォーム項目とデフォルト。"
+          },
+          {
+            "id": "presentation",
+            "title": "テーマ＆デザイン",
+            "description": "テーマ、スタイル、テンプレート、カバープリセット（アクセント、ロゴ、背景、順序付き項目）。"
+          },
+          {
+            "id": "oauth",
+            "title": "OAuthアプリ",
+            "description": "ユーザーがクラウドでエクスポートを開けるよう Google / Canva のアプリ資格情報を設定。"
+          },
+          {
+            "id": "proposal-ai",
+            "title": "提案書AI",
+            "description": "アセスメント・提案書・PoC生成の深さプリセット。"
           }
         ]
       },
       "userGuide": {
         "eyebrow": "ユーザーワークフロー",
         "title": "コンタクト vs フルユーザーガイド",
-        "intro": "サインイン後は両方とも同じ見積パイプラインを共有します。コンタクトアクセスは確認済みメールあたり1見積、システムレートカードに限定されます。",
+        "intro": "サインイン後は両方とも同じ見積パイプラインを共有します。コンタクトアクセスは確認済みメールあたり1見積、システムレートカードに限定されます。フルユーザーは提案書生成とクラウド連携エクスポートも利用できます。",
         "tracks": [
           {
             "id": "contact",
@@ -1666,7 +2220,7 @@
               {
                 "icon": "create",
                 "title": "プロジェクトフォーム入力",
-                "description": "自動作成された見積で21項目フォームを入力。",
+                "description": "自動作成された見積でプロジェクトフォームを入力。",
                 "href": null
               },
               {
@@ -1690,7 +2244,7 @@
               {
                 "icon": "export",
                 "title": "エクスポート",
-                "description": "見積あたり最大3回（PDF/DOCX詳細レポートまたは正式見積、Excel、Markdown）。PDFには「Draft Estimate」透かし、各エクスポートはメール送信。",
+                "description": "見積あたり最大3回。任意でテーマ／スタイル／テンプレート／カバーを選択。PDF/DOCX詳細レポートまたは正式見積、Excel、Markdown。PDFには「Draft Estimate」透かし、各エクスポートはメール送信。",
                 "href": null
               }
             ]
@@ -1698,7 +2252,7 @@
           {
             "id": "full",
             "title": "フルユーザー",
-            "description": "パスワードログイン、レートカード管理、見積数無制限。",
+            "description": "パスワードログイン、レートカード管理、提案書、見積数無制限。",
             "steps": [
               {
                 "icon": "login",
@@ -1743,9 +2297,15 @@
                 "href": null
               },
               {
+                "icon": "create",
+                "title": "提案書生成",
+                "description": "任意で提案書を開き、計算済み見積からアセスメント・提案書・PoCを生成。",
+                "href": null
+              },
+              {
                 "icon": "export",
                 "title": "エクスポート",
-                "description": "詳細レポートまたは正式見積をPDF/DOCXで、Excel・Markdownも出力。エクスポート上限・透かしなし。",
+                "description": "見積または提案書パックをテーマ・スタイル・テンプレート・カバー付きで出力。設定で連携済みなら Google / Canva で開くことも可能。コンタクト上限・透かしなし。",
                 "href": null
               }
             ]
@@ -1757,7 +2317,13 @@
           "id": "contact-estimate-access",
           "title": "コンタクト見積アクセス",
           "summary": "マジックリンクサインイン、メールあたり1見積、システムレートカード、エクスポート上限。",
-          "body": "訪問者はウェルカムページからメール、お名前または会社名、Turnstileチェックでアクセスを申請します。15分有効のマジックリンクでサインインし見積が開きます—確認済みメールあたり1件です。コンタクトユーザーはシステムレートカードを自動使用（レートカード管理UIなし）。計算後、見積あたり最大3回PDF・Excel・Markdownでエクスポートでき、各エクスポートはメールで届き、PDFには「Draft Estimate」の透かしが入ります。管理者はコンタクトアカウントをパスワードログインとレートカードアクセス付きのフルユーザーへ昇格できます。"
+          "body": "訪問者はウェルカムページからメール、お名前または会社名、Turnstileチェックでアクセスを申請します。15分有効のマジックリンクでサインインし見積が開きます—確認済みメールあたり1件です。コンタクトユーザーはシステムレートカードを自動使用（レートカード管理UIなし）。計算後、見積あたり最大3回PDF・DOCX・Excel・Markdownで、任意のプレゼンテーション／カバー付きでエクスポートでき、各エクスポートはメールで届き、PDFには「Draft Estimate」の透かしが入ります。管理者はコンタクトアカウントをパスワードログインとレートカードアクセス付きのフルユーザーへ昇格できます。"
+        },
+        {
+          "id": "quotation-settings",
+          "title": "正式見積の特記事項",
+          "summary": "正式見積PDF/DOCX用の管理者が編集する特記事項。",
+          "body": "割引適用時、正式見積エクスポート（PDF見積・DOCX見積）に特記事項セクションが含まれます。管理者は見積設定で日本語・英語のタイトルと本文を編集します。プレースホルダー {issue_date}、{special_price}、{original_price}、{discount_percent}、{discount_amount} はエクスポート時に置換されます。詳細レポートのエクスポートには影響しません。"
         },
         {
           "id": "rate-cards-basics",
@@ -1767,32 +2333,44 @@
         },
         {
           "id": "export-formats",
-          "title": "エクスポート形式",
-          "summary": "日本語または英語のPDF、Excel、Markdownエクスポート。",
-          "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。コンタクトユーザーは見積あたり3回まで。各エクスポートは自動メールされ、PDFには「Draft Estimate」の透かしが入ります。"
+          "title": "エクスポート形式とプレゼンテーション",
+          "summary": "詳細レポート／正式見積のPDF・DOCX、Excel、Markdown、テーマ／スタイル／テンプレート／カバー。",
+          "body": "計算後、見積詳細ページからエクスポートします。PDF/DOCXは詳細レポートまたは正式見積を選べます。Excelは分析向け、Markdownはドキュメント向けです。プレゼンテーション選択でテーマ（ブランド／色）、スタイル（余白）、テンプレート（レイアウト）、カバープリセット（アクセント形状、ロゴ、背景、順序付き項目）を適用します。割引適用時、正式見積には管理者設定の特記事項が含まれます。コンタクトユーザーは見積あたり3回まで。各エクスポートは自動メールされ、PDFには「Draft Estimate」の透かしが入ります。"
+        },
+        {
+          "id": "presentation-cover",
+          "title": "テーマ＆デザインのカバープリセット",
+          "summary": "見積・提案書エクスポートの表紙を駆動する管理カバー設定。",
+          "body": "管理者はテーマ＆デザインでテーマ、スタイル、テンプレート、カバープリセットを設定します。カバープリセットはページサイズ、アクセント形状と色、ロゴ／背景／装飾アセット、タイポグラフィ、配置付きの順序付きカバー項目を保持します。見積または提案書エクスポートでそのプリセットを選ぶと、PDFに対応する表紙が描画されます。ユーザーはエクスポート前に文書言語ごとのカバー項目テキストを上書きできます。"
+        },
+        {
+          "id": "proposals",
+          "title": "提案書の生成とエクスポート",
+          "summary": "計算済み見積からのアセスメント・提案書・PoCパック。",
+          "body": "フルユーザーは計算済み見積から提案書を開き、AIでアセスメント、提案書、任意のProof of Conceptを生成します。提案書エクスポートは見積と同じテーマ・スタイル・テンプレート・カバーを使います。管理者がOAuthアプリを設定し、ユーザーが連携アカウントを接続していれば、生成パックを Google Docs/Sheets や Canva で開くこともできます。"
         },
         {
           "id": "locale-switching",
           "title": "言語の切り替え",
           "summary": "ヘッダーのロケール切替で日本語・英語UIを使用します。",
-          "body": "右上ヘッダーのロケール切替をクリックして日本語と英語を切り替えます。ナビゲーションの選択は保持されます。翻訳がある場合、見積コンテンツはロケールごとに保存・表示できます。"
+          "body": "右上ヘッダーのロケール切替をクリックして日本語と英語を切り替えます。ナビゲーションの選択は保持されます。翻訳がある場合、見積コンテンツはロケールごとに保存・表示できます。エクスポートパネルでは生成ファイル用に別のエクスポート言語を選べます。"
         }
       ],
       "faqs": [
         {
           "id": "what-is-ai-estimate",
           "question": "AI見積とは何ですか？",
-          "answer": "AI見積はソフトウェアプロジェクト見積を作成する社内ツールです。構造化されたプロジェクトフォームにクライアントとスコープの情報を入力し、必要に応じて要件文書をアップロードしてAI抽出を行い、確定的な計算エンジンでNRC、RC、初年度コストを円で算出します。"
+          "answer": "AI見積はソフトウェアプロジェクト見積とクライアント向け成果物を作成する社内ツールです。構造化されたプロジェクトフォームにクライアントとスコープを入力し、必要に応じて要件文書をアップロードしてAI抽出し、確定的な計算エンジンでNRC、RC、初年度コストを円で算出したうえで、ブランド付きレポートをエクスポートするか提案書パックを生成できます。"
         },
         {
           "id": "who-can-use",
           "question": "誰がこのシステムを利用できますか？",
-          "answer": "2つのアクセス方法があります。コンタクトユーザーはウェルカムページからマジックリンクを申請（パスワード不要）し、確認済みメールあたり1件の見積とシステムレートカードを利用します。フルユーザーは管理者が作成したメールとパスワードでサインインし、レートカード、複数見積、全機能を利用できます。フルアカウントが必要な場合やサインインできない場合は管理者にお問い合わせください。"
+          "answer": "2つのアクセス方法があります。コンタクトユーザーはウェルカムページからマジックリンクを申請（パスワード不要）し、確認済みメールあたり1件の見積とシステムレートカードを利用します。フルユーザーは管理者が作成したメールとパスワードでサインインし、レートカード、複数見積、提案書、全機能を利用できます。フルアカウントが必要な場合やサインインできない場合は管理者にお問い合わせください。"
         },
         {
           "id": "supported-languages",
           "question": "対応している言語は？",
-          "answer": "インターフェースは日本語と英語で利用できます。ヘッダーのロケール切替でUI言語を変更できます。計算後、どちらの言語でも見積をエクスポートできます。"
+          "answer": "インターフェースは日本語と英語で利用できます。ヘッダーのロケール切替でUI言語を変更できます。計算後、どちらの言語でも見積や提案書をエクスポートできます。"
         },
         {
           "id": "supported-documents",
@@ -1802,7 +2380,12 @@
         {
           "id": "export-options",
           "question": "利用できるエクスポート形式は？",
-          "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。コンタクトユーザーは見積あたり最大3回。各エクスポートは確認済みアドレスへメールされ、PDFには「Draft Estimate」の透かしが入ります。"
+          "answer": "計算後、詳細レポートまたは正式見積をPDF/DOCXで、またはExcel・Markdownで出力できます。テーマ・スタイル・テンプレート・カバープリセットでブランド付き表紙にできます。割引適用時、正式見積には特記事項が含まれます。コンタクトユーザーは見積あたり最大3回。各エクスポートは確認済みアドレスへメールされ、PDFには「Draft Estimate」の透かしが入ります。"
+        },
+        {
+          "id": "presentation-cover",
+          "question": "カバープリセットはどこで設定しますか？",
+          "answer": "管理者は管理 → テーマ＆デザインでカバープリセット（アクセント形状、色、ロゴ、背景、装飾アセット、順序付き項目）を設計します。ユーザーは見積または提案書のエクスポートでカバーを選び、その表紙を含めます。"
         },
         {
           "id": "contact-magic-link",
@@ -1812,7 +2395,7 @@
         {
           "id": "contact-export-limit",
           "question": "エクスポート上限に達したのはなぜですか？",
-          "answer": "コンタクト見積アクセスでは見積あたり最大3回（PDF・Excel・Markdown合算）エクスポートできます。成功したエクスポートは上限にカウントされ、アドレスへメールされます。追加が必要な場合は管理者にお問い合わせください。"
+          "answer": "コンタクト見積アクセスでは見積あたり最大3回（PDF・DOCX・Excel・Markdown合算）エクスポートできます。成功したエクスポートは上限にカウントされ、アドレスへメールされます。追加が必要な場合は管理者にお問い合わせください。"
         },
         {
           "id": "estimate-statuses",
@@ -1822,7 +2405,7 @@
         {
           "id": "login-trouble",
           "question": "ログインできません。確認すべきことは？",
-          "answer": "メールアドレスとパスワードを確認してください。無効化されたアカウントはサインインできません。問題が続く場合は、管理者にアカウントが有効か確認し、必要なら資格情報のリセットを依頼してください。"
+          "answer": "メールアドレスとパスワードを確認してください。無効化されたアカウントはサインインできません。コンタクトユーザーはパスワードではなくウェルカムページのマジックリンクを使います。問題が続く場合は、管理者にアカウントが有効か確認し、必要なら資格情報のリセットを依頼してください。"
         },
         {
           "id": "ai-extraction",
@@ -1839,9 +2422,9 @@
         },
         {
           "id": "estimate-workflow",
-          "title": "見積ワークフロー",
-          "summary": "フォーム入力からエクスポートまでの一連の流れ。",
-          "body": "コンタクトユーザー: ウェルカムページでマジックリンクを申請し、メール確認後、自動作成された見積でプロジェクトフォームを入力。フルユーザー: 見積を作成しプロジェクトフォームを入力。共通: 必要に応じて文書をアップロードしてAI抽出、機能一覧と工数をレビュー・編集し、計算を実行（コンタクトユーザーはシステムレートカードを自動使用）。準備ができたら希望形式でエクスポート—コンタクトユーザーは3回上限・メール配信・PDF透かし付き。"
+          "title": "見積と提案書のワークフロー",
+          "summary": "フォーム入力からブランド付きエクスポートまたは提案書パックまでの流れ。",
+          "body": "コンタクトユーザー: ウェルカムページでマジックリンクを申請し、メール確認後、自動作成された見積でプロジェクトフォームを入力。フルユーザー: 見積を作成しプロジェクトフォームを入力。共通: 必要に応じて文書をアップロードしてAI抽出、機能一覧と工数をレビュー・編集し、計算を実行（コンタクトユーザーはシステムレートカードを自動使用）。必要に応じてテーマ／スタイル／テンプレート／カバー付きでエクスポート。フルユーザーは提案書を開きアセスメント・提案書・PoCを生成し、同じプレゼンテーション設定でパックをエクスポートできます。"
         },
         {
           "id": "rate-card-fields",
@@ -1850,11 +2433,36 @@
           "body": "ロールはチーム種別ごとの時間・日単価を定義します。フェーズは要件、設計、開発、テスト、リリースへの工数配分です—比率の合計は100%である必要があります。予備費、間接費、税は乗数として適用されます。セットアップ費用はNRCの一回限り項目です。月次RC項目は経常費用を追加します。開発アプローチは工数計算の生産性前提に影響します。"
         }
       ]
+    },
+    "oauthApps": {
+      "title": "OAuth アプリ（Google / Canva）",
+      "description": "このアプリを Google / Canva に登録するためのクライアント ID・シークレットです。各ユーザーは設定ページで自分のアカウントを接続します。.env はフォールバックです。",
+      "loading": "読み込み中…",
+      "loadError": "OAuth 設定の読み込みに失敗しました",
+      "saveError": "OAuth 設定の保存に失敗しました",
+      "saved": "保存しました",
+      "save": "保存",
+      "saving": "保存中…",
+      "googleTitle": "Google",
+      "canvaTitle": "Canva",
+      "clientId": "クライアント ID",
+      "clientSecret": "クライアントシークレット",
+      "redirectUri": "リダイレクト URI",
+      "secretLeaveBlank": "変更しない場合は空のまま",
+      "secretHint": "ヒント",
+      "googleConfigured": "Google は設定済み",
+      "googleNotConfigured": "Google は未設定",
+      "canvaConfigured": "Canva は設定済み",
+      "canvaNotConfigured": "Canva は未設定",
+      "templateProposalEn": "提案テンプレート ID（EN）",
+      "templateProposalJa": "提案テンプレート ID（JA）",
+      "templatePocEn": "POC テンプレート ID（EN）",
+      "templatePocJa": "POC テンプレート ID（JA）"
     }
   },
   "help": {
     "title": "ヘルプ",
-    "description": "見積の作成、文書のアップロード、コスト計算、エクスポートに関するよくある質問とガイドです。",
+    "description": "見積、AI抽出、計算、プレゼンテーションカバー、提案書、エクスポートに関するガイドです（日本語・英語）。",
     "search": {
       "placeholder": "ガイド、FAQ、ドキュメントを検索…",
       "clear": "検索をクリア",
@@ -1871,32 +2479,38 @@
     "articles": [
       {
         "id": "export-formats",
-        "title": "エクスポート形式",
-        "summary": "日本語または英語のPDF、Excel、Markdownエクスポート。",
-        "body": "計算後、見積詳細ページからエクスポートします。PDFはクライアント提出向け、Excelは分析向け、Markdownはドキュメント向けです。表示ロケールがエクスポート内のラベルと整形コンテンツの言語を制御します。"
+        "title": "エクスポート形式とプレゼンテーション",
+        "summary": "詳細レポート／正式見積のPDF・DOCX、Excel、Markdown、およびテーマ・スタイル・テンプレート・カバー。",
+        "body": "計算後、見積のエクスポートを開きます。言語と形式（詳細レポートまたは正式見積のPDF/DOCX、Excel、Markdown）を選びます。「プレゼンテーションとカバー」でテーマ（色・ブランド）、スタイル（余白）、テンプレート（レイアウト）、任意のカバープリセット（アクセント形状、ロゴ、背景、順序付きカバー項目）を選べます。カバー項目の値は文書言語ごとに保存できます。フルユーザーは設定の連携アカウントから、設定済みの場合 Google Docs/Sheets や Canva でエクスポートを開くこともできます。"
+      },
+      {
+        "id": "proposals",
+        "title": "見積からの提案書",
+        "summary": "アセスメント、提案書、任意のPoCを生成し、ブランド付きパックをエクスポート。",
+        "body": "計算後、見積から提案書を開きます。AIが再見積なしでアセスメント、提案書、任意のProof of Conceptを生成します。提案書エクスポートでテーマ・スタイル・テンプレート・カバーを選び、必要ならカバー項目を入力してPDF/DOCX/Markdown/Excelを出力します。PDFカバーは管理画面のテーマ＆デザインのカバーキャンバス（配置、アセット、アクセント）と一致します。"
       },
       {
         "id": "locale-switching",
         "title": "言語の切り替え",
         "summary": "ヘッダーのロケール切替で日本語・英語UIを使用します。",
-        "body": "右上ヘッダーのロケール切替をクリックして日本語と英語を切り替えます。ナビゲーションの選択は保持されます。翻訳がある場合、見積コンテンツはロケールごとに保存・表示できます。"
+        "body": "右上ヘッダーのロケール切替をクリックして日本語と英語を切り替えます。ナビゲーションの選択は保持されます。見積・提案書のエクスポートパネルでは、生成ファイル用に別のエクスポート言語を選べる場合があります。"
       }
     ],
     "faqs": [
       {
         "id": "what-is-ai-estimate",
         "question": "AI見積とは何ですか？",
-        "answer": "AI見積はソフトウェアプロジェクト見積を作成する社内ツールです。構造化されたプロジェクトフォームにクライアントとスコープの情報を入力し、必要に応じて要件文書をアップロードしてAI抽出を行い、確定的な計算エンジンでNRC、RC、初年度コストを円で算出します。"
+        "answer": "AI見積はソフトウェアプロジェクト見積とクライアント向け成果物のための社内ツールです。クライアントとスコープを入力し、必要に応じて文書をアップロードしてAI抽出し、円建てのNRC/RC/初年度コストを計算したうえで、ブランド付きレポートをエクスポートするか、提案書パックを生成できます。"
       },
       {
         "id": "who-can-use",
         "question": "誰がこのシステムを利用できますか？",
-        "answer": "アクセスは認証情報に基づきます。アカウントは組織内で作成されます—付与されたメールアドレスとパスワードでサインインしてください。アカウントが必要な場合やログインできない場合は、管理者にお問い合わせください。"
+        "answer": "2つのアクセス方法があります。コンタクトユーザーはウェルカムページからマジックリンクを申請（パスワード不要）し、確認済みメールあたり1件の見積とシステムレートカードを利用します。フルユーザーは管理者が作成したメールとパスワードでサインインし、レートカード、複数見積、提案書、全機能を利用できます。フルアカウントが必要な場合やサインインできない場合は管理者にお問い合わせください。"
       },
       {
         "id": "supported-languages",
         "question": "対応している言語は？",
-        "answer": "インターフェースは日本語と英語で利用できます。ヘッダーのロケール切替でUI言語を変更できます。計算後、どちらの言語でも見積をエクスポートできます。"
+        "answer": "インターフェースは日本語と英語で利用できます。ヘッダーのロケール切替でUI言語を変更できます。計算後、どちらの言語でも見積や提案書をエクスポートできます。"
       },
       {
         "id": "supported-documents",
@@ -1906,7 +2520,12 @@
       {
         "id": "export-options",
         "question": "利用できるエクスポート形式は？",
-        "answer": "計算後、クライアント提出向けのPDF、分析向けのExcel、ドキュメント向けのMarkdownで見積をエクスポートできます。日本語・英語のいずれでも出力可能です。"
+        "answer": "計算後、詳細レポートまたは正式見積をPDF/DOCXで、またはExcel・Markdownで出力できます。テーマ・スタイル・テンプレート・カバープリセットを選び、管理画面のテーマ＆デザインに合わせたカバーにできます。コンタクトユーザーは見積あたり最大3回。各エクスポートはメールされ、PDFには「Draft Estimate」の透かしが入ります。"
+      },
+      {
+        "id": "presentation-cover",
+        "question": "エクスポートのカバープリセットはどう動作しますか？",
+        "answer": "カバープリセットは管理 → テーマ＆デザインで設計します。見積または提案書のエクスポートでカバーを選ぶと、アクセント形状・色・ロゴ・背景・装飾アセット・順序付きカバー項目付きの表紙が含まれます。「カバーなし」にすると表紙は付きません。"
       },
       {
         "id": "estimate-statuses",
@@ -1916,7 +2535,7 @@
       {
         "id": "login-trouble",
         "question": "ログインできません。確認すべきことは？",
-        "answer": "メールアドレスとパスワードを確認してください。無効化されたアカウントはサインインできません。問題が続く場合は、管理者にアカウントが有効か確認し、必要なら資格情報のリセットを依頼してください。"
+        "answer": "メールアドレスとパスワードを確認してください。無効化されたアカウントはサインインできません。コンタクトユーザーはパスワードではなくウェルカムページのマジックリンクを使います。問題が続く場合は、管理者にアカウントが有効か確認を依頼してください。"
       },
       {
         "id": "ai-extraction",
@@ -1933,9 +2552,9 @@
       },
       {
         "id": "estimate-workflow",
-        "title": "見積ワークフロー",
-        "summary": "フォーム入力からエクスポートまでの一連の流れ。",
-        "body": "見積を作成しプロジェクトフォームを完成させます。必要に応じてAI抽出用に文書をアップロードします。機能一覧と工数をレビュー・編集します。アクティブなレートカードを確認します。計算を実行してフェーズ内訳、ガント、コストサマリーを生成します。クライアント提出の準備ができたら希望形式でエクスポートします。"
+        "title": "見積と提案書のワークフロー",
+        "summary": "フォーム入力からブランド付きエクスポートまたは提案書パックまでの流れ。",
+        "body": "見積を作成または開き、プロジェクトフォームを完成させます。必要に応じてAI抽出用に文書をアップロードし、機能と工数をレビューします。アクティブなレートカードで計算します。テーマ／スタイル／テンプレート／カバー付きのレポートまたは正式見積をエクスポートするか、提案書を開いてアセスメント・提案書・任意のPoCを生成し、同じプレゼンテーション設定でパックをエクスポートします。"
       }
     ]
   },
@@ -1973,6 +2592,8 @@
     "specificationDetails": "技術仕様（AI入力）",
     "specificationDetailsDescription": "見積もりに使うスコープ、複雑度、連携、体制などの技術的な前提を記入します。",
     "clientQuestionnaireGuidance": "お客様ヒアリング内容を確認してください。保存するか、スキップして技術仕様に進めます。",
+    "technicalSpecificationGuidance": "AIの値が下のフィールドに反映されました。各値が正しいか確認してください。必要に応じて手動で編集できます。",
+    "guidanceDismiss": "了解",
     "saveAndContinue": "保存して続行",
     "skipForNow": "スキップ",
     "expandSection": "セクションを展開",
@@ -2057,7 +2678,7 @@
       "eyebrow": "ワークフロー",
       "title": "使い方",
       "stepCta": "始める",
-      "intro": "メールでアクセスを申請し、マジックリンクを確認して、プロジェクトフォームからエクスポートまで1件の見積を完了します。標準レートが自動適用され、レートカードの設定は不要です。",
+      "intro": "メールでアクセスを申請し、マジックリンクを確認して、プロジェクトフォームからブランド付きエクスポートまで1件の見積を完了します。標準レートが自動適用され、レートカードの設定は不要です。",
       "steps": [
         {
           "icon": "login",
@@ -2074,7 +2695,7 @@
         {
           "icon": "create",
           "title": "プロジェクトフォームを入力",
-          "description": "見積ページで21項目のプロジェクトフォームにクライアントとスコープの情報を入力します。",
+          "description": "見積ページのプロジェクトフォームにクライアントとスコープの情報を入力します。",
           "href": null
         },
         {
@@ -2098,10 +2719,56 @@
         {
           "icon": "export",
           "title": "結果をエクスポート",
-          "description": "見積あたり最大3回、PDF・Excel・Markdownでエクスポートできます。各エクスポートはメールで届き、PDFには「Draft Estimate」の透かしが入ります。",
+          "description": "言語と形式（PDF/DOCXの詳細レポートまたは正式見積、Excel、Markdown）、任意でテーマ・スタイル・テンプレート・カバープリセットを選びます。見積あたり最大3回—各ファイルはメールで届き、PDFには「Draft Estimate」の透かしが入ります。",
           "href": null
         }
       ]
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "description": "プロフィール、表示、連携アカウントを管理します。",
+    "profileTitle": "プロフィール",
+    "fullName": "氏名",
+    "email": "メール",
+    "language": "言語",
+    "languageJa": "日本語",
+    "languageEn": "英語",
+    "saveProfile": "プロフィールを保存",
+    "saving": "保存中…",
+    "profileSaved": "プロフィールを更新しました",
+    "profileSaveError": "プロフィールを更新できませんでした",
+    "themeTitle": "テーマ",
+    "themeDescription": "このブラウザのライト / ダーク表示を選びます。",
+    "themeLight": "ライト",
+    "themeDark": "ダーク",
+    "passwordTitle": "パスワード変更",
+    "currentPassword": "現在のパスワード",
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "新しいパスワード（確認）",
+    "changePassword": "パスワードを更新",
+    "passwordSaved": "パスワードを更新しました",
+    "passwordSaveError": "パスワードを更新できませんでした",
+    "passwordMismatch": "新しいパスワードが一致しません",
+    "sessionTitle": "セッション",
+    "connectedAccounts": {
+      "title": "連携アカウント",
+      "description": "Google（Docs/Sheets）と Canva を接続するとクラウドでエクスポートを開けます。PC にインストールしたアプリでダウンロードして開くこともできます。価格の正本は常にこのアプリです。",
+      "loading": "読み込み中…",
+      "loadError": "連携状態の読み込みに失敗しました",
+      "connect": "接続",
+      "disconnect": "切断",
+      "connected": "接続済み",
+      "notConnected": "未接続",
+      "notConfigured": "未設定（管理者が OAuth アプリを設定してください）",
+      "connectSuccess": "{provider} を接続しました",
+      "connectError": "{provider} を接続できませんでした",
+      "disconnectSuccess": "{provider} を切断しました",
+      "disconnectError": "{provider} を切断できませんでした",
+      "providers": {
+        "google": "Google Drive / Docs / Sheets",
+        "canva": "Canva"
+      }
     }
   }
 }

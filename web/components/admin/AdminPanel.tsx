@@ -7,6 +7,8 @@ import AiInstructionLayersPanel from "@/components/admin/AiInstructionLayersPane
 import AiSettingsPanel from "@/components/admin/AiSettingsPanel";
 import DiscountSettingsPanel from "@/components/admin/DiscountSettingsPanel";
 import QuotationSettingsPanel from "@/components/admin/QuotationSettingsPanel";
+import PresentationSettingsPanel from "@/components/admin/PresentationSettingsPanel";
+import OAuthAppSettingsPanel from "@/components/admin/OAuthAppSettingsPanel";
 import FormTemplatesPanel from "@/components/admin/FormTemplatesPanel";
 import FormulasReference from "@/components/admin/FormulasReference";
 import SmtpSettingsPanel from "@/components/admin/SmtpSettingsPanel";
@@ -18,6 +20,8 @@ type AdminTab =
   | "formTemplates"
   | "discountSettings"
   | "quotationSettings"
+  | "presentation"
+  | "oauthApps"
   | "aiSettings"
   | "aiInstructionLayers"
   | "smtpSettings"
@@ -30,6 +34,8 @@ const tabs: AdminTab[] = [
   "formTemplates",
   "discountSettings",
   "quotationSettings",
+  "presentation",
+  "oauthApps",
   "aiSettings",
   "aiInstructionLayers",
   "smtpSettings",
@@ -58,6 +64,8 @@ export default function AdminPanel() {
     formTemplates: t("tabs.formTemplates"),
     discountSettings: t("tabs.discountSettings"),
     quotationSettings: t("tabs.quotationSettings"),
+    presentation: t("tabs.presentation"),
+    oauthApps: t("tabs.oauthApps"),
     aiSettings: t("tabs.aiSettings"),
     aiInstructionLayers: t("tabs.aiInstructionLayers"),
     smtpSettings: t("tabs.smtpSettings"),
@@ -74,10 +82,7 @@ export default function AdminPanel() {
 
   return (
     <>
-      <nav
-        className="mb-6 flex flex-wrap gap-2"
-        aria-label={t("title")}
-      >
+      <nav className="mb-6 flex flex-wrap gap-2" aria-label={t("title")}>
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -95,6 +100,8 @@ export default function AdminPanel() {
       {activeTab === "formTemplates" && <FormTemplatesPanel />}
       {activeTab === "discountSettings" && <DiscountSettingsPanel />}
       {activeTab === "quotationSettings" && <QuotationSettingsPanel />}
+      {activeTab === "presentation" && <PresentationSettingsPanel />}
+      {activeTab === "oauthApps" && <OAuthAppSettingsPanel />}
       {activeTab === "aiSettings" && <AiSettingsPanel />}
       {activeTab === "aiInstructionLayers" && <AiInstructionLayersPanel />}
       {activeTab === "smtpSettings" && <SmtpSettingsPanel />}

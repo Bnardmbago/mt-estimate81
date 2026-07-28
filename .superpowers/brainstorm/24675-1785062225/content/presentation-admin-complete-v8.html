@@ -1,0 +1,165 @@
+<h2>Admin / Presentation — complete unified design</h2>
+<p class="subtitle">Create Theme, Style, Template, and Cover presets once; reuse them for Estimate and Proposal exports.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Admin / Presentation</div>
+  <div class="mockup-body">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px">
+      <div>
+        <strong>Client Brand Presentation</strong>
+        <div><small>Draft preset set · Theme + Style + Template + Cover</small></div>
+      </div>
+      <div style="display:flex;gap:7px">
+        <button class="mock-button">Create blank</button>
+        <button class="mock-button">Upload JPEG / PNG / PDF</button>
+        <button class="mock-button" style="background:#2563eb;color:white">Analyze with AI</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="mock-button">Overview</button>
+      <button class="mock-button">Theme</button>
+      <button class="mock-button">Style</button>
+      <button class="mock-button">Template</button>
+      <button class="mock-button" style="background:#2563eb;color:white">Cover design</button>
+      <button class="mock-button">Defaults</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:0.92fr 1.08fr;gap:18px">
+      <div>
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px">
+          <div class="label">Localized preset content</div>
+          <div style="display:flex;gap:6px;margin:8px 0">
+            <button class="mock-button" style="background:#2563eb;color:white">English</button>
+            <button class="mock-button">日本語</button>
+            <span style="margin-left:auto"><small>Auto-translate on save ✓</small></span>
+          </div>
+          <label><small>Name · English</small><div class="mock-input">Client Brand Presentation</div></label>
+          <label style="display:block;margin-top:7px"><small>名前 · 日本語</small><div class="mock-input">クライアントブランド・プレゼンテーション</div></label>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px">
+          <div class="label">Template page setup</div>
+          <label><small>Paper size</small><div class="mock-input">A4 · 210 × 297 mm (Default)</div></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px">
+            <button class="mock-button" style="background:#2563eb;color:white">▯ Portrait</button>
+            <button class="mock-button">▭ Landscape</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px">
+            <div class="mock-input">Margins · 18 mm</div>
+            <div class="mock-input">Columns · 1</div>
+          </div>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>Include cover page</strong>
+              <div><small>Template default for Estimates and Proposals</small></div>
+            </div>
+            <div style="width:43px;height:24px;background:#2563eb;border-radius:20px;padding:3px">
+              <div style="width:18px;height:18px;background:white;border-radius:50%;margin-left:19px"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">Cover assets</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="border:1px solid #d8dee9;border-radius:8px;padding:9px">
+              <strong>Logo</strong><br><small>Extracted candidate</small>
+              <div style="width:34px;height:34px;background:#17365d;border-radius:5px;margin:8px 0"></div>
+              <button class="mock-button">Replace</button>
+            </div>
+            <div style="border:1px solid #d8dee9;border-radius:8px;padding:9px">
+              <strong>Background image</strong><br><small>Approved asset</small>
+              <div style="height:34px;background:linear-gradient(145deg,#17365d,#6385a8);border-radius:5px;margin:8px 0"></div>
+              <button class="mock-button">Crop / replace</button>
+            </div>
+          </div>
+          <button class="mock-button" style="width:100%;margin-top:8px">+ Add decorative image</button>
+        </div>
+
+        <div class="section">
+          <div class="label">Selected background · mixed controls</div>
+          <label><small>Fit</small><div class="mock-input">Cover</div></label>
+          <div style="display:grid;grid-template-columns:68px 1fr 60px;gap:7px;align-items:center;margin-top:9px">
+            <small>Position X</small><input type="range" min="0" max="100" value="62" style="width:100%"><div class="mock-input">62%</div>
+            <small>Position Y</small><input type="range" min="0" max="100" value="48" style="width:100%"><div class="mock-input">48%</div>
+            <small>Zoom</small><input type="range" min="100" max="250" value="125" style="width:100%"><div class="mock-input">125%</div>
+            <small>Opacity</small><input type="range" min="0" max="100" value="70" style="width:100%"><div class="mock-input">70%</div>
+          </div>
+          <p><small>Drag the background directly in the preview, or enter exact values.</small></p>
+        </div>
+
+        <div class="section">
+          <div class="label">Ordered cover fields</div>
+          <div class="mock-input">☰ &nbsp; Document title / ドキュメントタイトル · required</div>
+          <div class="mock-input" style="margin-top:6px">☰ &nbsp; Client / クライアント · auto-fill</div>
+          <div class="mock-input" style="margin-top:6px">☰ &nbsp; Confidential / 機密 · footer</div>
+          <button class="mock-button" style="margin-top:7px">+ Add variable text</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="label">Live A4 portrait cover preview</div>
+          <div style="display:flex;gap:5px">
+            <button class="mock-button" style="background:#2563eb;color:white">EN</button>
+            <button class="mock-button">日本語</button>
+          </div>
+        </div>
+        <div style="background:#e6e9ee;padding:20px;border-radius:10px;display:grid;place-items:center">
+          <div style="width:340px;aspect-ratio:0.707;background:#f6f4ef;border:1px solid #ccc;box-shadow:0 7px 20px rgba(0,0,0,.12);padding:31px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+            <div style="position:absolute;width:185px;height:560px;background:linear-gradient(145deg,#17365d,#6385a8);transform:rotate(14deg);right:-102px;top:-43px;opacity:.7"></div>
+            <div style="position:absolute;width:75px;height:580px;background:#d89b2b;transform:rotate(14deg);right:-60px;top:-15px;opacity:.7"></div>
+            <div style="display:flex;align-items:center;gap:8px;position:relative">
+              <div style="width:27px;height:27px;background:#17365d;border-radius:4px"></div>
+              <strong style="font-size:10px;color:#17365d">YOUR COMPANY</strong>
+            </div>
+            <div style="margin:auto 0;position:relative;max-width:77%;text-align:left">
+              <div style="font-size:10px;letter-spacing:.08em;color:#6b7280;text-transform:uppercase">Example Corporation</div>
+              <div style="font-size:29px;line-height:1.1;font-weight:750;color:#17365d;margin-top:11px">Digital Transformation Proposal</div>
+              <div style="height:4px;background:#d89b2b;width:82px;margin-top:15px"></div>
+              <div style="font-size:11px;color:#64748b;margin-top:14px">Prepared July 2026</div>
+            </div>
+            <div style="font-size:8px;color:#6b7280;position:relative">CONFIDENTIAL — FOR INTENDED RECIPIENT ONLY</div>
+          </div>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px;margin-top:12px">
+          <div class="label">Preset consumers</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:#f5f7fa;border-radius:7px;padding:10px"><strong>Estimates</strong><br><small>Preview and export</small></div>
+            <div style="background:#f5f7fa;border-radius:7px;padding:10px"><strong>Proposals</strong><br><small>Generate, preview, export</small></div>
+          </div>
+          <p><small>Export language is selected on the Estimate or Proposal export screen. Default: document/current locale.</small></p>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button class="mock-button">Save draft</button>
+          <button class="mock-button">Reset to AI result</button>
+          <button class="mock-button" style="background:#2563eb;color:white">Approve and activate presets</button>
+        </div>
+        <p style="text-align:center;margin:9px 0 0"><small>No export action on Admin / Presentation.</small></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-complete-admin" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve the complete Admin / Presentation design</h3>
+      <p>Unified presets, AI reference generation, assets, mixed cover controls, A4 page setup, and strict English/Japanese localization.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-complete-admin" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>

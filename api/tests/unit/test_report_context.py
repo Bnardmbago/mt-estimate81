@@ -6,6 +6,7 @@ import pytest
 
 from app.exports.report_context import build_report_context
 from app.i18n.localized_content import store_localized_dict
+from app.presentation.resolver import PresentationBundle
 from tests.unit.export_fixtures import (
     sample_estimate_with_calculation,
     sample_estimate_with_discount,
@@ -120,6 +121,34 @@ def test_report_context_includes_gantt_chart_svg():
     )
 
     assert ctx["gantt_chart_svg"].startswith("<svg")
+
+
+def test_report_context_passes_resolved_chart_accent_to_gantt():
+    estimate = sample_estimate_with_calculation()
+    estimate.calculation_result["gantt"]["tasks"][0]["phase"] = "design"
+    presentation = PresentationBundle(
+        theme_id="custom",
+        style_id="comfortable",
+        template_id="classic-linear",
+        theme_tokens={
+            "colors": {
+                "accent": "C026D3",
+                "chart": "0EA5E9",
+            }
+        },
+    )
+    ctx = build_report_context(
+        estimate,
+        "en",
+        generated_at=datetime(2026, 6, 7),
+        rate_card_name="Standard",
+        rate_card_version_number=1,
+        rate_card_effective_date=datetime(2026, 1, 1),
+        export_revision=1,
+        presentation=presentation,
+    )
+
+    assert 'fill="#0EA5E9"' in ctx["gantt_chart_svg"]
 
 
 def test_report_context_legacy_extracted_data_fallbacks():

@@ -1,0 +1,160 @@
+<h2>Admin / Presentation — header-driven locale</h2>
+<p class="subtitle">English/Japanese and dark/light mode come from the system header. This panel no longer includes its own language switcher.</p>
+
+<div class="mockup">
+  <div class="mockup-header">App header · already present</div>
+  <div class="mockup-body" style="padding:10px 14px">
+    <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center">
+      <button class="mock-button">☾</button>
+      <button class="mock-button" style="background:#2563eb;color:white">JA</button>
+      <button class="mock-button">Settings</button>
+      <button class="mock-button">Logout</button>
+    </div>
+    <p style="text-align:right;margin:8px 0 0"><small>Header language drives Admin UI labels and live preview locale.</small></p>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px">
+  <div class="mockup-header">Admin / Presentation</div>
+  <div class="mockup-body">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px">
+      <div>
+        <strong>クライアントブランド・プレゼンテーション</strong>
+        <div><small>下書きプリセット · Theme + Style + Template + Cover</small></div>
+      </div>
+      <div style="display:flex;gap:7px">
+        <button class="mock-button">空白作成</button>
+        <button class="mock-button">JPEG / PNG / PDF をアップロード</button>
+        <button class="mock-button" style="background:#2563eb;color:white">AIで解析</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="mock-button">概要</button>
+      <button class="mock-button">テーマ</button>
+      <button class="mock-button">スタイル</button>
+      <button class="mock-button">テンプレート</button>
+      <button class="mock-button" style="background:#2563eb;color:white">カバーデザイン</button>
+      <button class="mock-button">デフォルト</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:0.92fr 1.08fr;gap:18px">
+      <div>
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px">
+          <div class="label">プリセット内容 · ヘッダー言語に追従</div>
+          <label><small>名前</small><div class="mock-input">クライアントブランド・プレゼンテーション</div></label>
+          <label style="display:block;margin-top:7px"><small>説明</small><div class="mock-input">参考資料から生成されたブランドデザイン</div></label>
+          <p><small>保存時に他方の言語へ自動翻訳。両方の翻訳を確認・修正可能。</small></p>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px">
+          <div class="label">ページ設定</div>
+          <label><small>用紙サイズ</small><div class="mock-input">A4 · 210 × 297 mm（デフォルト）</div></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px">
+            <button class="mock-button" style="background:#2563eb;color:white">▯ 縦</button>
+            <button class="mock-button">▭ 横</button>
+          </div>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>カバーページを含める</strong>
+              <div><small>見積・提案書エクスポートのテンプレート既定</small></div>
+            </div>
+            <div style="width:43px;height:24px;background:#2563eb;border-radius:20px;padding:3px">
+              <div style="width:18px;height:18px;background:white;border-radius:50%;margin-left:19px"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">カバー素材</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="border:1px solid #d8dee9;border-radius:8px;padding:9px">
+              <strong>ロゴ</strong><br><small>抽出候補</small>
+              <div style="width:34px;height:34px;background:#17365d;border-radius:5px;margin:8px 0"></div>
+              <button class="mock-button">差し替え</button>
+            </div>
+            <div style="border:1px solid #d8dee9;border-radius:8px;padding:9px">
+              <strong>背景画像</strong><br><small>承認済み</small>
+              <div style="height:34px;background:linear-gradient(145deg,#17365d,#6385a8);border-radius:5px;margin:8px 0"></div>
+              <button class="mock-button">切り抜き / 差し替え</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">背景 · 複合コントロール</div>
+          <div style="display:grid;grid-template-columns:68px 1fr 60px;gap:7px;align-items:center">
+            <small>位置 X</small><input type="range" min="0" max="100" value="62" style="width:100%"><div class="mock-input">62%</div>
+            <small>位置 Y</small><input type="range" min="0" max="100" value="48" style="width:100%"><div class="mock-input">48%</div>
+            <small>ズーム</small><input type="range" min="100" max="250" value="125" style="width:100%"><div class="mock-input">125%</div>
+            <small>不透明度</small><input type="range" min="0" max="100" value="70" style="width:100%"><div class="mock-input">70%</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">カバー可変テキスト</div>
+          <div class="mock-input">☰ &nbsp; ドキュメントタイトル · 必須</div>
+          <div class="mock-input" style="margin-top:6px">☰ &nbsp; クライアント · 自動入力</div>
+          <div class="mock-input" style="margin-top:6px">☰ &nbsp; 機密 · フッター</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">ライブプレビュー · ヘッダー言語 = 日本語</div>
+        <div style="background:#e6e9ee;padding:20px;border-radius:10px;display:grid;place-items:center">
+          <div style="width:340px;aspect-ratio:0.707;background:#f6f4ef;border:1px solid #ccc;box-shadow:0 7px 20px rgba(0,0,0,.12);padding:31px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+            <div style="position:absolute;width:185px;height:560px;background:linear-gradient(145deg,#17365d,#6385a8);transform:rotate(14deg);right:-102px;top:-43px;opacity:.7"></div>
+            <div style="position:absolute;width:75px;height:580px;background:#d89b2b;transform:rotate(14deg);right:-60px;top:-15px;opacity:.7"></div>
+            <div style="display:flex;align-items:center;gap:8px;position:relative">
+              <div style="width:27px;height:27px;background:#17365d;border-radius:4px"></div>
+              <strong style="font-size:10px;color:#17365d">YOUR COMPANY</strong>
+            </div>
+            <div style="margin:auto 0;position:relative;max-width:77%;text-align:left">
+              <div style="font-size:10px;letter-spacing:.08em;color:#6b7280;text-transform:uppercase">株式会社サンプル</div>
+              <div style="font-size:29px;line-height:1.1;font-weight:750;color:#17365d;margin-top:11px">デジタルトランスフォーメーション提案書</div>
+              <div style="height:4px;background:#d89b2b;width:82px;margin-top:15px"></div>
+              <div style="font-size:11px;color:#64748b;margin-top:14px">2026年7月作成</div>
+            </div>
+            <div style="font-size:8px;color:#6b7280;position:relative">機密 — 宛先限定</div>
+          </div>
+        </div>
+
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:13px;margin-top:12px">
+          <div class="label">利用先</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:#f5f7fa;border-radius:7px;padding:10px"><strong>見積</strong><br><small>プレビュー / エクスポート</small></div>
+            <div style="background:#f5f7fa;border-radius:7px;padding:10px"><strong>提案書</strong><br><small>生成 / プレビュー / エクスポート</small></div>
+          </div>
+          <p><small>エクスポート画面でもヘッダー言語を既定値として使用し、必要ならその場で上書き選択できます。</small></p>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button class="mock-button">下書き保存</button>
+          <button class="mock-button">AI結果に戻す</button>
+          <button class="mock-button" style="background:#2563eb;color:white">承認して有効化</button>
+        </div>
+        <p style="text-align:center;margin:9px 0 0"><small>このページに言語切替やエクスポート操作はありません。</small></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-header-locale" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve header-driven locale</h3>
+      <p>No language switcher inside Admin / Presentation. Header JA/EN controls UI and preview language.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-header-locale" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,84 @@
+<h2>Admin / Presentation — Template page setup</h2>
+<p class="subtitle">Paper size and orientation are saved with the Template and used by Estimate and Proposal exports.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Template / Page setup</div>
+    <div class="mockup-body">
+      <div class="section">
+        <div class="label">Paper size</div>
+        <div class="mock-input">A4 — 210 × 297 mm (Default)</div>
+        <p><small>Other supported sizes: A3, Letter, Legal</small></p>
+      </div>
+
+      <div class="section">
+        <div class="label">Orientation</div>
+        <div class="cards" style="grid-template-columns:1fr 1fr">
+          <div class="card" style="border:2px solid #2563eb">
+            <div class="card-image" style="display:grid;place-items:center;padding:14px">
+              <div style="width:76px;height:108px;background:white;border:1px solid #9aa4b2;box-shadow:0 3px 8px rgba(0,0,0,.1)"></div>
+            </div>
+            <div class="card-body">
+              <h3>Portrait</h3>
+              <p>Selected · A4 210 × 297 mm</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-image" style="display:grid;place-items:center;padding:26px 10px">
+              <div style="width:108px;height:76px;background:white;border:1px solid #9aa4b2;box-shadow:0 3px 8px rgba(0,0,0,.1)"></div>
+            </div>
+            <div class="card-body">
+              <h3>Landscape</h3>
+              <p>A4 297 × 210 mm</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Template defaults</div>
+        <div class="mock-input">Margins · 18 / 16 / 18 / 16 mm</div>
+        <div class="mock-input" style="margin-top:7px">Columns · 1</div>
+        <div class="mock-input" style="margin-top:7px">Cover page · enabled</div>
+      </div>
+
+      <button class="mock-button" style="width:100%;background:#2563eb;color:white">Save Template page setup</button>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Live A4 portrait preview</div>
+    <div class="mockup-body" style="background:#e6e9ee;display:grid;place-items:center">
+      <div style="width:310px;aspect-ratio:0.707;background:#f6f4ef;border:1px solid #ccc;box-shadow:0 7px 20px rgba(0,0,0,.12);padding:28px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+        <div style="position:absolute;width:150px;height:480px;background:linear-gradient(145deg,#17365d,#6385a8);transform:rotate(14deg);right:-92px;top:-40px;opacity:.7"></div>
+        <div style="display:flex;align-items:center;gap:8px;position:relative">
+          <div style="width:24px;height:24px;background:#17365d;border-radius:4px"></div>
+          <strong style="font-size:10px;color:#17365d">YOUR COMPANY</strong>
+        </div>
+        <div style="margin:auto 0;position:relative;max-width:76%">
+          <div style="font-size:10px;color:#6b7280;text-transform:uppercase">Example Corporation</div>
+          <div style="font-size:25px;line-height:1.1;font-weight:750;color:#17365d;margin-top:10px">Estimate / Proposal Cover</div>
+          <div style="height:4px;background:#d89b2b;width:72px;margin-top:14px"></div>
+        </div>
+        <div style="font-size:8px;color:#6b7280;position:relative">A4 · PORTRAIT</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-page-setup" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve Template page setup</h3>
+      <p>A4 default, portrait/landscape selection, additional standard sizes, and live preview.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-page-setup" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>

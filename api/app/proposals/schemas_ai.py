@@ -37,8 +37,16 @@ class ProposalMilestoneAI(BaseModel):
     date: str = ""
 
 
+class ProposalTableAI(BaseModel):
+    id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    headers: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+
+
 class ProposalBodyAI(BaseModel):
     sections: list[ProposalAISection]
+    tables: list[ProposalTableAI] = Field(default_factory=list)
     diagrams: list[ProposalDiagramAI] = Field(default_factory=list)
     milestones: list[ProposalMilestoneAI] = Field(default_factory=list)
 
@@ -52,13 +60,6 @@ class ProposalProjectBriefAI(BaseModel):
     constraints: str = ""
 
 
-class ProposalTableAI(BaseModel):
-    id: str = Field(min_length=1)
-    title: str = Field(min_length=1)
-    headers: list[str] = Field(default_factory=list)
-    rows: list[list[str]] = Field(default_factory=list)
-
-
 class ProposalPocAI(BaseModel):
     project_brief: ProposalProjectBriefAI
     sections: list[ProposalAISection]
@@ -67,6 +68,13 @@ class ProposalPocAI(BaseModel):
     milestones: list[ProposalMilestoneAI] = Field(default_factory=list)
     suggested_validation_window: str = ""
     selected_feature_ids: list[str] = Field(default_factory=list)
+
+
+class PresentationRecommendAI(BaseModel):
+    theme_id: str = Field(min_length=1)
+    style_id: str = Field(min_length=1)
+    template_id: str = Field(min_length=1)
+    rationale: str = ""
 
 
 POC_SECTION_IDS: list[str] = [

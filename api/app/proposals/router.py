@@ -7,14 +7,17 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, require_full_account
+from app.destinations import service as destination_service
 from app.models.user import User
 from app.proposals import export_service, service
-from app.schemas.export import ExportEmailRequest, ExportEmailResponse
+from app.schemas.export import DestinationSendResponse, ExportEmailRequest, ExportEmailResponse
 from app.schemas.proposal import (
+    ProposalCoverValuesPatch,
     ProposalDetail,
     ProposalExportRecord,
     ProposalExportRequest,
     ProposalGenerateRequest,
+    ProposalPresentationPatch,
     ProposalRegenerateRequest,
     ProposalSectionsPatchRequest,
     ProposalStatusResponse,
@@ -56,6 +59,9 @@ async def generate_proposal(
         locale=body.locale,
         include_poc=body.include_poc,
         background_tasks=background_tasks,
+        theme_id=body.theme_id,
+        style_id=body.style_id,
+        template_id=body.template_id,
     )
 
 
@@ -97,6 +103,39 @@ async def patch_proposal_sections(
     user: User = Depends(require_full_account),
 ) -> ProposalDetail:
     return await service.patch_sections(db, user, proposal_id, body.sections)
+
+
+@router.patch("/{proposal_id}/presentation", response_model=ProposalDetail)
+async def patch_proposal_presentation(
+    proposal_id: uuid.UUID,
+    body: ProposalPresentationPatch,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_full_account),
+) -> ProposalDetail:
+    return await service.patch_presentation(
+        db,
+        user,
+        proposal_id,
+        theme_id=body.theme_id,
+        style_id=body.style_id,
+        template_id=body.template_id,
+    )
+
+
+@router.patch("/{proposal_id}/cover-values", response_model=ProposalDetail)
+async def patch_proposal_cover_values(
+    proposal_id: uuid.UUID,
+    body: ProposalCoverValuesPatch,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_full_account),
+) -> ProposalDetail:
+    return await service.patch_cover_values(
+        db,
+        user,
+        proposal_id,
+        locale=body.locale,
+        values=body.values,
+    )
 
 
 @router.post("/{proposal_id}/regenerate", response_model=ProposalDetail)
@@ -145,6 +184,12 @@ async def create_proposal_export(
         variant=body.variant,
         locale=body.locale,
         project_name=body.project_name,
+        theme_id=body.theme_id,
+        style_id=body.style_id,
+        template_id=body.template_id,
+        include_cover=body.include_cover,
+        cover_template_id=body.cover_template_id,
+        cover_values=body.cover_values,
     )
     return ProposalExportRecord.model_validate(row)
 
@@ -181,6 +226,37 @@ async def delete_proposal_export(
 ) -> Response:
     await export_service.delete_export(db, user, proposal_id, export_id)
     return Response(status_code=204)
+
+
+
+@router.post(
+    "/{proposal_id}/exports/{export_id}/send-to/google",
+    response_model=DestinationSendResponse,
+)
+async def send_proposal_export_to_google(
+    proposal_id: uuid.UUID,
+    export_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_full_account),
+):
+    return await destination_service.send_proposal_export_to_google(
+        db, proposal_id, export_id, user
+    )
+
+
+@router.post(
+    "/{proposal_id}/exports/{export_id}/send-to/canva",
+    response_model=DestinationSendResponse,
+)
+async def send_proposal_export_to_canva(
+    proposal_id: uuid.UUID,
+    export_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_full_account),
+):
+    return await destination_service.send_proposal_export_to_canva(
+        db, proposal_id, export_id, user
+    )
 
 
 @router.post(

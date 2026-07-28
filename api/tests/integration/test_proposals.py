@@ -382,3 +382,151 @@ async def test_generate_proposal_persists_rich_ai_bodies(
     assert len(payload["poc"]["sections"]) >= 17
     assert payload["poc"]["tables"]
     assert payload["poc"]["diagrams"]
+
+
+async def _seed_presentation(db_session: AsyncSession) -> None:
+    from app.models.presentation import PresentationStyle, PresentationTemplate, PresentationTheme
+    from app.presentation.seeds import (
+        CLASSIC_LINEAR_TEMPLATE,
+        COMFORTABLE_STYLE,
+        CORPORATE_NAVY_CONFIG,
+        EXECUTIVE_COVER_TEMPLATE,
+        MODERN_SLATE_CONFIG,
+        SPACIOUS_STYLE,
+    )
+
+    existing = await db_session.get(PresentationTheme, "corporate-navy")
+    if existing is not None:
+        return
+    db_session.add_all(
+        [
+            PresentationTheme(
+                id="corporate-navy",
+                name="Corporate Navy",
+                is_default=True,
+                is_active=True,
+                config=CORPORATE_NAVY_CONFIG,
+            ),
+            PresentationTheme(
+                id="modern-slate",
+                name="Modern Slate",
+                is_default=False,
+                is_active=True,
+                config=MODERN_SLATE_CONFIG,
+            ),
+            PresentationStyle(
+                id="comfortable",
+                name="Comfortable",
+                is_default=True,
+                is_active=True,
+                config=COMFORTABLE_STYLE,
+            ),
+            PresentationStyle(
+                id="spacious",
+                name="Spacious",
+                is_default=False,
+                is_active=True,
+                config=SPACIOUS_STYLE,
+            ),
+            PresentationTemplate(
+                id="classic-linear",
+                name="Classic Linear",
+                is_default=True,
+                is_active=True,
+                config=CLASSIC_LINEAR_TEMPLATE,
+            ),
+            PresentationTemplate(
+                id="executive-cover",
+                name="Executive Cover",
+                is_default=False,
+                is_active=True,
+                config=EXECUTIVE_COVER_TEMPLATE,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_proposal_presentation_ids_and_export_override(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    calculated_estimate: Estimate,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("PROPOSAL_GENERATE_SYNC", "1")
+    await _seed_presentation(db_session)
+
+    async def fake_recommend(*_args, **_kwargs):
+        return (
+            "modern-slate",
+            "spacious",
+            "executive-cover",
+            {"source": "ai", "recommended": {}, "warnings": []},
+        )
+
+    monkeypatch.setattr(
+        "app.proposals.service.recommend_presentation",
+        fake_recommend,
+    )
+
+    response = await client.post(
+        "/proposals/generate",
+        headers=auth_headers,
+        json={
+            "estimate_id": str(calculated_estimate.id),
+            "locale": "en",
+            "include_poc": False,
+            "theme_id": "modern-slate",
+            "style_id": "spacious",
+            "template_id": "executive-cover",
+        },
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["theme_id"] == "modern-slate"
+    assert payload["style_id"] == "spacious"
+    assert payload["template_id"] == "executive-cover"
+    assert payload["presentation_css_vars"]["--proposal-primary"]
+    proposal_id = payload["id"]
+
+    patch = await client.patch(
+        f"/proposals/{proposal_id}/presentation",
+        headers=auth_headers,
+        json={"theme_id": "corporate-navy"},
+    )
+    assert patch.status_code == 200, patch.text
+    assert patch.json()["theme_id"] == "corporate-navy"
+    assert patch.json()["style_id"] == "spacious"
+
+    export = await client.post(
+        f"/proposals/{proposal_id}/export",
+        headers=auth_headers,
+        json={
+            "format": "md",
+            "variant": "full",
+            "theme_id": "modern-slate",
+            "style_id": "comfortable",
+            "template_id": "classic-linear",
+        },
+    )
+    assert export.status_code == 200, export.text
+    export_row = export.json()
+    assert export_row["theme_id"] == "modern-slate"
+    assert export_row["style_id"] == "comfortable"
+    assert export_row["template_id"] == "classic-linear"
+
+    detail = await client.get(f"/proposals/{proposal_id}", headers=auth_headers)
+    assert detail.status_code == 200
+    assert detail.json()["theme_id"] == "corporate-navy"
+    assert detail.json()["style_id"] == "spacious"
+    assert detail.json()["template_id"] == "executive-cover"
+
+    catalogs = await client.get("/presentation/themes", headers=auth_headers)
+    assert catalogs.status_code == 200
+    assert any(row["id"] == "corporate-navy" for row in catalogs.json())
+
+    defaults = await client.get("/presentation/defaults", headers=auth_headers)
+    assert defaults.status_code == 200
+    assert defaults.json()["theme_id"] == "corporate-navy"

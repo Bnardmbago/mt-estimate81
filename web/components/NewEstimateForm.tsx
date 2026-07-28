@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { apiJson } from "@/lib/api";
-import type { EstimateDetail } from "@/lib/estimate";
-import { defaultProjectNameForLocale } from "@/lib/formFields";
 import {
   NATURE_OF_WORK_CATEGORIES,
   type CategorizedTemplateOption,
@@ -99,33 +97,16 @@ export default function NewEstimateForm() {
     });
   }, [templatesForCategory]);
 
-  async function handleCreate() {
+  function handleCreate() {
     if (!selectedTemplateId) {
       return;
     }
 
     setCreating(true);
     setError(null);
-
-    try {
-      const estimate = await apiJson<EstimateDetail>(
-        "/estimates",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            project_name: defaultProjectNameForLocale(locale),
-            locale,
-            form_template_id: selectedTemplateId,
-          }),
-        },
-        locale,
-      );
-      router.push(`/${locale}/estimates/${estimate.id}`);
-      router.refresh();
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : t("createError"));
-      setCreating(false);
-    }
+    router.push(
+      `/${locale}/estimates/new/draft?template=${encodeURIComponent(selectedTemplateId)}`,
+    );
   }
 
   if (loading) {
@@ -191,7 +172,7 @@ export default function NewEstimateForm() {
 
       <button
         type="button"
-        onClick={() => void handleCreate()}
+        onClick={handleCreate}
         disabled={creating || !selectedTemplateId}
         className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
       >

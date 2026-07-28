@@ -35,6 +35,24 @@ LOCATION_GUARDRAILS: dict[InstructionLocation, str] = {
         "Do not duplicate items that already exist in the current section (match by name, case-insensitive). "
         "Return only data for the requested section."
     ),
+    "proposal_assessment": (
+        f"{JSON_SCHEMA_GUARDRAIL}\n"
+        "Write stakeholder-facing feasibility analysis. "
+        "Never invent costs, hours, or dates; only use figures provided in the facts. "
+        "Spell out Proof of Concept; do not use bare abbreviations like POC, NRC, or RC."
+    ),
+    "proposal_body": (
+        f"{JSON_SCHEMA_GUARDRAIL}\n"
+        "Write a client-facing project proposal for executives. "
+        "Do not invent commercial numbers or schedule dates; quote the provided facts. "
+        "Spell out one-time project cost and monthly recurring cost; avoid NRC/RC abbreviations."
+    ),
+    "proposal_poc": (
+        f"{JSON_SCHEMA_GUARDRAIL}\n"
+        "Write an enterprise Proof of Concept focused on technical feasibility, not production readiness. "
+        "Never invent official hours, costs, or calendar dates for engine pricing. "
+        "Spell out Proof of Concept; do not use bare abbreviations like POC, NRC, or RC."
+    ),
 }
 
 

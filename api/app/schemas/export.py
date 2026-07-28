@@ -9,6 +9,12 @@ class ExportRequest(BaseModel):
         pattern=r"^(md|xlsx|pdf|pdf_quotation|docx|docx_quotation|pdf_internal|docx_internal|xlsx_internal|md_internal)$"
     )
     locale: str | None = Field(default=None, pattern=r"^(ja|en)$")
+    theme_id: str | None = Field(default=None, max_length=64)
+    style_id: str | None = Field(default=None, max_length=64)
+    template_id: str | None = Field(default=None, max_length=64)
+    include_cover: bool | None = None
+    cover_template_id: str | None = Field(default=None, max_length=64)
+    cover_values: dict[str, object] | None = None
 
 
 class ExportEmailRequest(BaseModel):

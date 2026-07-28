@@ -16,6 +16,7 @@ from app.models.estimate import Estimate
 from app.models.proposal import Proposal
 from app.models.rate_card import RateCard, RateCardVersion
 from app.models.user import User
+from app.presentation.resolver import PresentationBundle
 from app.proposals.export_pack_content import brief_field_rows, section_rows
 
 
@@ -133,6 +134,9 @@ async def build_internal_dossier_payload(
     estimate: Estimate,
     *,
     locale: str,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     warnings: list[str] = []
     rate_card, rate_card_effective_date = await _load_rate_card(
@@ -152,6 +156,9 @@ async def build_internal_dossier_payload(
             rate_card_version_number=rate_card["version_number"] if rate_card else None,
             rate_card_effective_date=rate_card_effective_date,
             export_revision=1,
+            presentation=presentation,
+            include_cover=include_cover,
+            cover_values=cover_values,
         )
         _restore_full_role_breakdown_for_dossier(report, estimate, locale=locale)
     else:
@@ -187,9 +194,20 @@ async def load_internal_export_parts(
     db: AsyncSession,
     estimate: Estimate,
     locale: str,
+    *,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return build_internal_export_context(...) ready for generators."""
-    payload = await build_internal_dossier_payload(db, estimate, locale=locale)
+    payload = await build_internal_dossier_payload(
+        db,
+        estimate,
+        locale=locale,
+        presentation=presentation,
+        include_cover=include_cover,
+        cover_values=cover_values,
+    )
     return build_internal_export_context(
         payload["report"],
         payload["rate_card"],

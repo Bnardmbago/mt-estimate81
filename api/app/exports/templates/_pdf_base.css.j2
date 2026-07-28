@@ -1,6 +1,37 @@
+{% set cover_page_size = ctx.page.size if ctx.page and ctx.page.size else 'A4' %}
+{% if cover_page_size == 'A3' %}
+  {% set cover_page_width_mm = 297 %}
+  {% set cover_page_height_mm = 420 %}
+{% elif cover_page_size == 'Letter' %}
+  {% set cover_page_width_mm = 215.9 %}
+  {% set cover_page_height_mm = 279.4 %}
+{% elif cover_page_size == 'Legal' %}
+  {% set cover_page_width_mm = 215.9 %}
+  {% set cover_page_height_mm = 355.6 %}
+{% else %}
+  {% set cover_page_width_mm = 210 %}
+  {% set cover_page_height_mm = 297 %}
+{% endif %}
+{% if ctx.page and ctx.page.orientation == 'landscape' %}
+  {% set portrait_page_width_mm = cover_page_width_mm %}
+  {% set cover_page_width_mm = cover_page_height_mm %}
+  {% set cover_page_height_mm = portrait_page_width_mm %}
+{% endif %}
+
 @page {
-  size: A4;
+  size: {{ ctx.page.css_size if ctx.page and ctx.page.css_size else 'A4 portrait' }};
   margin: 14mm 12mm 16mm 12mm;
+}
+
+/* Full-bleed cover — geometry % match Admin Cover canvas (full page). */
+@page cover {
+  size: {{ ctx.page.css_size if ctx.page and ctx.page.css_size else 'A4 portrait' }};
+  margin: 0;
+}
+
+:root {
+  --cover-page-width: {{ cover_page_width_mm }}mm;
+  --cover-page-height: {{ cover_page_height_mm }}mm;
 }
 
 @font-face {
@@ -21,6 +52,66 @@ body {
   print-color-adjust: exact;
 }
 
+.estimate-cover {
+  page: cover;
+  width: var(--cover-page-width);
+  height: var(--cover-page-height);
+  color: {{ ctx.cover.text_color if ctx.cover and ctx.cover.text_color else '#334155' }};
+  background: {{ ctx.cover.background_color if ctx.cover and ctx.cover.background_color else '#FFFFFF' }};
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+}
+.estimate-cover-field-title .estimate-cover-value {
+  color: {{ ctx.cover.title_color if ctx.cover and ctx.cover.title_color else '#1E3A5F' }};
+}
+
+.cover-accent-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+/* Keep SVG intrinsic mm size — WeasyPrint drops fills when forced to 100%. */
+.cover-accent-art svg { display: block; max-width: none; max-height: none; }
+.estimate-cover-content {
+  position: relative;
+  z-index: 3;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: {{ ctx.cover.design.padding_mm if ctx.cover and ctx.cover.design and ctx.cover.design.padding_mm else 24 }}mm;
+  text-align: {{ (ctx.cover.design.alignment if ctx.cover and ctx.cover.design and ctx.cover.design.alignment else 'left') }};
+}
+.estimate-cover-field { position: relative; z-index: 3; margin-bottom: 8pt; }
+.estimate-cover-label { display: block; font-size: 8pt; opacity: 0.8; }
+.estimate-cover-value {
+  display: block;
+  font-size: {{ (ctx.cover.design.typography.metadata_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography and ctx.cover.design.typography.metadata_pt else 10) }}pt;
+  font-weight: 600;
+}
+.estimate-cover-field-title .estimate-cover-value {
+  font-size: {{ (ctx.cover.design.typography.title_pt if ctx.cover and ctx.cover.design and ctx.cover.design.typography else 30) }}pt;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.estimate-cover-field-styled .estimate-cover-value {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  font-style: inherit;
+  color: inherit;
+  text-align: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+.estimate-cover-asset { position: absolute; z-index: 2; object-fit: contain; }
+/* Position/size come from asset.background_css (focal-point pan/zoom). */
+.estimate-cover-asset-background { z-index: 0; pointer-events: none; }
+.estimate-cover-asset-logo { top: 18mm; right: 18mm; max-width: 48mm; max-height: 24mm; }
+.estimate-cover-asset-decorative { right: 0; bottom: 0; max-width: 45%; max-height: 45%; }
+
 h1 {
   font-size: 12pt;
   font-weight: 700;
@@ -37,7 +128,7 @@ h2, .section-title {
   color: var(--export-primary);
   margin: 0 0 3pt;
   padding-bottom: 2pt;
-  border-bottom: 0.75pt solid var(--export-border);
+  border-bottom: 0.75pt solid var(--export-accent);
   background: transparent;
   page-break-after: avoid;
 }
@@ -137,7 +228,7 @@ ul + .req-group {
   margin: 0 0 5pt;
   padding: 4pt 8pt;
   background: var(--export-surface);
-  border-left: 2pt solid var(--export-accent);
+  border-left: 2pt solid var(--export-callout);
   border-radius: 0 3pt 3pt 0;
   line-height: 1.35;
 }
@@ -181,7 +272,7 @@ ul + .req-group {
   padding: 4pt 6pt;
   text-align: left;
   border: none;
-  border-bottom: 0.5pt solid var(--export-border);
+  border-bottom: 0.5pt solid var(--export-table-highlight);
 }
 
 .data-table td {
@@ -203,18 +294,18 @@ ul + .req-group {
 .data-table .total-row th {
   font-weight: 700;
   background: var(--export-primary-light) !important;
-  border-top: 0.75pt solid var(--export-border);
+  border-top: 0.75pt solid var(--export-table-highlight);
   color: var(--export-text);
 }
 
 .data-table .first-year-highlight {
   font-size: 8.5pt;
   font-weight: 700;
-  color: var(--export-primary);
+  color: var(--export-table-highlight);
 }
 
 .data-table .total-row .first-year-highlight {
-  color: var(--export-primary);
+  color: var(--export-table-highlight);
 }
 
 /* Questionnaire / key-value tables */
@@ -345,7 +436,7 @@ ul + .req-group {
   color: var(--export-primary);
   margin: 0 0 6pt;
   padding-bottom: 3pt;
-  border-bottom: 0.75pt solid var(--export-border);
+  border-bottom: 0.75pt solid var(--export-accent);
   background: transparent;
 }
 

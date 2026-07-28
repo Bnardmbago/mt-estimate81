@@ -9,7 +9,10 @@ type InstructionLocation =
   | "extraction"
   | "extraction_client_constraints"
   | "rate_card_generation"
-  | "rate_card_section";
+  | "rate_card_section"
+  | "proposal_assessment"
+  | "proposal_body"
+  | "proposal_poc";
 
 type InstructionLocale = "en" | "ja";
 
@@ -50,6 +53,9 @@ const LOCATIONS: InstructionLocation[] = [
   "extraction_client_constraints",
   "rate_card_generation",
   "rate_card_section",
+  "proposal_assessment",
+  "proposal_body",
+  "proposal_poc",
 ];
 
 const LOCALES: InstructionLocale[] = ["en", "ja"];

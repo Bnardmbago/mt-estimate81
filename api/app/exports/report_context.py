@@ -30,7 +30,23 @@ from app.exports.questionnaire import (
     resolve_export_extracted,
     resolve_export_form_data,
 )
+from app.exports.theme import EXPORT_THEME
 from app.models.estimate import Estimate
+from app.presentation.accent_shapes import (
+    PAGE_DIMENSIONS_MM,
+    render_accent_svg,
+)
+from app.presentation.background_style import cover_background_inline_css
+from app.presentation.cover import cover_surface_colors, resolve_cover_fields
+from app.presentation.resolver import PresentationBundle
+
+
+def _page_dimensions_mm(page: dict[str, Any]) -> tuple[float, float]:
+    width, height = PAGE_DIMENSIONS_MM.get(
+        str(page.get("size")),
+        PAGE_DIMENSIONS_MM["A4"],
+    )
+    return (height, width) if page.get("orientation") == "landscape" else (width, height)
 
 
 def _normalize_extracted(extracted: dict[str, Any]) -> dict[str, Any]:
@@ -140,6 +156,9 @@ def build_report_context(
     rate_card_effective_date: datetime | None,
     export_revision: int,
     export_user_display_name: str | None = None,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if locale not in ("ja", "en"):
         raise ValueError(f"Unsupported locale: {locale}")
@@ -210,6 +229,77 @@ def build_report_context(
         "development_period_display": f"{format_person_days(duration_days)} {labels['days']}",
     }
 
+    theme = presentation.theme_color_map() if presentation else dict(EXPORT_THEME)
+    style = presentation.style_tokens if presentation else {}
+    layout = presentation.layout if presentation else {"layout": "linear", "cover": False}
+    resolved_include_cover = (
+        bool(layout.get("cover")) if include_cover is None else include_cover
+    )
+    page = {"size": "A4", "orientation": "portrait", "css_size": "A4 portrait"}
+    cover_fields: list[dict[str, Any]] = []
+    cover_warnings: list[str] = []
+    cover_assets: list[dict[str, Any]] = []
+    cover_design: dict[str, Any] = {}
+    if presentation:
+        page = {**presentation.page, "css_size": presentation.page_css_size()}
+        cover_design = presentation.cover_design
+        if resolved_include_cover:
+            fallback_locale = estimate.locale if estimate.locale != locale else (
+                "ja" if locale == "en" else "en"
+            )
+            document_facts = {
+                **form_data,
+                "title": estimate.project_name,
+                "project_name": estimate.project_name,
+                "client_name": estimate.client_name,
+                "document_type": labels["title"],
+            }
+            cover_fields, cover_warnings = resolve_cover_fields(
+                presentation.cover_fields,
+                cover_values if cover_values is not None else getattr(estimate, "cover_values", {}),
+                display_locale=locale,
+                fallback_locale=fallback_locale,
+                document_facts=document_facts,
+            )
+            for raw_asset in presentation.cover_assets:
+                if not isinstance(raw_asset, dict):
+                    continue
+                asset = dict(raw_asset)
+                asset["region"] = asset.get("region") or asset.get("role") or "decorative"
+                asset["url"] = (
+                    asset.get("url")
+                    or asset.get("data_uri")
+                    or asset.get("storage_path")
+                    or ""
+                )
+                if asset["region"] == "background":
+                    asset["background_css"] = cover_background_inline_css(asset)
+                cover_assets.append(asset)
+            if presentation.logo_storage_path and not any(
+                asset.get("region") == "logo" for asset in cover_assets
+            ):
+                cover_assets.append(
+                    {
+                        "region": "logo",
+                        "url": presentation.logo_storage_path,
+                        "storage_path": presentation.logo_storage_path,
+                        "alt": presentation.theme_name,
+                    }
+                )
+
+    cover_colors = cover_surface_colors(cover_design)
+    cover_background_color = cover_colors["background"]
+    cover_accent_svg = ""
+    if presentation is not None:
+        page_width_mm, page_height_mm = _page_dimensions_mm(page)
+        cover_accent_svg = render_accent_svg(
+            cover_design.get("accent_shapes") or [],
+            theme_accent=f"#{str(theme['accent']).lstrip('#')}",
+            width_mm=page_width_mm,
+            height_mm=page_height_mm,
+        )
+        cover_warnings.extend(presentation.accent_warnings)
+
     return {
         "labels": labels,
         "locale": locale,
@@ -256,5 +346,29 @@ def build_report_context(
         "calculation": calculation_payload,
         "rc_breakdown": rc_breakdown,
         "gantt": gantt,
-        "gantt_chart_svg": build_gantt_svg(gantt),
+        "gantt_chart_svg": build_gantt_svg(
+            gantt,
+            accent_color=f"#{str(theme.get('chart', theme['accent'])).lstrip('#')}",
+        ),
+        "theme": theme,
+        "style": style,
+        "layout": layout,
+        "page": page,
+        "include_cover": resolved_include_cover,
+        "cover": {
+            "fields": cover_fields,
+            "assets": cover_assets,
+            "design": cover_design,
+            "accent_svg": cover_accent_svg,
+            "background_color": cover_background_color,
+            "title_color": cover_colors["title"],
+            "text_color": cover_colors["text"],
+            "warnings": cover_warnings,
+        },
+        "presentation": {
+            "theme_id": presentation.theme_id if presentation else None,
+            "style_id": presentation.style_id if presentation else None,
+            "template_id": presentation.template_id if presentation else None,
+            "layout_class": presentation.layout_class() if presentation else "proposal-layout-linear",
+        },
     }

@@ -6,7 +6,23 @@ from typing import Any
 
 from app.exports.gantt_svg import build_gantt_svg
 from app.exports.theme import EXPORT_THEME
+from app.i18n.localized_content import resolve_localized_dict
 from app.models.proposal import Proposal
+from app.presentation.accent_shapes import (
+    PAGE_DIMENSIONS_MM,
+    render_accent_svg,
+)
+from app.presentation.background_style import cover_background_inline_css
+from app.presentation.cover import cover_surface_colors, resolve_cover_fields
+from app.presentation.resolver import PresentationBundle
+
+
+def _page_dimensions_mm(page: dict[str, Any]) -> tuple[float, float]:
+    width, height = PAGE_DIMENSIONS_MM.get(
+        str(page.get("size")),
+        PAGE_DIMENSIONS_MM["A4"],
+    )
+    return (height, width) if page.get("orientation") == "landscape" else (width, height)
 
 
 def _lexicon_labels(locale: str) -> dict[str, str]:
@@ -116,17 +132,15 @@ def build_proposal_export_context(
     locale: str | None = None,
     variant: str = "full",
     project_name: str | None = None,
+    presentation: PresentationBundle | None = None,
+    include_cover: bool | None = None,
+    cover_values: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     loc = locale or proposal.locale
     labels = _lexicon_labels(loc)
     snapshot = proposal.source_snapshot or {}
     costs = snapshot.get("costs") or {}
     gantt = snapshot.get("gantt") or {}
-    gantt_svg = ""
-    try:
-        gantt_svg = build_gantt_svg(gantt) if gantt else ""
-    except Exception:
-        gantt_svg = ""
 
     # Stakeholder cost block — never use NRC/RC abbreviations
     cost_summary = {
@@ -148,6 +162,96 @@ def build_proposal_export_context(
             brief["project_name"] = display_name
             poc["project_brief"] = brief
 
+    theme_map = dict(EXPORT_THEME)
+    style_tokens: dict[str, Any] = {}
+    layout: dict[str, Any] = {"layout": "linear", "cover": False, "section_chrome": "ruled", "columns": 1}
+    if presentation is not None:
+        theme_map = presentation.theme_color_map()
+        style_tokens = presentation.style_tokens
+        layout = presentation.layout
+    gantt_svg = ""
+    try:
+        gantt_svg = (
+            build_gantt_svg(
+                gantt,
+                accent_color=f"#{str(theme_map.get('chart', theme_map['accent'])).lstrip('#')}",
+            )
+            if gantt
+            else ""
+        )
+    except Exception:
+        gantt_svg = ""
+
+    template_cover = bool(layout.get("cover"))
+    resolved_include_cover = template_cover if include_cover is None else include_cover
+    fallback_locale = proposal.locale if proposal.locale != loc else ("ja" if loc == "en" else "en")
+    document_facts = resolve_localized_dict(snapshot, loc, fallback_locale)
+    document_facts.update(
+        {
+            "title": display_name,
+            "project_name": display_name,
+            "client_name": snapshot.get("client_name") or "",
+            "document_type": labels["title"],
+        }
+    )
+    resolved_cover_fields: list[dict[str, Any]] = []
+    cover_warnings: list[str] = []
+    cover_assets: list[dict[str, Any]] = []
+    cover_design: dict[str, Any] = {}
+    page = {"size": "A4", "orientation": "portrait", "css_size": "A4 portrait"}
+    if presentation is not None:
+        page = {
+            **presentation.page,
+            "css_size": presentation.page_css_size(),
+        }
+        cover_design = presentation.cover_design
+        if resolved_include_cover:
+            resolved_cover_fields, cover_warnings = resolve_cover_fields(
+                presentation.cover_fields,
+                cover_values if cover_values is not None else proposal.cover_values,
+                display_locale=loc,
+                fallback_locale=fallback_locale,
+                document_facts=document_facts,
+            )
+            for raw_asset in presentation.cover_assets:
+                if not isinstance(raw_asset, dict):
+                    continue
+                asset = dict(raw_asset)
+                asset["region"] = asset.get("region") or asset.get("role") or "decorative"
+                asset["url"] = (
+                    asset.get("url")
+                    or asset.get("data_uri")
+                    or asset.get("storage_path")
+                    or ""
+                )
+                if asset["region"] == "background":
+                    asset["background_css"] = cover_background_inline_css(asset)
+                cover_assets.append(asset)
+            if presentation.logo_storage_path and not any(
+                asset.get("region") == "logo" for asset in cover_assets
+            ):
+                cover_assets.append(
+                    {
+                        "region": "logo",
+                        "url": presentation.logo_storage_path,
+                        "storage_path": presentation.logo_storage_path,
+                        "alt": presentation.theme_name,
+                    }
+                )
+
+    cover_colors = cover_surface_colors(cover_design)
+    cover_background_color = cover_colors["background"]
+    cover_accent_svg = ""
+    if presentation is not None:
+        page_width_mm, page_height_mm = _page_dimensions_mm(page)
+        cover_accent_svg = render_accent_svg(
+            cover_design.get("accent_shapes") or [],
+            theme_accent=f"#{str(theme_map['accent']).lstrip('#')}",
+            width_mm=page_width_mm,
+            height_mm=page_height_mm,
+        )
+        cover_warnings.extend(presentation.accent_warnings)
+
     return {
         "labels": labels,
         "locale": loc,
@@ -164,5 +268,25 @@ def build_proposal_export_context(
         "gantt": gantt,
         "gantt_svg": gantt_svg,
         "include_poc": proposal.include_poc,
-        "theme": dict(EXPORT_THEME),
+        "theme": theme_map,
+        "style": style_tokens,
+        "layout": layout,
+        "include_cover": resolved_include_cover,
+        "page": page,
+        "cover": {
+            "fields": resolved_cover_fields,
+            "assets": cover_assets,
+            "design": cover_design,
+            "accent_svg": cover_accent_svg,
+            "background_color": cover_background_color,
+            "title_color": cover_colors["title"],
+            "text_color": cover_colors["text"],
+            "warnings": cover_warnings,
+        },
+        "presentation": {
+            "theme_id": presentation.theme_id if presentation else None,
+            "style_id": presentation.style_id if presentation else None,
+            "template_id": presentation.template_id if presentation else None,
+            "layout_class": presentation.layout_class() if presentation else "proposal-layout-linear",
+        },
     }

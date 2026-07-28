@@ -175,6 +175,9 @@ def sample_report_context(
     rate_card_effective_date: datetime | None = None,
     export_revision: int = 1,
     export_user_display_name: str | None = None,
+    presentation=None,
+    include_cover: bool | None = None,
+    cover_values: dict | None = None,
 ):
     estimate = estimate or sample_estimate_with_calculation()
     return build_report_context(
@@ -186,6 +189,9 @@ def sample_report_context(
         rate_card_effective_date=rate_card_effective_date or datetime(2026, 1, 1),
         export_revision=export_revision,
         export_user_display_name=export_user_display_name,
+        presentation=presentation,
+        include_cover=include_cover,
+        cover_values=cover_values,
     )
 
 

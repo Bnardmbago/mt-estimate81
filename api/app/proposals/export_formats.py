@@ -8,8 +8,10 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from app.exports.docx import PAGE_DIMENSIONS_MM, add_docx_cover_accent
 from app.exports.markdown import format_currency
 from app.exports.theme import PRIMARY, TEXT_ON_PRIMARY
+from app.presentation.background_style import cover_background_inline_css
 from app.proposals.export_pack_content import (
     brief_field_rows,
     collect_diagrams,
@@ -22,12 +24,14 @@ TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "exports" / "templates"
 
 
 def _env() -> Environment:
-    return Environment(
+    env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
         autoescape=select_autoescape(["html", "xml"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    env.globals["cover_background_inline_css"] = cover_background_inline_css
+    return env
 
 
 def _money(value: Any) -> str:
@@ -39,8 +43,15 @@ def _money(value: Any) -> str:
         return str(value)
 
 
+def render_proposal_html(ctx: dict[str, Any]) -> str:
+    return _env().get_template("proposal_pack.html.j2").render(
+        ctx=ctx,
+        locale=ctx.get("locale", "en"),
+    )
+
+
 def generate_proposal_pdf(ctx: dict[str, Any]) -> bytes:
-    html = _env().get_template("proposal_pack.html.j2").render(ctx=ctx, locale=ctx.get("locale", "en"))
+    html = render_proposal_html(ctx)
     from weasyprint import HTML
 
     return HTML(string=html, base_url=str(TEMPLATE_DIR)).write_pdf()
@@ -48,14 +59,38 @@ def generate_proposal_pdf(ctx: dict[str, Any]) -> bytes:
 
 def generate_proposal_markdown(ctx: dict[str, Any]) -> bytes:
     labels = ctx.get("labels") or {}
+    layout = ctx.get("layout") or {}
+    presentation = ctx.get("presentation") or {}
     lines: list[str] = [
         f"# {ctx.get('project_name', '')}",
         "",
         f"{ctx.get('client_name', '')} — {labels.get('title', 'Proposal')}",
         "",
-        f"## {labels.get('toc', 'Table of Contents')}",
-        "",
     ]
+    if presentation.get("theme_id") or layout.get("layout"):
+        lines.append(
+            f"_Presentation: theme={presentation.get('theme_id') or '—'}, "
+            f"style={presentation.get('style_id') or '—'}, "
+            f"template={presentation.get('template_id') or layout.get('layout') or '—'}_"
+        )
+        lines.append("")
+    if ctx.get("include_cover"):
+        lines.extend(["---", "", f"## {labels.get('title', 'Proposal')} cover", ""])
+        for field in (ctx.get("cover") or {}).get("fields") or []:
+            if field.get("value") is not None:
+                lines.append(f"- **{field.get('label') or field.get('key')}:** {field.get('value')}")
+        for asset in (ctx.get("cover") or {}).get("assets") or []:
+            region = asset.get("region") or asset.get("role") or "decorative"
+            location = asset.get("url") or asset.get("storage_path") or ""
+            lines.append(f"- **Cover asset ({region}):** {location}")
+        lines.extend(["", "---", ""])
+    chrome = layout.get("section_chrome") or "ruled"
+    lines.extend(
+        [
+            f"## {labels.get('toc', 'Table of Contents')}",
+            "",
+        ]
+    )
     for item in ctx.get("toc") or []:
         prefix = "- " if item.get("level") == "1" else "  - "
         lines.append(f"{prefix}{item.get('title')}")
@@ -89,7 +124,10 @@ def generate_proposal_markdown(ctx: dict[str, Any]) -> bytes:
             lines.append(f"- **{labels.get('brief_constraints')}:** {brief.get('constraints', '')}")
             lines.append("")
         for section in blob.get("sections") or []:
-            lines.append(f"### {section.get('title')}")
+            if chrome == "cards":
+                lines.append(f"> ### {section.get('title')}")
+            else:
+                lines.append(f"### {section.get('title')}")
             lines.append("")
             if section.get("body"):
                 lines.append(str(section["body"]))
@@ -97,6 +135,9 @@ def generate_proposal_markdown(ctx: dict[str, Any]) -> bytes:
             for bullet in section.get("bullets") or []:
                 lines.append(f"- {bullet}")
             if section.get("bullets"):
+                lines.append("")
+            if chrome == "ruled":
+                lines.append("---")
                 lines.append("")
         for table in blob.get("tables") or []:
             lines.append(f"### {table.get('title')}")
@@ -159,6 +200,40 @@ def _docx_set_run_color(paragraph, hex_color: str) -> None:
         return
     for run in paragraph.runs:
         run.font.color.rgb = RGBColor(r, g, b)
+
+
+def _docx_apply_cover_style(paragraph, style: dict[str, Any] | None) -> None:
+    """Apply flow-based DOCX typography; exact Cover geometry is unsupported."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    if not isinstance(style, dict):
+        return
+
+    alignment = style.get("alignment", style.get("text_align"))
+    alignments = {
+        "left": WD_ALIGN_PARAGRAPH.LEFT,
+        "center": WD_ALIGN_PARAGRAPH.CENTER,
+        "right": WD_ALIGN_PARAGRAPH.RIGHT,
+    }
+    if alignment in alignments:
+        paragraph.alignment = alignments[alignment]
+    if style.get("line_height") is not None:
+        paragraph.paragraph_format.line_spacing = float(style["line_height"])
+
+    color = str(style.get("color") or "").removeprefix("#")
+    if color:
+        _docx_set_run_color(paragraph, color)
+
+    for run in paragraph.runs:
+        if style.get("font_family"):
+            run.font.name = str(style["font_family"])
+        if style.get("font_size_pt") is not None:
+            run.font.size = Pt(float(style["font_size_pt"]))
+        if style.get("font_weight") is not None:
+            run.bold = int(style["font_weight"]) >= 600
+        if isinstance(style.get("italic"), bool):
+            run.italic = style["italic"]
 
 
 def _docx_add_monospace(doc, text: str) -> None:
@@ -273,18 +348,75 @@ def _docx_emit_part(doc, title: str, blob: dict[str, Any], labels: dict[str, Any
 
 def generate_proposal_docx(ctx: dict[str, Any]) -> bytes:
     from docx import Document
-    from docx.shared import Inches
+    from docx.enum.section import WD_ORIENT
+    from docx.shared import Inches, Mm, Pt
 
     labels = ctx.get("labels") or {}
     theme = ctx.get("theme") or {}
+    style = ctx.get("style") or {}
+    layout = ctx.get("layout") or {}
     primary_hex = str(theme.get("primary") or PRIMARY)
 
     doc = Document()
+    page = ctx.get("page") or {}
+    section = doc.sections[0]
+    width_mm, height_mm = PAGE_DIMENSIONS_MM.get(
+        str(page.get("size") or "A4"),
+        PAGE_DIMENSIONS_MM["A4"],
+    )
+    if page.get("orientation") == "landscape":
+        width_mm, height_mm = height_mm, width_mm
+        section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width = Mm(width_mm)
+    section.page_height = Mm(height_mm)
+
+    styled_cover_paragraphs: list[tuple[Any, dict[str, Any] | None]] = []
+    if ctx.get("include_cover"):
+        cover = ctx.get("cover") or {}
+        add_docx_cover_accent(
+            doc,
+            cover,
+            page_width_mm=width_mm,
+            page_height_mm=height_mm,
+        )
+        cover_fields = cover.get("fields") or []
+        # DOCX cover content intentionally remains in document flow. Exact
+        # percentage geometry requires floating anchors, which python-docx
+        # does not support reliably; PDF is the exact-positioning format.
+        title_field = next(
+            (field for field in cover_fields if field.get("emphasis") == "title"),
+            None,
+        )
+        cover_title = (
+            (title_field or {}).get("value")
+            or ctx.get("project_name")
+            or labels.get("title")
+            or "Proposal"
+        )
+        cover_heading = doc.add_heading(str(cover_title), level=0)
+        _docx_set_run_color(cover_heading, primary_hex)
+        styled_cover_paragraphs.append((cover_heading, (title_field or {}).get("style")))
+        for field in cover_fields:
+            if field is title_field or field.get("value") is None:
+                continue
+            paragraph = doc.add_paragraph(
+                f"{field.get('label') or field.get('key')}: {field.get('value')}"
+            )
+            styled_cover_paragraphs.append((paragraph, field.get("style")))
+        doc.add_page_break()
+
     title = doc.add_heading(str(ctx.get("project_name") or "Proposal"), level=0)
     _docx_set_run_color(title, primary_hex)
 
     subtitle = doc.add_paragraph(f"{ctx.get('client_name', '')} — {labels.get('title', '')}")
     _docx_set_run_color(subtitle, primary_hex)
+
+    base_pt = float(style.get("base_font_size_pt") or 10)
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            run.font.size = Pt(base_pt)
+    for paragraph, cover_style in styled_cover_paragraphs:
+        _docx_apply_cover_style(paragraph, cover_style)
 
     doc.add_heading(str(labels.get("toc") or "Table of Contents"), level=1)
     for item in ctx.get("toc") or []:
@@ -361,32 +493,36 @@ def generate_proposal_docx(ctx: dict[str, Any]) -> bytes:
     return buffer.getvalue()
 
 
-def _xlsx_header_fill():
+def _xlsx_header_fill(theme: dict[str, Any] | None = None):
     from openpyxl.styles import PatternFill
 
-    return PatternFill(fill_type="solid", fgColor=PRIMARY)
+    color = str((theme or {}).get("primary") or PRIMARY)
+    return PatternFill(fill_type="solid", fgColor=color)
 
 
-def _xlsx_header_font():
+def _xlsx_header_font(theme: dict[str, Any] | None = None):
     from openpyxl.styles import Font
 
-    return Font(bold=True, color=TEXT_ON_PRIMARY)
+    color = str((theme or {}).get("text_on_primary") or TEXT_ON_PRIMARY)
+    return Font(bold=True, color=color)
 
 
-def _xlsx_style_header_row(ws, row: int = 1) -> None:
-    fill = _xlsx_header_fill()
-    font = _xlsx_header_font()
+def _xlsx_style_header_row(ws, row: int = 1, theme: dict[str, Any] | None = None) -> None:
+    fill = _xlsx_header_fill(theme)
+    font = _xlsx_header_font(theme)
     for cell in ws[row]:
         cell.fill = fill
         cell.font = font
 
 
-def _xlsx_append_section_sheet(wb, sheet_name: str, blob: dict[str, Any] | None) -> None:
+def _xlsx_append_section_sheet(
+    wb, sheet_name: str, blob: dict[str, Any] | None, theme: dict[str, Any] | None = None
+) -> None:
     if not blob:
         return
     ws = wb.create_sheet(sheet_name[:31])
     ws.append(["Section", "Body", "Bullet", "Rating"])
-    _xlsx_style_header_row(ws)
+    _xlsx_style_header_row(ws, theme=theme)
     for section in blob.get("sections") or []:
         title = section.get("title") or ""
         body = section.get("body") or ""
@@ -410,34 +546,65 @@ def generate_proposal_xlsx(ctx: dict[str, Any]) -> bytes:
     from openpyxl import Workbook
 
     labels = ctx.get("labels") or {}
+    theme = ctx.get("theme") or {}
     wb = Workbook()
 
     # Summary
     ws = wb.active
     ws.title = "Summary"
     ws.append(["Field", "Value"])
-    _xlsx_style_header_row(ws)
+    _xlsx_style_header_row(ws, theme=theme)
     costs = ctx.get("cost_summary") or {}
     poc = ctx.get("poc") or {}
+    presentation = ctx.get("presentation") or {}
     summary_rows = [
         ("Project", ctx.get("project_name")),
         ("Client", ctx.get("client_name")),
+        ("Theme", presentation.get("theme_id")),
+        ("Style", presentation.get("style_id")),
+        ("Template", presentation.get("template_id")),
         (labels.get("one_time"), costs.get("one_time_project_cost_jpy")),
         (labels.get("monthly"), costs.get("monthly_recurring_cost_jpy")),
         (labels.get("first_year"), costs.get("first_year_total_jpy")),
         (labels.get("suggested_window"), poc.get("suggested_validation_window")),
     ]
+    if ctx.get("include_cover"):
+        for field in (ctx.get("cover") or {}).get("fields") or []:
+            summary_rows.append(
+                (f"Cover: {field.get('label') or field.get('key')}", field.get("value"))
+            )
+        for asset in (ctx.get("cover") or {}).get("assets") or []:
+            region = asset.get("region") or asset.get("role") or "decorative"
+            summary_rows.append(
+                (
+                    f"Cover asset: {region}",
+                    asset.get("url") or asset.get("storage_path") or "",
+                )
+            )
     for field, value in summary_rows:
         ws.append([field, value])
 
     # Assessment / Proposal / PoC section sheets
-    _xlsx_append_section_sheet(wb, "Assessment", ctx.get("assessment"))
-    _xlsx_append_section_sheet(wb, "Proposal", ctx.get("proposal_body"))
+    _xlsx_append_section_sheet(wb, "Assessment", ctx.get("assessment"), theme=theme)
+    _xlsx_append_section_sheet(wb, "Proposal", ctx.get("proposal_body"), theme=theme)
+
+    proposal_tables = (ctx.get("proposal_body") or {}).get("tables") or []
+    if proposal_tables:
+        tables_ws = wb.create_sheet("Proposal Tables")
+        for table in proposal_tables:
+            tables_ws.append([table.get("title") or ""])
+            headers = list(table.get("headers") or [])
+            if headers:
+                tables_ws.append(headers)
+                _xlsx_style_header_row(tables_ws, tables_ws.max_row, theme=theme)
+            for row in table.get("rows") or []:
+                tables_ws.append(list(row))
+            tables_ws.append([])
 
     if poc:
         poc_ws = wb.create_sheet("PoC")
         poc_ws.append(["Field", "Value"])
-        _xlsx_style_header_row(poc_ws)
+        _xlsx_style_header_row(poc_ws, theme=theme)
         for label, value in brief_field_rows(poc.get("project_brief"), labels):
             poc_ws.append([label, value])
         official = poc.get("official") or {}
@@ -469,7 +636,7 @@ def generate_proposal_xlsx(ctx: dict[str, Any]) -> bytes:
                 headers = list(table.get("headers") or [])
                 if headers:
                     tables_ws.append(headers)
-                    _xlsx_style_header_row(tables_ws, tables_ws.max_row)
+                    _xlsx_style_header_row(tables_ws, tables_ws.max_row, theme=theme)
                 for row in table.get("rows") or []:
                     tables_ws.append(list(row))
                 tables_ws.append([])
@@ -478,14 +645,14 @@ def generate_proposal_xlsx(ctx: dict[str, Any]) -> bytes:
     if diagrams:
         diag_ws = wb.create_sheet("Diagrams")
         diag_ws.append(["Title", "Source"])
-        _xlsx_style_header_row(diag_ws)
+        _xlsx_style_header_row(diag_ws, theme=theme)
         for diagram in diagrams:
             diag_ws.append([diagram.get("title") or "", diagram.get("source") or ""])
 
     timeline_rows = gantt_timeline_rows(ctx.get("gantt"))
     timeline = wb.create_sheet("Timeline")
     timeline.append(["Name", "Phase", "Start", "End", "Days", "Hours"])
-    _xlsx_style_header_row(timeline)
+    _xlsx_style_header_row(timeline, theme=theme)
     for row in timeline_rows:
         timeline.append(
             [
@@ -504,7 +671,7 @@ def generate_proposal_xlsx(ctx: dict[str, Any]) -> bytes:
 
     milestones = wb.create_sheet("Milestones")
     milestones.append(["Name", "Date"])
-    _xlsx_style_header_row(milestones)
+    _xlsx_style_header_row(milestones, theme=theme)
     for m in ctx.get("milestones") or []:
         milestones.append([m.get("name"), m.get("date")])
 

@@ -30,6 +30,8 @@ type EstimateFormProps = {
   hasUploadedDocuments?: boolean;
   isContactUser?: boolean;
   isAdmin?: boolean;
+  /** When true, first Save POSTs a new estimate (not yet in the list) then redirects. */
+  isLocalDraft?: boolean;
   children?: ReactNode;
   documentsSection?: ReactNode;
 };
@@ -46,8 +48,25 @@ export type EstimateFormHandle = {
 const SECTION_ID_TECHNICAL_SPECIFICATION = "estimate-section-technical-specification";
 const SECTION_ID_CLIENT_QUESTIONNAIRE = "estimate-section-client-questionnaire";
 
+/** Empty-form defaults from emptyFormValuesForSchema — ignore for auto-expand. */
+function isEmptyFormDefault(key: string, value: string): boolean {
+  if (key === "data_complexity" || key === "ui_complexity") {
+    return value === "low";
+  }
+  if (key === "timeline_planning") {
+    return value === "match_schedule";
+  }
+  return false;
+}
+
 function sectionHasData(fields: FormFieldSchema[], values: FormFieldValues): boolean {
-  return fields.some((field) => (values[field.key] ?? "").trim().length > 0);
+  return fields.some((field) => {
+    const value = (values[field.key] ?? "").trim();
+    if (!value || isEmptyFormDefault(field.key, value)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 function scrollToSection(sectionId: string): void {
@@ -89,6 +108,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     hasUploadedDocuments = false,
     isContactUser = false,
     isAdmin = false,
+    isLocalDraft = false,
     children,
     documentsSection,
   },
@@ -99,6 +119,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
   const tForm = useTranslations("form");
   const tEstimates = useTranslations("estimates");
   const tInternalDossier = useTranslations("internalDossier");
+  const [allowNavigation, setAllowNavigation] = useState(false);
 
   const schema = useMemo(
     () => resolveFormSchema(estimate.form_schema_snapshot),
@@ -129,9 +150,10 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
   const [clientExpanded, setClientExpanded] = useState(() =>
     sectionHasData(headerFields, initialValues),
   );
-  const [guidanceStep, setGuidanceStep] = useState<"client" | null>(null);
+  const [guidanceStep, setGuidanceStep] = useState<"spec" | null>(null);
 
   const isDirty = !valuesEqual(schema, values, savedValues);
+  const shouldWarnOnLeave = isLocalDraft && isDirty && !allowNavigation;
 
   useEffect(() => {
     setValues(initialValues);
@@ -142,6 +164,7 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     setSpecExpanded(sectionHasData(specificationFields, initialValues));
     setClientExpanded(sectionHasData(headerFields, initialValues));
     setGuidanceStep(null);
+    setAllowNavigation(false);
   }, [initialValues, specificationFields, headerFields]);
 
   useEffect(() => {
@@ -152,6 +175,43 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
       setSaveState("idle");
     }
   }, [isDirty, saveState]);
+
+  useEffect(() => {
+    if (!shouldWarnOnLeave) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const onDocumentClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) {
+        return;
+      }
+      if (anchor.target === "_blank" || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) {
+        return;
+      }
+      if (!window.confirm(tEstimates("leaveUnsavedConfirm"))) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("click", onDocumentClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("click", onDocumentClick, true);
+    };
+  }, [shouldWarnOnLeave, tEstimates]);
 
   const updateField = useCallback((key: string, value: string) => {
     setValues((current) => ({ ...current, [key]: value }));
@@ -207,16 +267,39 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     const formData = Object.fromEntries(
       schema.map((field) => [field.key, nextValues[field.key]]),
     );
+    const projectName = resolveProjectNameForSave(
+      nextValues.project_name,
+      estimate.project_name,
+    );
+
+    if (isLocalDraft) {
+      const created = await apiJson<EstimateDetail>(
+        "/estimates",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            project_name: projectName,
+            locale,
+            form_template_id: estimate.form_template_id,
+            form_data: formData,
+          }),
+        },
+        locale,
+      );
+      setSavedValues(nextValues);
+      setSaveState("saved");
+      setAllowNavigation(true);
+      router.replace(`/${locale}/estimates/${created.id}`);
+      router.refresh();
+      return;
+    }
 
     await apiJson<EstimateDetail>(
       `/estimates/${estimate.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
-          project_name: resolveProjectNameForSave(
-            nextValues.project_name,
-            estimate.project_name,
-          ),
+          project_name: projectName,
           form_data: formData,
         }),
       },
@@ -277,6 +360,10 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
   }, [hasUploadedDocuments, locale, savedValues, schema, tEstimates, values]);
 
   const saveProjectName = useCallback(async (): Promise<boolean> => {
+    if (isLocalDraft) {
+      return false;
+    }
+
     const projectName = resolveProjectNameForSave(values.project_name, estimate.project_name);
     if (!projectName) {
       setErrors((current) => ({ ...current, project_name: tForm("required") }));
@@ -305,9 +392,21 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     } finally {
       setSaving(false);
     }
-  }, [estimate.project_name, locale, savedValues.project_name, tEstimates, tForm, values.project_name]);
+  }, [
+    estimate.project_name,
+    isLocalDraft,
+    locale,
+    savedValues.project_name,
+    tEstimates,
+    tForm,
+    values.project_name,
+  ]);
 
   const saveBeforeAiSuggest = useCallback(async (): Promise<boolean> => {
+    if (isLocalDraft) {
+      return false;
+    }
+
     const projectName = resolveProjectNameForSave(values.project_name, estimate.project_name);
     if (!projectName) {
       setErrors((current) => ({ ...current, project_name: tForm("required") }));
@@ -359,7 +458,18 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     } finally {
       setSaving(false);
     }
-  }, [estimate.id, estimate.project_name, locale, router, savedValues, schema, tEstimates, tForm, values]);
+  }, [
+    estimate.id,
+    estimate.project_name,
+    isLocalDraft,
+    locale,
+    router,
+    savedValues,
+    schema,
+    tEstimates,
+    tForm,
+    values,
+  ]);
 
   const getValues = useCallback(() => values, [values]);
 
@@ -380,29 +490,12 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
     [specKeys],
   );
 
-  const completeClientGuidanceStep = useCallback(() => {
-    setGuidanceStep(null);
+  const startPostApplyGuidance = useCallback(() => {
+    setGuidanceStep("spec");
     setSpecExpanded(true);
+    setClientExpanded(false);
     scrollToSection(SECTION_ID_TECHNICAL_SPECIFICATION);
   }, []);
-
-  const startPostApplyGuidance = useCallback(() => {
-    setGuidanceStep("client");
-    setClientExpanded(true);
-    setSpecExpanded(false);
-    scrollToSection(SECTION_ID_CLIENT_QUESTIONNAIRE);
-  }, []);
-
-  async function handleGuidanceSaveAndContinue() {
-    const saved = await saveIfNeeded();
-    if (saved) {
-      completeClientGuidanceStep();
-    }
-  }
-
-  function handleGuidanceSkip() {
-    completeClientGuidanceStep();
-  }
 
   useImperativeHandle(
     ref,
@@ -584,20 +677,24 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide ${badgeClass}`}
               >
-                {tEstimates(`status.${estimate.status}`)}
+                {isLocalDraft
+                  ? tEstimates("status.unsavedDraft")
+                  : tEstimates(`status.${estimate.status}`)}
               </span>
-              {isAdmin ? (
+              {isAdmin && !isLocalDraft ? (
                 <Link
                   href={`/${locale}/estimates/${estimate.id}/internal`}
-                  className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  className="rounded border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-950/40"
                 >
                   {tInternalDossier("openLink")}
                 </Link>
               ) : null}
             </div>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {tEstimates("client")}: {estimate.client_name}
-            </p>
+            {!isLocalDraft && estimate.client_name ? (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {tEstimates("client")}: {estimate.client_name}
+              </p>
+            ) : null}
             {estimate.form_template_name && !isContactUser && (
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {tForm("templateLabel")}: {estimate.form_template_name}
@@ -668,6 +765,18 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
             expandLabel={tForm("expandSection")}
             collapseLabel={tForm("collapseSection")}
           >
+            {guidanceStep === "spec" ? (
+              <div className="rounded-lg border border-sky-300 bg-sky-100/70 p-4">
+                <p className="text-sm text-sky-950">{tForm("technicalSpecificationGuidance")}</p>
+                <button
+                  type="button"
+                  onClick={() => setGuidanceStep(null)}
+                  className="mt-3 rounded border border-sky-400 bg-white px-3 py-1.5 text-sm font-medium text-sky-900 hover:bg-sky-50"
+                >
+                  {tForm("guidanceDismiss")}
+                </button>
+              </div>
+            ) : null}
             {hasUploadedDocuments && (
               <p className="text-sm text-gray-600">{tForm("optionalWithDocuments")}</p>
             )}
@@ -688,29 +797,6 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
             expandLabel={tForm("expandSection")}
             collapseLabel={tForm("collapseSection")}
           >
-            {guidanceStep === "client" ? (
-              <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-4">
-                <p className="text-sm text-amber-950">{tForm("clientQuestionnaireGuidance")}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleGuidanceSaveAndContinue()}
-                    disabled={saving}
-                    className="rounded bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
-                  >
-                    {saving ? tEstimates("saving") : tForm("saveAndContinue")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleGuidanceSkip}
-                    disabled={saving}
-                    className="rounded border border-amber-400 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-50 disabled:opacity-50"
-                  >
-                    {tForm("skipForNow")}
-                  </button>
-                </div>
-              </div>
-            ) : null}
             {headerFields.map((field) => renderField(field))}
           </CollapsibleFormSection>
         ) : null}

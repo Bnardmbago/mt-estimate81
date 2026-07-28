@@ -1,4 +1,8 @@
 {
+  "common": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
+  },
   "nav": {
     "estimates": "Estimates",
     "rateCards": "Rate Cards",
@@ -8,6 +12,7 @@
     "contact": "Contact Estimate",
     "help": "Help",
     "logout": "Logout",
+    "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
   },
@@ -41,19 +46,46 @@
     "statusError": "Failed",
     "statusSkipped": "Skipped",
     "generateFailed": "Could not generate proposal",
+    "presentationUpdateFailed": "Could not update presentation settings",
+    "presentation": {
+      "theme": "Theme",
+      "style": "Style",
+      "template": "Template",
+      "coverPreset": "Cover preset",
+      "noCover": "No cover",
+      "themeHelp": "Branding and colors",
+      "styleHelp": "Spacing and typography density",
+      "templateHelp": "Page layout (columns, chrome)",
+      "coverPresetHelp": "Created cover designs; selecting one includes the cover page"
+    },
+    "cover": {
+      "title": "Cover fields",
+      "description": "Values saved here belong to this document for {locale} exports.",
+      "autoFillHint": "Leave blank to use the document value supplied by the template.",
+      "save": "Save cover fields",
+      "saving": "Saving…",
+      "saveFailed": "Could not save cover fields"
+    },
+    "exportLocale": {
+      "label": "Export language",
+      "ja": "Japanese",
+      "en": "English",
+      "defaultHint": "Defaults to the document language; changing it affects only this export."
+    },
     "loadFailed": "Could not load proposals",
     "regenAssessment": "Regenerate assessment",
     "regenProposal": "Regenerate proposal",
     "regenPoc": "Regenerate Proof of Concept",
     "finalize": "Finalize",
     "progress": "Assessment: {assessment} · Proposal: {proposal} · Proof of Concept: {poc}",
-    "recent": "Recent proposals",
+    "recent": "Proposals-List",
     "columnProject": "Project",
     "columnClient": "Client",
     "columnStatus": "Status",
     "columnUpdated": "Updated",
     "columnActions": "Actions",
     "open": "Open",
+    "collapse": "Collapse",
     "deleteCancel": "Cancel",
     "deleteConfirmAction": "Confirm delete",
     "deleting": "Deleting…",
@@ -86,6 +118,12 @@
     "suggestedWindow": "Suggested validation window",
     "exportTitle": "Export",
     "exportHint": "Generate a professional pack, preview it, then download, delete, or email—same flow as Estimates export.",
+    "editDestinationAssessment": "Download and open with Word / Pages, or Open in Google Docs.",
+    "editDestinationProposal": "Download and open with Canva, or Open in Canva (OAuth). Official fees stay in app exports.",
+    "editDestinationPoc": "Download and open with Canva, or Open in Canva (OAuth). Official POC cost stays in the app.",
+    "editDestinationFull": "Assessment: Word/Pages or Docs. Proposal/POC: Canva. Official costs stay in the app.",
+    "editDestinationMd": "Markdown is internal only—download and open with your IDE.",
+    "editDestinationOfficialCostNote": "Official Proof of Concept cost and quotation numbers always come from the app (or regenerate), never from Canva alone.",
     "exportProjectName": "Project name on export",
     "exportProjectNamePlaceholder": "e.g. Marui-A Outlet Inspection System",
     "format": "Format",
@@ -105,6 +143,52 @@
     "light": "Light",
     "dark": "Dark",
     "toggle": "Toggle color theme"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your profile, preferences, and connected accounts.",
+    "profileTitle": "Profile",
+    "fullName": "Full name",
+    "email": "Email",
+    "language": "Language",
+    "languageJa": "Japanese",
+    "languageEn": "English",
+    "saveProfile": "Save profile",
+    "saving": "Saving…",
+    "profileSaved": "Profile updated",
+    "profileSaveError": "Could not update profile",
+    "themeTitle": "Theme",
+    "themeDescription": "Choose light or dark appearance for this browser.",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "passwordTitle": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "changePassword": "Update password",
+    "passwordSaved": "Password updated",
+    "passwordSaveError": "Could not update password",
+    "passwordMismatch": "New passwords do not match",
+    "sessionTitle": "Session",
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "description": "Connect Google (Docs/Sheets) and Canva to open exported files in the cloud. You can also download and open with apps installed on your PC. Pricing always stays in this app.",
+      "loading": "Loading…",
+      "loadError": "Failed to load connection status",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "notConfigured": "Not configured (ask an admin to set OAuth apps)",
+      "connectSuccess": "{provider} connected",
+      "connectError": "Could not connect {provider}",
+      "disconnectSuccess": "{provider} disconnected",
+      "disconnectError": "Could not disconnect {provider}",
+      "providers": {
+        "google": "Google Drive / Docs / Sheets",
+        "canva": "Canva"
+      }
+    }
   },
   "login": {
     "title": "Login",
@@ -149,8 +233,12 @@
     "creating": "Creating…",
     "createError": "Failed to create estimate",
     "noTemplatesForLocale": "No form templates are available for this language.",
+    "draftLoading": "Loading estimate form…",
+    "draftNotSavedHint": "This estimate is not in your list yet. Save to create it. Document upload, AI tools, and calculation become available after saving.",
+    "leaveUnsavedConfirm": "You have unsaved changes. Leave this page and discard them?",
     "status": {
       "draft": "Draft",
+      "unsavedDraft": "Not saved",
       "extracting": "Extracting",
       "constraint_paused": "Awaiting confirmation",
       "review": "Review",
@@ -182,10 +270,6 @@
     "projectBrief": "Project brief",
     "pocRecommendedBadge": "POC recommended",
     "proposalLocaleSwitcher": "Proposal locale",
-    "exportSectionTitle": "Export",
-    "exportEmpty": "No exports yet",
-    "exportDescription": "Internal-only formats (never shown to clients). Choose language and formats, then export.",
-    "exportCalculationRequiredHint": "Run Calculate on the estimate before exporting.",
     "disclosureTitle": "Internal Disclosure",
     "disclosureCostDrivers": "Cost Drivers",
     "disclosureRisks": "Risks",
@@ -198,7 +282,11 @@
     "disclosureEstimateExclusions": "Estimate Exclusions",
     "disclosureConfidence": "Confidence",
     "disclosureConfidenceScore": "Score: {score}.",
-    "disclosureQuestionnaire": "Questionnaire"
+    "disclosureQuestionnaire": "Questionnaire",
+    "exportSectionTitle": "Export",
+    "exportEmpty": "No exports yet",
+    "exportDescription": "Internal-only formats (never shown to clients). Choose language and formats, then export.",
+    "exportCalculationRequiredHint": "Run Calculate on the estimate before exporting."
   },
   "documents": {
     "title": "Documents",
@@ -397,6 +485,7 @@
     "localeLabel": "Export language",
     "localeJa": "Japanese",
     "localeEn": "English",
+    "presentationTitle": "Presentation and cover",
     "formatsLabel": "Formats",
     "formatPdf": "PDF",
     "formatXlsx": "Excel",
@@ -442,11 +531,28 @@
     "deleteConfirmAction": "Delete",
     "deleteCancel": "Cancel",
     "deleteError": "Failed to delete export",
-    "destinationsUnavailable": "Cloud destinations are unavailable or not configured. Download exports to open them locally.",
     "contactExportsRemaining": "{remaining} of {limit} exports remaining for this estimate",
     "contactExportLimitReached": "Export limit reached ({limit} per estimate)",
     "contactAutoEmailNote": "Each export is emailed automatically to your verified address.",
-    "contactExportEmailed": "Export sent to {email}"
+    "contactExportEmailed": "Export sent to {email}",
+    "bestEditedInLabel": "Best edited in",
+    "bestEditedInDocx": "Word / Pages locally, or Open in Google Docs",
+    "bestEditedInXlsx": "Excel / Numbers locally, or Open in Google Sheets",
+    "bestEditedInMd": "Your IDE — Markdown is internal only (not for clients)",
+    "bestEditedInPdf": "PDF delivery; formal quotes: edit DOCX. Proposal/POC: Canva after download or Open in Canva",
+    "editDestinationHintSelected": "Selected formats: {hint}",
+    "externallyEditedBadge": "Externally edited",
+    "regenerateEditedWarn": "An externally edited export already exists for this format. A new export will be created so the edited copy is kept.",
+    "downloadOpenWithDocx": "Download and open with Word / Pages",
+    "downloadOpenWithXlsx": "Download and open with Excel / Numbers",
+    "downloadOpenWithMd": "Download and open with IDE",
+    "downloadOpenWithCanva": "Download and open with Canva",
+    "downloadPdf": "Download PDF",
+    "openInDocs": "Open in Docs",
+    "openInSheets": "Open in Sheets",
+    "openInCanva": "Open in Canva",
+    "destinationsUnavailable": "Cloud destinations are unavailable or not configured. Download exports to open them locally.",
+    "sendToDestinationError": "Could not open in external tool"
   },
   "calculation": {
     "title": "Calculation Results",
@@ -614,208 +720,208 @@
     "pageTitle": "Rate Card Management",
     "pageDescription": "Create and manage rate cards used for estimate calculation.",
     "loading": "Loading rate card…",
-      "loadError": "Failed to load rate card",
-      "saveCard": "Save card",
-      "saveCardInUseConfirm": "This rate card is used by existing estimates. Save anyway?",
-      "saveCardConfirmYes": "Yes, save",
-      "saveCardConfirmNo": "Cancel",
-      "cardActionsTitle": "Rate card",
-      "saving": "Saving…",
-      "saved": "Saved",
-      "saveError": "Failed to save rate card",
-      "phaseSumWarning": "Phase percentages must sum to 100% (currently {percent}%)",
-      "roles": "Roles",
-      "roleName": "Role",
-      "hourlyRate": "Hourly rate ({symbol})",
-      "dailyRate": "Daily rate ({symbol})",
-      "phases": "Phases",
-      "phaseName": "Phase",
-      "percentage": "Percentage (%)",
-      "phaseMeaning": "Meaning",
-      "phaseMeanings": {
-        "requirement": "Gathering and clarifying requirements",
-        "design": "Architecture, UI/UX, and technical design",
-        "development": "Building and coding",
-        "testing": "QA, UAT, and bug fixing",
-        "deployment": "Release, go-live, and handover"
-      },
-      "phaseLabels": {
-        "requirement": "Requirements",
-        "design": "Design",
-        "development": "Development",
-        "testing": "Testing",
-        "deployment": "Deployment"
-      },
-      "roleNames": {
-        "pm": "PM",
-        "project_manager": "Project Manager",
-        "developer": "Developer",
-        "senior_developer": "Senior Developer",
-        "frontend_developer": "Frontend Developer",
-        "backend_developer": "Backend Developer",
-        "full_stack_developer": "Full Stack Developer",
-        "qa": "QA",
-        "qa_engineer": "QA Engineer",
-        "designer": "Designer",
-        "ui_designer": "UI Designer",
-        "ux_designer": "UX Designer",
-        "architect": "Architect",
-        "devops": "DevOps",
-        "business_analyst": "Business Analyst",
-        "tech_lead": "Tech Lead"
-      },
-      "setupItemNames": {
-        "infrastructure": "Infrastructure",
-        "tooling": "Tooling",
-        "third_party": "Third party"
-      },
-      "contingency": "Contingency (%)",
-      "overhead": "Overhead (%)",
-      "tax": "Tax (%)",
-      "setupCosts": "Setup costs (NRC)",
-      "setupCostsHint": "These one-time setup items are included in NRC when calculating estimates.",
-      "setupTotal": "Setup costs total",
-      "monthlyRcHint": "These line items define monthly recurring costs. At calculate time, the Maintenance and Support amount may be raised if support hours × role rate exceeds the entered amount.",
-      "monthlyRcSubtotal": "Line items subtotal",
-      "monthlyRcTotal": "Monthly total",
-      "annualRcTotal": "Annual total",
-      "defaultMaintenance": "Maintenance",
-      "linkedEstimateBanner": "This rate card is linked to estimate \"{projectName}\".",
-      "frozenVersionBanner": "This estimate was calculated with an older version of this rate card (you are viewing version {latestVersion}). Recalculate to apply the latest rates.",
-      "addItem": "Add item",
-      "removeItem": "Remove",
-      "cardName": "Rate card name",
-      "selectCard": "Rate card",
-      "activeCard": "active",
-      "systemDefault": "Rate Card System Default",
-      "systemDefaultCardName": "Rate Card Default",
-      "createCard": "Create card",
-      "createCardConfirm": "Create",
-      "createCardCancel": "Cancel",
-      "creatingCard": "Creating…",
-      "createCardError": "Failed to create rate card",
-      "switchCardError": "Failed to switch rate card",
-      "newCardName": "New card name",
-      "newCardDefaultName": "New Rate Card",
-      "noCards": "No rate cards yet. Create one to get started.",
-      "loadVersion": "Load version",
-      "versionOption": "Version {number}{label}",
-      "versionLabel": "Version label",
-      "versionLabelPlaceholder": "e.g. Q3 2026 client rates",
-      "unsavedChanges": "Unsaved edits",
-      "dailyRateFormula": "Hourly rate × 8",
-      "resetDailyRate": "Reset from hourly",
-      "monthlyRcItems": "Monthly RC items",
-      "itemName": "Item",
-      "amount": "Amount ({symbol})",
-      "regionLabel": "Region (standard rates)",
-      "regionJapan": "Japan",
-      "regionPhilippines": "Philippines",
-      "regionUsa": "USA",
-      "currencyLabel": "Currency",
-      "currencyJPY": "JPY (¥)",
-      "currencyUSD": "USD ($)",
-      "currencyPHP": "PHP (₱)",
-      "applyRegionalRates": "Apply regional standard rates",
-      "applyRegionalRatesConfirm": "Apply standard rates for the selected region? This will overwrite existing role hourly rates.",
-      "applyingRegionalRates": "Applying…",
-      "applyRegionalRatesError": "Failed to apply regional standard rates",
-      "applyRegionalRatesNoMatch": "No role names matched the regional standard rate table. Rename roles to PM, developer, QA, etc., or add standard role names.",
-      "applyRegionalRatesPartial": "Updated {count} role(s). Some custom role names could not be matched to standard rates.",
-      "fxLastUpdated": "FX rates last updated: {date}",
-      "fxLastUpdatedUnknown": "FX rates last updated: unknown",
-      "deleteCard": "Delete card",
-      "deleteCardConfirm": "Delete \"{name}\"? This cannot be undone.",
-      "deleteCardConfirmYes": "Yes, delete card",
-      "deleteCardConfirmNo": "Cancel",
-      "deletingCard": "Deleting…",
-      "deleteCardError": "Failed to delete rate card",
-      "deleteCardInUse": "Cannot delete: this rate card is used by one or more estimates.",
-      "deleteLastCardHint": "At least one rate card must remain.",
-      "deleteSystemCardHint": "Rate Card Default is the system rate card and cannot be deleted.",
-      "estimateCountBadge": "{count} estimates",
-      "lockedBanner": "This rate card is locked because {count} exported or completed estimate(s) use it. Duplicate the card to make changes.",
-      "lockedSaveError": "This rate card is locked. Duplicate it to make changes.",
-      "duplicateCard": "Duplicate card",
-      "duplicateModalTitle": "Duplicate rate card",
-      "duplicateModalDescription": "Create an editable copy with a new name. The copy becomes the active rate card for new estimates.",
-      "duplicateOriginalName": "Original name",
-      "duplicateNewName": "New name",
-      "duplicateDefaultName": "{name} (Copy)",
-      "duplicateConfirm": "Duplicate",
-      "duplicateCancel": "Cancel",
-      "duplicating": "Duplicating…",
-      "duplicateError": "Failed to duplicate rate card",
-      "usageTitle": "Estimates using this rate card",
-      "usageLoading": "Loading estimates…",
-      "usageEmpty": "No estimates have used this rate card yet.",
-      "usageProject": "Project",
-      "usageClient": "Client",
-      "usageStatus": "Status",
-      "usageUpdated": "Last updated",
-      "ai": {
-        "suggest": "AI suggest",
-        "noEstimatesHint": "Link a project to this rate card to use project-specific context in AI suggestions.",
-        "noLinkOption": "No link — free-form",
-        "modalTitle": "AI suggest — {section}",
-        "modalDescription": "Optionally link a project for estimate context, or choose free-form and describe what you need in your prompt.",
-        "estimateLabel": "Linked project",
-        "promptLabel": "Your prompt",
-        "promptPlaceholder": "e.g. Add a DevOps role for cloud infrastructure based on the integration requirements",
-        "generate": "Generate suggestions",
-        "generating": "Generating…",
-        "apply": "Apply suggestions",
-        "cancel": "Cancel",
-        "error": "AI suggestion failed. Try again or check AI credentials.",
-        "previewTitle": "Suggestions for {project}",
-        "previewTitleNoLink": "Free-form suggestions",
-        "noSuggestions": "No new items to add. Try a different prompt or project.",
-        "replaceAllPhasesHint": "These suggestions replace all phase percentages. Applying will overwrite the current phase table.",
-        "sections": {
-          "roles": "Roles",
-          "phases": "Phases",
-          "setup_cost_items": "Setup costs (NRC)",
-          "monthly_rc_items": "Monthly RC items"
-        }
-      },
-      "developmentApproach": "Development Approach",
-      "developmentApproachHint": "Applied as an effort multiplier when calculating time, team size, and labor cost on estimates.",
-      "developmentApproachOptions": {
-        "traditional": {
-          "label": "Traditional Development",
-          "description": "Manual software development with minimal AI assistance."
-        },
-        "ai_assisted": {
-          "label": "AI-Assisted Development",
-          "description": "Development primarily supported by AI coding tools (e.g., GitHub Copilot, Cursor AI, Claude Code)."
-        },
-        "hybrid": {
-          "label": "Hybrid Development",
-          "description": "Combination of traditional development practices and AI-assisted development."
-        },
-        "low_code": {
-          "label": "Low-Code / No-Code Development",
-          "description": "Development using low-code or no-code platforms with minimal custom coding."
-        }
-      },
-      "allCardsList": {
-        "title": "All rate cards",
-        "description": "Click a rate card to view and edit its details.",
-        "loading": "Loading rate cards…",
-        "empty": "No rate cards yet.",
-        "name": "Rate card name",
-        "developmentApproach": "Development approach",
-        "status": "Status",
-        "estimates": "Estimates",
-        "estimateCount": "{count}",
-        "statusActive": "Active",
-        "statusInactive": "Inactive",
-        "statusLocked": "Locked",
-        "systemDefault": "Rate Card System Default",
-        "backToList": "← All rate cards",
-        "detailTitle": "Rate card details",
-        "detailDescription": "View and edit this rate card's roles, rates, and cost assumptions."
+    "loadError": "Failed to load rate card",
+    "saveCard": "Save card",
+    "saveCardInUseConfirm": "This rate card is used by existing estimates. Save anyway?",
+    "saveCardConfirmYes": "Yes, save",
+    "saveCardConfirmNo": "Cancel",
+    "cardActionsTitle": "Rate card",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveError": "Failed to save rate card",
+    "phaseSumWarning": "Phase percentages must sum to 100% (currently {percent}%)",
+    "roles": "Roles",
+    "roleName": "Role",
+    "hourlyRate": "Hourly rate ({symbol})",
+    "dailyRate": "Daily rate ({symbol})",
+    "phases": "Phases",
+    "phaseName": "Phase",
+    "percentage": "Percentage (%)",
+    "phaseMeaning": "Meaning",
+    "phaseMeanings": {
+      "requirement": "Gathering and clarifying requirements",
+      "design": "Architecture, UI/UX, and technical design",
+      "development": "Building and coding",
+      "testing": "QA, UAT, and bug fixing",
+      "deployment": "Release, go-live, and handover"
+    },
+    "phaseLabels": {
+      "requirement": "Requirements",
+      "design": "Design",
+      "development": "Development",
+      "testing": "Testing",
+      "deployment": "Deployment"
+    },
+    "roleNames": {
+      "pm": "PM",
+      "project_manager": "Project Manager",
+      "developer": "Developer",
+      "senior_developer": "Senior Developer",
+      "frontend_developer": "Frontend Developer",
+      "backend_developer": "Backend Developer",
+      "full_stack_developer": "Full Stack Developer",
+      "qa": "QA",
+      "qa_engineer": "QA Engineer",
+      "designer": "Designer",
+      "ui_designer": "UI Designer",
+      "ux_designer": "UX Designer",
+      "architect": "Architect",
+      "devops": "DevOps",
+      "business_analyst": "Business Analyst",
+      "tech_lead": "Tech Lead"
+    },
+    "setupItemNames": {
+      "infrastructure": "Infrastructure",
+      "tooling": "Tooling",
+      "third_party": "Third party"
+    },
+    "contingency": "Contingency (%)",
+    "overhead": "Overhead (%)",
+    "tax": "Tax (%)",
+    "setupCosts": "Setup costs (NRC)",
+    "setupCostsHint": "These one-time setup items are included in NRC when calculating estimates.",
+    "setupTotal": "Setup costs total",
+    "monthlyRcHint": "These line items define monthly recurring costs. At calculate time, the Maintenance and Support amount may be raised if support hours × role rate exceeds the entered amount.",
+    "monthlyRcSubtotal": "Line items subtotal",
+    "monthlyRcTotal": "Monthly total",
+    "annualRcTotal": "Annual total",
+    "defaultMaintenance": "Maintenance",
+    "linkedEstimateBanner": "This rate card is linked to estimate \"{projectName}\".",
+    "frozenVersionBanner": "This estimate was calculated with an older version of this rate card (you are viewing version {latestVersion}). Recalculate to apply the latest rates.",
+    "addItem": "Add item",
+    "removeItem": "Remove",
+    "cardName": "Rate card name",
+    "selectCard": "Rate card",
+    "activeCard": "active",
+    "systemDefault": "Rate Card System Default",
+    "systemDefaultCardName": "Rate Card Default",
+    "createCard": "Create card",
+    "createCardConfirm": "Create",
+    "createCardCancel": "Cancel",
+    "creatingCard": "Creating…",
+    "createCardError": "Failed to create rate card",
+    "switchCardError": "Failed to switch rate card",
+    "newCardName": "New card name",
+    "newCardDefaultName": "New Rate Card",
+    "noCards": "No rate cards yet. Create one to get started.",
+    "loadVersion": "Load version",
+    "versionOption": "Version {number}{label}",
+    "versionLabel": "Version label",
+    "versionLabelPlaceholder": "e.g. Q3 2026 client rates",
+    "unsavedChanges": "Unsaved edits",
+    "dailyRateFormula": "Hourly rate × 8",
+    "resetDailyRate": "Reset from hourly",
+    "monthlyRcItems": "Monthly RC items",
+    "itemName": "Item",
+    "amount": "Amount ({symbol})",
+    "regionLabel": "Region (standard rates)",
+    "regionJapan": "Japan",
+    "regionPhilippines": "Philippines",
+    "regionUsa": "USA",
+    "currencyLabel": "Currency",
+    "currencyJPY": "JPY (¥)",
+    "currencyUSD": "USD ($)",
+    "currencyPHP": "PHP (₱)",
+    "applyRegionalRates": "Apply regional standard rates",
+    "applyRegionalRatesConfirm": "Apply standard rates for the selected region? This will overwrite existing role hourly rates.",
+    "applyingRegionalRates": "Applying…",
+    "applyRegionalRatesError": "Failed to apply regional standard rates",
+    "applyRegionalRatesNoMatch": "No role names matched the regional standard rate table. Rename roles to PM, developer, QA, etc., or add standard role names.",
+    "applyRegionalRatesPartial": "Updated {count} role(s). Some custom role names could not be matched to standard rates.",
+    "fxLastUpdated": "FX rates last updated: {date}",
+    "fxLastUpdatedUnknown": "FX rates last updated: unknown",
+    "deleteCard": "Delete card",
+    "deleteCardConfirm": "Delete \"{name}\"? This cannot be undone.",
+    "deleteCardConfirmYes": "Yes, delete card",
+    "deleteCardConfirmNo": "Cancel",
+    "deletingCard": "Deleting…",
+    "deleteCardError": "Failed to delete rate card",
+    "deleteCardInUse": "Cannot delete: this rate card is used by one or more estimates.",
+    "deleteLastCardHint": "At least one rate card must remain.",
+    "deleteSystemCardHint": "Rate Card Default is the system rate card and cannot be deleted.",
+    "estimateCountBadge": "{count} estimates",
+    "lockedBanner": "This rate card is locked because {count} exported or completed estimate(s) use it. Duplicate the card to make changes.",
+    "lockedSaveError": "This rate card is locked. Duplicate it to make changes.",
+    "duplicateCard": "Duplicate card",
+    "duplicateModalTitle": "Duplicate rate card",
+    "duplicateModalDescription": "Create an editable copy with a new name. The copy becomes the active rate card for new estimates.",
+    "duplicateOriginalName": "Original name",
+    "duplicateNewName": "New name",
+    "duplicateDefaultName": "{name} (Copy)",
+    "duplicateConfirm": "Duplicate",
+    "duplicateCancel": "Cancel",
+    "duplicating": "Duplicating…",
+    "duplicateError": "Failed to duplicate rate card",
+    "usageTitle": "Estimates using this rate card",
+    "usageLoading": "Loading estimates…",
+    "usageEmpty": "No estimates have used this rate card yet.",
+    "usageProject": "Project",
+    "usageClient": "Client",
+    "usageStatus": "Status",
+    "usageUpdated": "Last updated",
+    "ai": {
+      "suggest": "AI suggest",
+      "noEstimatesHint": "Link a project to this rate card to use project-specific context in AI suggestions.",
+      "noLinkOption": "No link — free-form",
+      "modalTitle": "AI suggest — {section}",
+      "modalDescription": "Optionally link a project for estimate context, or choose free-form and describe what you need in your prompt.",
+      "estimateLabel": "Linked project",
+      "promptLabel": "Your prompt",
+      "promptPlaceholder": "e.g. Add a DevOps role for cloud infrastructure based on the integration requirements",
+      "generate": "Generate suggestions",
+      "generating": "Generating…",
+      "apply": "Apply suggestions",
+      "cancel": "Cancel",
+      "error": "AI suggestion failed. Try again or check AI credentials.",
+      "previewTitle": "Suggestions for {project}",
+      "previewTitleNoLink": "Free-form suggestions",
+      "noSuggestions": "No new items to add. Try a different prompt or project.",
+      "replaceAllPhasesHint": "These suggestions replace all phase percentages. Applying will overwrite the current phase table.",
+      "sections": {
+        "roles": "Roles",
+        "phases": "Phases",
+        "setup_cost_items": "Setup costs (NRC)",
+        "monthly_rc_items": "Monthly RC items"
       }
+    },
+    "developmentApproach": "Development Approach",
+    "developmentApproachHint": "Applied as an effort multiplier when calculating time, team size, and labor cost on estimates.",
+    "developmentApproachOptions": {
+      "traditional": {
+        "label": "Traditional Development",
+        "description": "Manual software development with minimal AI assistance."
+      },
+      "ai_assisted": {
+        "label": "AI-Assisted Development",
+        "description": "Development primarily supported by AI coding tools (e.g., GitHub Copilot, Cursor AI, Claude Code)."
+      },
+      "hybrid": {
+        "label": "Hybrid Development",
+        "description": "Combination of traditional development practices and AI-assisted development."
+      },
+      "low_code": {
+        "label": "Low-Code / No-Code Development",
+        "description": "Development using low-code or no-code platforms with minimal custom coding."
+      }
+    },
+    "allCardsList": {
+      "title": "All rate cards",
+      "description": "Click a rate card to view and edit its details.",
+      "loading": "Loading rate cards…",
+      "empty": "No rate cards yet.",
+      "name": "Rate card name",
+      "developmentApproach": "Development approach",
+      "status": "Status",
+      "estimates": "Estimates",
+      "estimateCount": "{count}",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusLocked": "Locked",
+      "systemDefault": "Rate Card System Default",
+      "backToList": "← All rate cards",
+      "detailTitle": "Rate card details",
+      "detailDescription": "View and edit this rate card's roles, rates, and cost assumptions."
+    }
   },
   "admin": {
     "title": "Admin",
@@ -823,9 +929,11 @@
     "loadError": "Could not load the admin page.",
     "tabs": {
       "users": "Users",
-      "formTemplates": "Form templates",
+      "formTemplates": "Questionnaires",
       "discountSettings": "Discount and Mark-Up",
       "quotationSettings": "Quotation settings",
+      "presentation": "Theme & Design",
+      "oauthApps": "OAuth apps",
       "aiSettings": "AI credentials",
       "aiInstructionLayers": "AI instruction layers",
       "smtpSettings": "SMTP settings",
@@ -958,6 +1066,27 @@
       "statusOk": "Healthy",
       "statusIssue": "Issue detected"
     },
+    "proposalAiSettings": {
+      "title": "Proposal generation purpose",
+      "description": "Choose how rich Assessment, Proposal, and Proof of Concept generation should be. Purpose sets depth, diagrams/tables targets, token budget, and timeout. Advanced prompt overrides live under AI instruction layers (proposal_* flows).",
+      "advancedHint": "Switch to the AI instruction layers tab to edit proposal_assessment, proposal_body, or proposal_poc prompts and override max tokens / timeout.",
+      "loading": "Loading proposal generation settings…",
+      "loadError": "Failed to load proposal generation settings",
+      "save": "Save purpose settings",
+      "saving": "Saving…",
+      "saved": "Proposal generation purposes saved",
+      "saveError": "Failed to save proposal generation settings",
+      "assessment": "Assessment",
+      "proposal": "Proposal",
+      "poc": "Proof of Concept",
+      "purposes": {
+        "concise": "Concise",
+        "standard": "Standard",
+        "detailed": "Detailed"
+      },
+      "summaryAssessment": "{tokens} tokens · {timeout}s timeout",
+      "summaryVisual": "{tokens} tokens · {timeout}s · ≥{diagrams} diagram(s) · ≥{tables} table(s)"
+    },
     "aiInstructionLayers": {
       "title": "AI Generation Instruction Layers",
       "loading": "Loading instruction layers…",
@@ -971,7 +1100,10 @@
         "extraction": "AI Extraction",
         "extraction_client_constraints": "Extraction client constraints",
         "rate_card_generation": "Rate card generation",
-        "rate_card_section": "Rate card section AI"
+        "rate_card_section": "Rate card section AI",
+        "proposal_assessment": "Proposal assessment",
+        "proposal_body": "Proposal body",
+        "proposal_poc": "Proposal Proof of Concept"
       },
       "systemPrompt": "System prompt",
       "systemPromptHint": "Primary system instructions for this flow. Pre-filled with the built-in default; save to override.",
@@ -983,7 +1115,10 @@
         "extraction": "Optional prefix added before the structured questionnaire and document content.",
         "extraction_client_constraints": "Template for the Client Constraints section in the extraction user prompt. Placeholders: {client_budget_jpy}, {max_labor_jpy}, {blended_hourly_rate_jpy}, {max_hours_budget}, {delivery_schedule_label}, {target_working_days}, {max_hours_schedule}, {max_hours}, {binding_constraint_label}, {budget_section}, {schedule_section}.",
         "rate_card_generation": "Optional prefix added before the structured project context.",
-        "rate_card_section": "Prefixes the section AI prompt entered by the user."
+        "rate_card_section": "Prefixes the section AI prompt entered by the user.",
+        "proposal_assessment": "Optional prefix added before the structured assessment facts prompt.",
+        "proposal_body": "Optional prefix added before the structured proposal facts prompt.",
+        "proposal_poc": "Optional prefix added before the structured Proof of Concept facts prompt."
       },
       "negativePrompt": "Negative prompt",
       "negativePromptHint": "Optional restrictions appended as a “Do not” section on the system prompt.",
@@ -1040,6 +1175,359 @@
       "saving": "Saving…",
       "saved": "Discount and mark-up settings saved",
       "saveError": "Failed to save discount and mark-up settings"
+    },
+    "presentation": {
+      "title": "Manage design",
+      "description": "Manage Theme, Style, and Template presets for Proposal generate/export. Select system defaults used when Generate leaves an axis empty or AI recommend fails.",
+      "loading": "Loading presentation presets…",
+      "loadError": "Failed to load presentation presets",
+      "defaultsTitle": "System defaults",
+      "defaultTheme": "Default Theme",
+      "defaultStyle": "Default Style",
+      "defaultTemplate": "Default Template",
+      "defaultCover": "Default Cover",
+      "defaultCoverNone": "No cover",
+      "saveDefaults": "Save defaults",
+      "saving": "Saving…",
+      "saved": "Defaults saved",
+      "saveError": "Failed to save defaults",
+      "themesTitle": "Themes",
+      "stylesTitle": "Styles",
+      "templatesTitle": "Templates",
+      "defaultBadge": "Default",
+      "inactiveBadge": "Inactive",
+      "setDefault": "Set as default",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "logoUpload": "Upload logo",
+      "logoReset": "Clear logo",
+      "logoHint": "Optional Theme logo (PNG/JPG/SVG/WebP, max 2MB).",
+      "createTitle": "Create preset",
+      "createKind": "Catalog",
+      "slugId": "Slug id",
+      "name": "Name",
+      "descriptionLabel": "Description",
+      "configJson": "Config JSON",
+      "create": "Create preset",
+      "created": "Preset created",
+      "createError": "Failed to create preset",
+      "createRequired": "Slug id and name are required",
+      "invalidConfigJson": "Config must be valid JSON",
+      "edit": "Edit",
+      "cancelEdit": "Cancel",
+      "saveEdit": "Save changes",
+      "updated": "Preset updated",
+      "delete": "Delete",
+      "deleteConfirm": "Delete preset \"{name}\"?",
+      "deleted": "Preset deleted",
+      "deleteError": "Failed to delete preset",
+      "cannotDeleteDefault": "Promote another preset to default before deleting this one",
+      "retry": "Retry",
+      "selectPreset": "Select preset",
+      "newPreset": "New preset",
+      "advancedJson": "Advanced JSON",
+      "applyJson": "Apply JSON",
+      "defaultsDescription": "Choose the Theme, Style, Template, and Cover used when a proposal does not specify presentation settings.",
+      "tabs": {
+        "theme": "Theme",
+        "style": "Style",
+        "template": "Template",
+        "cover": "Cover",
+        "defaults": "Defaults"
+      },
+      "createSetTitle": "Create a preset",
+      "createSetDescription": "Start with a blank draft or generate a draft from a reference document.",
+      "createBlank": "Create blank",
+      "generateFromReference": "Generate from reference",
+      "referenceHint": "Upload a PNG, JPEG, or PDF. The generated draft uses the current header language.",
+      "presetSetsTitle": "Preset Sets",
+      "noDrafts": "No presentation drafts yet.",
+      "untitledDraft": "Untitled presentation draft",
+      "updatedAt": "Updated {value}",
+      "draftWarnings": "{count, plural, one {# warning} other {# warnings}}",
+      "preview": "Preview",
+      "setPreviewTitle": "Preset set preview",
+      "approve": "Approve",
+      "discard": "Discard",
+      "discardDraftConfirm": "Discard this presentation draft?",
+      "deleteSetConfirm": "Delete this preset set from the list? Active Theme/Style/Template catalog entries created from an approved set are kept.",
+      "coverTitle": "Cover designer",
+      "cover": {
+        "title": "Cover designer",
+        "savedTitle": "Saved cover presets",
+        "savedHelp": "Select a cover-enabled template to edit its design, or create a new cover preset.",
+        "noSavedCovers": "No cover presets yet",
+        "emptyHelp": "Create a new cover preset, or generate one from a reference file below.",
+        "createFromReferenceTitle": "Create blank or generate from reference",
+        "createFromReferenceHelp": "Draft sets can include Theme, Style, and Cover together. Approve to save them into the catalogs.",
+        "generateFromReferenceTitle": "Generate cover from reference",
+        "generateFromReferenceHelp": "Upload a PNG, JPEG, or PDF to replicate a cover design. The result opens as a new cover preset for you to review and save.",
+        "generatingFromReference": "Generating cover from reference…",
+        "referenceReady": "Cover draft ready — review the design below, then save.",
+        "draftCreated": "Draft created — edit the cover below, then review and approve.",
+        "editDraft": "Edit",
+        "editing": "Editing",
+        "saveBeforeUpload": "Save the cover preset before uploading assets.",
+        "draft": "Presentation draft",
+        "untitled": "Untitled draft",
+        "coverState": "Cover",
+        "templateDefault": "Template default",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "layout": "Layout and typography",
+        "alignment": "Content alignment",
+        "alignments": {
+          "left": "Left",
+          "center": "Center",
+          "right": "Right"
+        },
+        "padding": "Page padding",
+        "titleFont": "Title font size",
+        "metadataFont": "Metadata font size",
+        "accentEnabled": "Show accent region",
+        "accentWidth": "Accent width",
+        "colors": {
+          "background": "Background color",
+          "title": "Title color",
+          "text": "Text color",
+          "accent": "Accent color"
+        },
+        "accent": {
+          "title": "Accent shapes",
+          "shapeType": "Shape type",
+          "edge": "Edge",
+          "addShape": "Add shape",
+          "addEdge": "Add edge stripe",
+          "shapeTypes": {
+            "rectangle": "Rectangle",
+            "line": "Line",
+            "circle": "Circle",
+            "ellipse": "Ellipse",
+            "triangle": "Triangle",
+            "polygon": "Polygon"
+          },
+          "edges": {
+            "left": "Left stripe",
+            "right": "Right stripe",
+            "top": "Top stripe",
+            "bottom": "Bottom stripe"
+          },
+          "empty": "No accent shapes yet. Add a shape or edge stripe.",
+          "countWarning": "More than {max} accent shapes may reduce editing and export performance.",
+          "layerName": "Layer name",
+          "show": "Show shape",
+          "hide": "Hide shape",
+          "lock": "Lock shape",
+          "unlock": "Unlock shape",
+          "duplicate": "Duplicate shape",
+          "delete": "Delete shape",
+          "deleteConfirm": "Delete this accent shape?",
+          "moveUp": "Move shape up",
+          "moveDown": "Move shape down",
+          "hidden": "Hidden",
+          "lockedBadge": "Locked",
+          "appearance": "Appearance",
+          "fillMode": "Fill",
+          "fillModes": {
+            "theme": "Theme accent",
+            "custom": "Custom color",
+            "linear": "Linear gradient",
+            "radial": "Radial gradient"
+          },
+          "fillColor": "Fill color",
+          "gradientStart": "Gradient start",
+          "gradientEnd": "Gradient end",
+          "gradientAngle": "Gradient angle",
+          "gradientCenterX": "Gradient center X",
+          "gradientCenterY": "Gradient center Y",
+          "opacity": "Opacity",
+          "pattern": "Pattern",
+          "patternTypes": {
+            "none": "None",
+            "stripes": "Stripes",
+            "dots": "Dots",
+            "grid": "Grid",
+            "diagonal_hatch": "Diagonal hatch"
+          },
+          "patternColor": "Pattern color",
+          "patternScale": "Pattern scale",
+          "patternSpacing": "Pattern spacing",
+          "patternOpacity": "Pattern opacity",
+          "borderEnabled": "Show border",
+          "borderColor": "Border color",
+          "borderWidth": "Border width",
+          "borderStyle": "Border style",
+          "borderStyles": {
+            "solid": "Solid",
+            "dashed": "Dashed",
+            "dotted": "Dotted"
+          },
+          "borderRadius": "Corner radius",
+          "rotation": "Rotation",
+          "lineThickness": "Line thickness",
+          "lineCap": "Line cap",
+          "lineCaps": {
+            "butt": "Butt",
+            "round": "Round",
+            "square": "Square"
+          },
+          "resetStyle": "Reset style",
+          "resetGeometry": "Reset position & size",
+          "rotateHandle": "Rotate shape"
+        },
+        "assets": "Cover assets",
+        "assetRoles": {
+          "logo": "Logo",
+          "background": "Background image",
+          "decorative": "Decorative image"
+        },
+        "noAsset": "No asset selected",
+        "storedAsset": "Stored draft asset",
+        "upload": "Upload",
+        "replace": "Replace",
+        "remove": "Remove",
+        "position": "Position",
+        "positions": {
+          "custom": "Custom",
+          "top-left": "Top left",
+          "top-right": "Top right",
+          "center": "Center",
+          "bottom-left": "Bottom left",
+          "bottom-right": "Bottom right"
+        },
+        "fit": "Image fit",
+        "fitOptions": {
+          "cover": "Cover",
+          "contain": "Contain",
+          "fill": "Fill"
+        },
+        "xPosition": "Horizontal position",
+        "yPosition": "Vertical position",
+        "zoom": "Zoom",
+        "opacity": "Opacity",
+        "rotation": "Rotation",
+        "coverFields": "Ordered cover fields",
+        "fieldLocaleHint": "Editing {locale}, based on the current header language.",
+        "addField": "Add field",
+        "noFields": "No cover fields. Add fields to display proposal metadata.",
+        "newFieldLabel": "New field",
+        "fieldKey": "Field key",
+        "fieldLabel": "Label",
+        "defaultText": "Default text",
+        "autoFill": "Auto-fill path",
+        "autoFillPlaceholder": "e.g. client.name",
+        "required": "Required",
+        "moveUp": "Move field up",
+        "moveDown": "Move field down",
+        "removeField": "Remove field",
+        "removeFieldConfirm": "Remove this cover field?",
+        "textStyle": "Text style",
+        "fontFamily": "Font family",
+        "fontFamilyPlaceholder": "e.g. Noto Sans JP",
+        "fontSize": "Font size",
+        "fontWeight": "Font weight",
+        "textAlignment": "Text alignment",
+        "textColor": "Text color",
+        "lineHeight": "Line height",
+        "letterSpacing": "Letter spacing",
+        "fieldOpacity": "Text opacity",
+        "italic": "Italic",
+        "fieldBackground": "Field background",
+        "backgroundColor": "Field background color",
+        "fieldPadding": "Field padding",
+        "geometry": "Position and size",
+        "resetAutomaticLayout": "Reset to automatic layout",
+        "positionManually": "Position manually",
+        "zIndex": "Layer",
+        "automaticLayoutHint": "This field follows the ordered automatic layout. Drag it on the canvas to position it.",
+        "livePreview": "Live preview",
+        "setPreview": "Cover preview",
+        "portrait": "Portrait",
+        "landscape": "Landscape",
+        "sampleTitle": "Proposal title",
+        "disabledPreview": "Cover disabled",
+        "disabledBadge": "Disabled — not included in exports",
+        "enableCover": "Enable cover",
+        "snap": "Snap",
+        "bringForward": "Forward",
+        "sendBackward": "Backward",
+        "bringToFront": "To front",
+        "sendToBack": "To back",
+        "canvasLabel": "Interactive cover canvas",
+        "resizeHandle": "Resize {handle}",
+        "pageInherited": "Preview uses Template page setup: {size} · {orientation}.",
+        "saveDraft": "Save draft",
+        "saving": "Saving…",
+        "saved": "Cover draft saved",
+        "saveError": "Failed to update cover draft",
+        "checkConsistency": "Check consistency",
+        "reviewApprove": "Review and approve",
+        "consistencyTitle": "Theme and Style consistency",
+        "consistencyHint": "Suggestions are deterministic and are never applied automatically.",
+        "consistencyClear": "Cover, Theme, and Style are consistent.",
+        "checkAgain": "Check again",
+        "applyAll": "Apply all",
+        "applySelected": "Apply selected ({count})",
+        "suggestionsApplied": "Selected consistency changes applied",
+        "dismiss": "Dismiss",
+        "reset": "Reset suggestions",
+        "bilingualReviewTitle": "Bilingual activation review",
+        "bilingualReviewHint": "Review English and Japanese content before approving and activating this preset set.",
+        "translationPending": "{count} required values are missing. Approval will translate them automatically and stop if translation fails.",
+        "translationsReady": "Required English and Japanese content is ready.",
+        "sourceNamesRequired": "Theme, Style, and Template names are required in the draft language before activation. Fill them below, then approve.",
+        "axisNamesTitle": "Preset names ({locale})",
+        "axisNamesHint": "Names are required. Empty Japanese or English values are translated automatically on approve.",
+        "name": "Name",
+        "description": "Description",
+        "reviewItem": "Content",
+        "reviewAxes": {
+          "theme": "Theme",
+          "style": "Style",
+          "template": "Template"
+        },
+        "reviewField": "Cover: {key}",
+        "missing": "Missing",
+        "close": "Close",
+        "cancel": "Cancel",
+        "approving": "Translating and approving…",
+        "approveAndActivate": "Approve and activate"
+      },
+      "fields": {
+        "primaryColor": "Primary color",
+        "accentColor": "Accent color",
+        "surfaceColor": "Surface color",
+        "bodyColor": "Body text color",
+        "headingFont": "Heading font stack",
+        "bodyFont": "Body font stack",
+        "watermark": "Enable watermark",
+        "marginTop": "Top margin (mm)",
+        "marginRight": "Right margin (mm)",
+        "marginBottom": "Bottom margin (mm)",
+        "marginLeft": "Left margin (mm)",
+        "paragraphSpacing": "Paragraph spacing (em)",
+        "lineSpacing": "Line spacing",
+        "baseFontSize": "Base font size (pt)",
+        "h1Scale": "H1 type scale",
+        "h2Scale": "H2 type scale",
+        "h3Scale": "H3 type scale",
+        "layout": "Layout",
+        "layoutLinear": "Linear",
+        "layoutExecutive": "Executive",
+        "layoutTwoColumn": "Two column",
+        "coverEnabled": "Include cover",
+        "sectionChrome": "Section chrome",
+        "chromeNone": "None",
+        "chromeRuled": "Ruled",
+        "chromeBoxed": "Boxed",
+        "pageSize": "Page size",
+        "orientation": "Orientation",
+        "portrait": "Portrait",
+        "landscape": "Landscape",
+        "columns": "Columns",
+        "headerSlot": "Header content",
+        "footerSlot": "Footer content"
+      }
     },
     "quotationSettings": {
       "loading": "Loading quotation settings…",
@@ -1176,7 +1664,7 @@
     },
     "formulas": {
       "title": "Formulas",
-      "intro": "Reference for how estimates, rate cards, variance, and KPIs are calculated. Client budget and delivery schedule can constrain AI extraction and are compared again after Calculate. Contact users (magic-link access) use the system rate card automatically. Full users use the selected rate card version when set; otherwise the active rate card. Administrators can access all rate cards.",
+      "intro": "Reference for how estimates, rate cards, variance, KPIs, formal quotation tax, and export presentation are calculated or resolved. Client budget and delivery schedule can constrain AI extraction and are compared again after Calculate. Contact users (magic-link access) use the system rate card automatically. Full users use the selected rate card version when set; otherwise the active rate card. Cover presets and Theme/Style/Template affect export layout only—not NRC/RC math. Administrators can access all rate cards.",
       "columns": {
         "metric": "Metric",
         "formula": "Formula",
@@ -1311,7 +1799,7 @@
           {
             "metric": "NRC total",
             "formula": "labor + setup + contingency + overhead",
-            "notes": "tax_rate on rate card is stored but not applied in calculation"
+            "notes": "Rate-card tax_rate is stored for quotation export; not applied inside calculate_estimate (see Formal quotation)"
           }
         ]
       },
@@ -1482,7 +1970,7 @@
       },
       "contactAccess": {
         "title": "Contact estimate access",
-        "description": "Rules for magic-link contact users (account_type = contact).",
+        "description": "Rules for magic-link contact users (account_type = contact), including export limits and presentation options.",
         "rows": [
           {
             "metric": "Account type",
@@ -1512,7 +2000,17 @@
           {
             "metric": "PDF watermark",
             "formula": "\"Draft Estimate\" overlay on PDF exports",
-            "notes": "Excel and Markdown exports are not watermarked"
+            "notes": "Excel and Markdown are not watermarked; DOCX follows PDF draft overlay rules where applicable"
+          },
+          {
+            "metric": "Export formats",
+            "formula": "pdf | pdf_quotation | docx | docx_quotation | xlsx | md",
+            "notes": "Each successful export counts toward the limit"
+          },
+          {
+            "metric": "Presentation on export",
+            "formula": "Theme, Style, Template, Cover preset optional",
+            "notes": "Same selectors as full users; cover assets embedded for PDF"
           }
         ]
       },
@@ -1546,11 +2044,93 @@
             "notes": "Each field gets its own variance row"
           }
         ]
+      },
+      "quotation": {
+        "title": "Formal quotation (PDF/DOCX)",
+        "description": "Applied when exporting a formal quotation. Calculation NRC is tax-exclusive; quotation adds consumption tax for the grand total. Rate-card tax_rate is not applied inside calculate_estimate.",
+        "rows": [
+          {
+            "metric": "Quotation subtotal",
+            "formula": "round(NRC total_jpy)  # client-visible after discount",
+            "notes": "Same as executive_summary.nrc_total_jpy / pricing special price base"
+          },
+          {
+            "metric": "Tax rate",
+            "formula": "rate_card.tax_rate if set, else 0.10",
+            "notes": "DEFAULT_TAX_RATE = 10% when unset"
+          },
+          {
+            "metric": "Tax amount",
+            "formula": "round(subtotal_jpy × tax_rate)",
+            "notes": "Integer JPY"
+          },
+          {
+            "metric": "Grand total",
+            "formula": "subtotal_jpy + tax_jpy",
+            "notes": "Shown on formal quotation PDF/DOCX"
+          },
+          {
+            "metric": "Special Notes (when discount)",
+            "formula": "render template with {issue_date}, {special_price}, {original_price}, {discount_percent}, {discount_amount}",
+            "notes": "Admin → Quotation settings; skipped when has_discount is false"
+          },
+          {
+            "metric": "Campaign / limited-time discount labels",
+            "formula": "from pricing_summary when discount_rate_applied > 0",
+            "notes": "Original NRC vs discounted NRC; RC unchanged"
+          }
+        ]
+      },
+      "presentationExport": {
+        "title": "Presentation & cover (export)",
+        "description": "Export presentation is resolved from Theme, Style, Template, and optional Cover preset. Not part of cost calculation; controls document chrome and cover page rendering.",
+        "rows": [
+          {
+            "metric": "Theme / Style / Template resolution",
+            "formula": "request ids → else estimate/proposal saved ids → else admin defaults",
+            "notes": "Inactive or unknown ids fall back with warnings"
+          },
+          {
+            "metric": "Cover include",
+            "formula": "include_cover OR (cover_template_id selected)",
+            "notes": "No cover skips the cover page"
+          },
+          {
+            "metric": "Cover source",
+            "formula": "cover_template_id if set, else document template cover config",
+            "notes": "Cover preset overrides cover_design, cover_fields, and page when provided"
+          },
+          {
+            "metric": "Cover field value",
+            "formula": "override → auto_fill(document_facts) → default_text",
+            "notes": "Ordered list from cover_fields; required missing → COVER_VALUES_REQUIRED"
+          },
+          {
+            "metric": "Cover surface colors",
+            "formula": "cover_design.colors.{background,title,text} with #RRGGBB normalize",
+            "notes": "Defaults #ffffff / #1e3a5f / #334155"
+          },
+          {
+            "metric": "Accent shapes",
+            "formula": "render_accent_svg(accent_shapes, theme_accent)",
+            "notes": "Theme accent fill mode; PDF keeps SVG intrinsic mm size"
+          },
+          {
+            "metric": "Cover assets",
+            "formula": "storage_path → data: URI embed before PDF/DOCX HTML render",
+            "notes": "logo / background / decorative; background uses focal pan/zoom CSS"
+          },
+          {
+            "metric": "Asset / field geometry",
+            "formula": "position absolute; left/top/width/height = *_pct of full page",
+            "notes": "Matches Admin Theme & Design cover canvas (full-bleed @page cover)"
+          }
+        ]
       }
     },
     "help": {
       "title": "Resources",
-      "description": "Browse guides, FAQs, and reference docs for contact estimate access (magic link), full-user workflows, AI extraction, cost calculation, and export in Japanese or English.",
+      "description": "Browse guides, FAQs, and reference docs for contact estimate access (magic link), full-user workflows, AI extraction, cost calculation, proposals, presentation covers, and export in Japanese or English.",
       "search": {
         "placeholder": "Search guides, FAQs, and documentation…",
         "clear": "Clear search",
@@ -1567,10 +2147,10 @@
       "pipeline": {
         "eyebrow": "System pipeline",
         "title": "Estimate processing pipeline",
-        "intro": "Every estimate follows the same core stages from access through export. Administrators configure the inputs that feed calculation and client deliverables.",
+        "intro": "Every estimate follows the same core stages from access through branded export. Full users can also generate a proposal pack after calculation. Administrators configure the inputs that feed calculation and client deliverables.",
         "flowLabel": "Core flow",
         "adminLabel": "Admin configuration",
-        "adminIntro": "These admin panels control defaults, pricing rules, and export content applied during the pipeline.",
+        "adminIntro": "These admin panels control defaults, pricing rules, presentation, and export content applied during the pipeline.",
         "stages": [
           {
             "id": "access",
@@ -1580,7 +2160,7 @@
           {
             "id": "form",
             "title": "Project form",
-            "description": "21-field client and scope template stored on the estimate."
+            "description": "Client and scope template stored on the estimate."
           },
           {
             "id": "upload",
@@ -1603,9 +2183,14 @@
             "description": "Deterministic engine applies rate card, discount, and markup."
           },
           {
+            "id": "proposal",
+            "title": "Proposal",
+            "description": "Optional AI assessment, proposal, and Proof of Concept from the calculated estimate."
+          },
+          {
             "id": "export",
             "title": "Export",
-            "description": "PDF/DOCX report or quotation, Excel, or Markdown in JA/EN."
+            "description": "PDF/DOCX report or quotation, Excel, or Markdown with Theme, Style, Template, and Cover presets."
           }
         ],
         "adminItems": [
@@ -1622,7 +2207,7 @@
           {
             "id": "ai",
             "title": "AI credentials",
-            "description": "Provider, model, and API keys for document extraction."
+            "description": "Provider, model, and API keys for document extraction and proposal generation."
           },
           {
             "id": "discount",
@@ -1638,13 +2223,28 @@
             "id": "templates",
             "title": "Form templates",
             "description": "Project form fields and defaults used at estimate creation."
+          },
+          {
+            "id": "presentation",
+            "title": "Theme & Design",
+            "description": "Themes, styles, templates, and Cover presets (accent, logo, background, ordered fields)."
+          },
+          {
+            "id": "oauth",
+            "title": "OAuth apps",
+            "description": "Google and Canva app credentials so users can open exports in the cloud."
+          },
+          {
+            "id": "proposal-ai",
+            "title": "Proposal AI",
+            "description": "Generation depth presets for Assessment, Proposal, and Proof of Concept."
           }
         ]
       },
       "userGuide": {
         "eyebrow": "User workflows",
         "title": "Contact vs full user guide",
-        "intro": "Both paths share the same estimate pipeline after sign-in. Contact access is limited to one estimate per verified email with the system rate card.",
+        "intro": "Both paths share the same estimate pipeline after sign-in. Contact access is limited to one estimate per verified email with the system rate card. Full users can also generate proposals and use cloud export destinations.",
         "tracks": [
           {
             "id": "contact",
@@ -1666,7 +2266,7 @@
               {
                 "icon": "create",
                 "title": "Complete project form",
-                "description": "Fill the 21-field form on the auto-created estimate.",
+                "description": "Fill the project form on the auto-created estimate.",
                 "href": null
               },
               {
@@ -1690,7 +2290,7 @@
               {
                 "icon": "export",
                 "title": "Export",
-                "description": "Up to 3 exports per estimate (PDF/DOCX report or quotation, Excel, Markdown). PDFs include a Draft Estimate watermark; each export is emailed.",
+                "description": "Up to 3 exports per estimate with optional Theme/Style/Template/Cover. PDF/DOCX report or quotation, Excel, Markdown. PDFs include a Draft Estimate watermark; each export is emailed.",
                 "href": null
               }
             ]
@@ -1698,7 +2298,7 @@
           {
             "id": "full",
             "title": "Full user",
-            "description": "Password login with rate card management and unlimited estimates.",
+            "description": "Password login with rate card management, proposals, and unlimited estimates.",
             "steps": [
               {
                 "icon": "login",
@@ -1743,9 +2343,15 @@
                 "href": null
               },
               {
+                "icon": "create",
+                "title": "Generate proposal",
+                "description": "Optionally open Proposal to create Assessment, Proposal, and Proof of Concept from the calculated estimate.",
+                "href": null
+              },
+              {
                 "icon": "export",
                 "title": "Export",
-                "description": "Export detailed report or formal quotation in PDF/DOCX, plus Excel and Markdown. No export limit or watermark.",
+                "description": "Export estimate or proposal packs with Theme, Style, Template, and Cover presets. Open in Google or Canva when connected under Settings. No contact export limit or watermark.",
                 "href": null
               }
             ]
@@ -1757,7 +2363,7 @@
           "id": "contact-estimate-access",
           "title": "Contact estimate access",
           "summary": "Magic-link sign-in, one estimate per email, system rate card, and export limits.",
-          "body": "Visitors request access from the welcome page with email, name or company, and a Turnstile check. A magic link valid for 15 minutes signs them in and opens their estimate—one estimate per verified email. Contact users use the system rate card automatically (no rate card management UI). After calculation they may export up to three times per estimate in PDF, DOCX, Excel, or Markdown; each export is emailed to their address and PDFs include a Draft Estimate watermark. Administrators can upgrade contact accounts to full users with password login and rate card access."
+          "body": "Visitors request access from the welcome page with email, name or company, and a Turnstile check. A magic link valid for 15 minutes signs them in and opens their estimate—one estimate per verified email. Contact users use the system rate card automatically (no rate card management UI). After calculation they may export up to three times per estimate in PDF, DOCX, Excel, or Markdown with optional presentation and cover presets; each export is emailed to their address and PDFs include a Draft Estimate watermark. Administrators can upgrade contact accounts to full users with password login and rate card access."
         },
         {
           "id": "quotation-settings",
@@ -1773,32 +2379,44 @@
         },
         {
           "id": "export-formats",
-          "title": "Export formats",
-          "summary": "Detailed report and formal quotation in PDF/DOCX, plus Excel and Markdown.",
-          "body": "After calculation, export from the estimate detail page. Choose detailed report or formal quotation for PDF and DOCX. Excel supports analysis; Markdown supports documentation. Display locale controls label language. Formal quotation exports include admin-configured Special Notes when a discount applies. Contact users are limited to three exports per estimate; each export is emailed and PDFs include a Draft Estimate watermark."
+          "title": "Export formats and presentation",
+          "summary": "Report/quotation PDF/DOCX, Excel, Markdown, and Theme/Style/Template/Cover controls.",
+          "body": "After calculation, export from the estimate detail page. Choose detailed report or formal quotation for PDF and DOCX. Excel supports analysis; Markdown supports documentation. Presentation selectors apply Theme (branding/colors), Style (spacing), Template (layout), and Cover preset (accent shapes, logo, background, ordered fields designed in Theme & Design). Formal quotation exports include admin-configured Special Notes when a discount applies. Contact users are limited to three exports per estimate; each export is emailed and PDFs include a Draft Estimate watermark."
+        },
+        {
+          "id": "presentation-cover",
+          "title": "Theme & Design cover presets",
+          "summary": "Admin Cover tab designs that drive estimate and proposal export covers.",
+          "body": "Administrators configure Themes, Styles, Templates, and Cover presets under Theme & Design. A Cover preset stores page size, accent shapes and colors, logo/background/decorative assets, typography, and ordered cover fields with geometry. Selecting that preset on Estimate or Proposal Export renders the matching cover in PDF. Users can override cover field text per document language before exporting."
+        },
+        {
+          "id": "proposals",
+          "title": "Proposal generation and export",
+          "summary": "Assessment, proposal, and PoC packs from a calculated estimate.",
+          "body": "Full users open Proposal from a calculated estimate to generate Assessment, Proposal, and optional Proof of Concept with AI. Proposal Export uses the same Theme, Style, Template, and Cover controls as estimates. Generated packs can be downloaded or opened in Google Docs/Sheets or Canva when the user has connected accounts and admin OAuth apps are configured."
         },
         {
           "id": "locale-switching",
           "title": "Switching language",
           "summary": "Use the locale switcher in the header for Japanese or English UI.",
-          "body": "Click the locale switcher in the top-right header to toggle between Japanese and English. The app remembers your choice for navigation. Estimate content can be stored and displayed per locale where translations exist."
+          "body": "Click the locale switcher in the top-right header to toggle between Japanese and English. The app remembers your choice for navigation. Estimate content can be stored and displayed per locale where translations exist. Export panels can use a separate export language for the generated file."
         }
       ],
       "faqs": [
         {
           "id": "what-is-ai-estimate",
           "question": "What is AI Estimate?",
-          "answer": "AI Estimate is an internal tool for creating software project estimates. Enter client and scope details in a structured project form, optionally upload requirement documents for AI extraction, and run a deterministic calculation engine to produce NRC, RC, and first-year cost totals in JPY."
+          "answer": "AI Estimate is an internal tool for creating software project estimates and client deliverables. Enter client and scope details in a structured project form, optionally upload requirement documents for AI extraction, run a deterministic calculation engine for NRC, RC, and first-year totals in JPY, then export branded reports or generate a proposal pack."
         },
         {
           "id": "who-can-use",
           "question": "Who can use the system?",
-          "answer": "Two access paths exist. Contact users request a magic link from the welcome page—no password required—and receive one estimate per verified email with the system rate card. Full users sign in with email and password created by an administrator and can manage rate cards, multiple estimates, and the full feature set. Contact your administrator if you need a full account or cannot sign in."
+          "answer": "Two access paths exist. Contact users request a magic link from the welcome page—no password required—and receive one estimate per verified email with the system rate card. Full users sign in with email and password created by an administrator and can manage rate cards, multiple estimates, proposals, and the full feature set. Contact your administrator if you need a full account or cannot sign in."
         },
         {
           "id": "supported-languages",
           "question": "What languages are supported?",
-          "answer": "The interface is available in Japanese and English. Use the locale switcher in the header to change the UI language. After calculation, you can export estimates in either language."
+          "answer": "The interface is available in Japanese and English. Use the locale switcher in the header to change the UI language. After calculation, you can export estimates and proposals in either language."
         },
         {
           "id": "supported-documents",
@@ -1808,7 +2426,12 @@
         {
           "id": "export-options",
           "question": "What export formats are available?",
-          "answer": "After calculation, export as a detailed report or formal quotation in PDF or DOCX, or as Excel and Markdown. Exports are available in Japanese or English. Formal quotation includes Special Notes when a discount is applied. Contact users may export up to three times per estimate; each export is emailed to their verified address and PDFs include a Draft Estimate watermark."
+          "answer": "After calculation, export as a detailed report or formal quotation in PDF or DOCX, or as Excel and Markdown. Choose Theme, Style, Template, and Cover preset for branded covers. Formal quotation includes Special Notes when a discount is applied. Contact users may export up to three times per estimate; each export is emailed to their verified address and PDFs include a Draft Estimate watermark."
+        },
+        {
+          "id": "presentation-cover",
+          "question": "Where are cover presets configured?",
+          "answer": "Administrators design Cover presets in Admin → Theme & Design (accent shapes, colors, logo, background, decorative assets, and ordered fields). Users select a Cover preset on Estimate or Proposal Export to include that cover page."
         },
         {
           "id": "contact-magic-link",
@@ -1828,7 +2451,7 @@
         {
           "id": "login-trouble",
           "question": "I cannot log in. What should I check?",
-          "answer": "Verify your email and password. Disabled accounts cannot sign in. If problems persist, ask an administrator to confirm your account is active and reset your credentials if needed."
+          "answer": "Verify your email and password. Disabled accounts cannot sign in. Contact users should use the welcome-page magic link instead of a password. If problems persist, ask an administrator to confirm your account is active and reset your credentials if needed."
         },
         {
           "id": "ai-extraction",
@@ -1845,9 +2468,9 @@
         },
         {
           "id": "estimate-workflow",
-          "title": "Estimate workflow",
-          "summary": "End-to-end flow from form entry to exported deliverable.",
-          "body": "Contact users: request a magic link on the welcome page, verify email, and complete the project form on the auto-created estimate. Full users: create an estimate and complete the project form. Both paths: optionally upload documents for AI extraction, review and edit the feature list and hours, then run calculation (contact users use the system rate card automatically). Export in your preferred format when ready—contact users receive exports by email with a three-export limit and PDF watermark."
+          "title": "Estimate and proposal workflow",
+          "summary": "End-to-end flow from form entry to branded export or proposal pack.",
+          "body": "Contact users: request a magic link on the welcome page, verify email, and complete the project form on the auto-created estimate. Full users: create an estimate and complete the project form. Both paths: optionally upload documents for AI extraction, review and edit the feature list and hours, then run calculation (contact users use the system rate card automatically). Export with Theme/Style/Template/Cover as needed. Full users may also open Proposal to generate Assessment, Proposal, and Proof of Concept, then export that pack with the same presentation controls."
         },
         {
           "id": "rate-card-fields",
@@ -1856,11 +2479,36 @@
           "body": "Roles define hourly and daily rates per team member type. Phases split effort across requirements, design, development, testing, and deployment—the percentages must sum to 100%. Contingency, overhead, and tax are applied as multipliers. Setup costs are one-time NRC line items. Monthly RC items add recurring charges. Development approach affects productivity assumptions used in effort calculations."
         }
       ]
+    },
+    "oauthApps": {
+      "title": "OAuth apps (Google / Canva)",
+      "description": "App-level Client ID and Secret that register this product with Google and Canva. Each user connects their own account under Settings. .env remains an optional fallback.",
+      "loading": "Loading…",
+      "loadError": "Failed to load OAuth app settings",
+      "saveError": "Failed to save OAuth app settings",
+      "saved": "Saved",
+      "save": "Save",
+      "saving": "Saving…",
+      "googleTitle": "Google",
+      "canvaTitle": "Canva",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "redirectUri": "Redirect URI",
+      "secretLeaveBlank": "Leave blank to keep current secret",
+      "secretHint": "Hint",
+      "googleConfigured": "Google is configured",
+      "googleNotConfigured": "Google is not configured",
+      "canvaConfigured": "Canva is configured",
+      "canvaNotConfigured": "Canva is not configured",
+      "templateProposalEn": "Proposal template ID (EN)",
+      "templateProposalJa": "Proposal template ID (JA)",
+      "templatePocEn": "POC template ID (EN)",
+      "templatePocJa": "POC template ID (JA)"
     }
   },
   "help": {
     "title": "Help",
-    "description": "Quick answers and guides for creating estimates, uploading documents, calculating costs, and exporting results.",
+    "description": "Guides for estimates, AI extraction, calculation, presentation covers, proposals, and exports in Japanese or English.",
     "search": {
       "placeholder": "Search guides, FAQs, and documentation…",
       "clear": "Clear search",
@@ -1877,32 +2525,38 @@
     "articles": [
       {
         "id": "export-formats",
-        "title": "Export formats",
-        "summary": "PDF, Excel, and Markdown exports in Japanese or English.",
-        "body": "After calculation, export the estimate from the detail page. PDF is suited for client delivery, Excel for further analysis, and Markdown for documentation. Display locale controls the language of labels and formatted content in the export."
+        "title": "Export formats and presentation",
+        "summary": "Report or quotation PDF/DOCX, Excel, Markdown, plus Theme, Style, Template, and Cover presets.",
+        "body": "After calculation, open Export on the estimate. Choose language and format: detailed report or formal quotation (PDF/DOCX), Excel, or Markdown. Under Presentation and cover, pick Theme (colors/branding), Style (spacing), Template (document layout), and an optional Cover preset (accent shapes, logo, background, and ordered cover fields). Cover field values can be saved per document language. Full users can also open exports in Google Docs/Sheets or Canva from Settings → Connected accounts when configured."
+      },
+      {
+        "id": "proposals",
+        "title": "Proposals from an estimate",
+        "summary": "Generate assessment, proposal, and optional Proof of Concept, then export a branded pack.",
+        "body": "After calculation, open Proposal from the estimate. AI generates Assessment, Proposal, and optional Proof of Concept without re-estimating. In Proposal Export, choose Theme, Style, Template, and Cover preset, fill cover fields if needed, then export PDF/DOCX/Markdown/Excel. PDF covers match the Admin Theme & Design cover canvas (geometry, assets, and accents)."
       },
       {
         "id": "locale-switching",
         "title": "Switching language",
         "summary": "Use the locale switcher in the header for Japanese or English UI.",
-        "body": "Click the locale switcher in the top-right header to toggle between Japanese and English. The app remembers your choice for navigation. Estimate content can be stored and displayed per locale where translations exist."
+        "body": "Click the locale switcher in the top-right header to toggle between Japanese and English. The app remembers your choice for navigation. Estimate and proposal exports can use a separate export language when offered on the export panel."
       }
     ],
     "faqs": [
       {
         "id": "what-is-ai-estimate",
         "question": "What is AI Estimate?",
-        "answer": "AI Estimate is an internal tool for creating software project estimates. Enter client and scope details in a structured project form, optionally upload requirement documents for AI extraction, and run a deterministic calculation engine to produce NRC, RC, and first-year cost totals in JPY."
+        "answer": "AI Estimate is an internal tool for software project estimates and client-facing deliverables. Enter client and scope details, optionally upload documents for AI extraction, calculate NRC/RC/first-year costs in JPY, then export branded reports or generate a proposal pack with assessment and Proof of Concept."
       },
       {
         "id": "who-can-use",
         "question": "Who can use the system?",
-        "answer": "Access is credential-based. Accounts are created by your organization—sign in with the email and password provided to you. If you need an account or cannot log in, contact your administrator."
+        "answer": "Two access paths exist. Contact users request a magic link from the welcome page—no password required—and receive one estimate per verified email with the system rate card. Full users sign in with email and password created by an administrator and can manage rate cards, multiple estimates, proposals, and the full feature set. Contact your administrator if you need a full account or cannot sign in."
       },
       {
         "id": "supported-languages",
         "question": "What languages are supported?",
-        "answer": "The interface is available in Japanese and English. Use the locale switcher in the header to change the UI language. After calculation, you can export estimates in either language."
+        "answer": "The interface is available in Japanese and English. Use the locale switcher in the header to change the UI language. After calculation, you can export estimates and proposals in either language."
       },
       {
         "id": "supported-documents",
@@ -1912,7 +2566,12 @@
       {
         "id": "export-options",
         "question": "What export formats are available?",
-        "answer": "After calculation, export your estimate as PDF for client delivery, Excel for further analysis, or Markdown for documentation. Exports are available in Japanese or English."
+        "answer": "After calculation, export a detailed report or formal quotation in PDF or DOCX, or Excel and Markdown. You can also select Theme, Style, Template, and Cover preset so the cover page matches Admin Theme & Design. Contact users may export up to three times per estimate; each export is emailed and PDFs include a Draft Estimate watermark."
+      },
+      {
+        "id": "presentation-cover",
+        "question": "How do cover presets work on export?",
+        "answer": "Cover presets are designed under Admin → Theme & Design. On Estimate or Proposal Export, choose a Cover preset to include the cover page with accent shapes, colors, logo, background image, decorative assets, and ordered cover fields. Leave Cover as No cover to skip the cover page."
       },
       {
         "id": "estimate-statuses",
@@ -1922,7 +2581,7 @@
       {
         "id": "login-trouble",
         "question": "I cannot log in. What should I check?",
-        "answer": "Verify your email and password. Disabled accounts cannot sign in. If problems persist, ask an administrator to confirm your account is active and reset your credentials if needed."
+        "answer": "Verify your email and password. Disabled accounts cannot sign in. Contact users should use the magic link from the welcome page instead of a password. If problems persist, ask an administrator to confirm your account is active."
       },
       {
         "id": "ai-extraction",
@@ -1939,9 +2598,9 @@
       },
       {
         "id": "estimate-workflow",
-        "title": "Estimate workflow",
-        "summary": "End-to-end flow from form entry to exported deliverable.",
-        "body": "Create an estimate and complete the project form. Optionally upload documents for AI extraction. Review and edit the feature list and hours. Select or confirm the active rate card. Run calculation to generate phase breakdown, Gantt timeline, and cost summary. Export in your preferred format when ready for client delivery."
+        "title": "Estimate and proposal workflow",
+        "summary": "End-to-end flow from form entry to branded export or proposal pack.",
+        "body": "Create or open an estimate and complete the project form. Optionally upload documents for AI extraction, then review features and hours. Run calculation with the active rate card. Export a branded report or quotation (Theme/Style/Template/Cover), or open Proposal to generate Assessment, Proposal, and optional Proof of Concept and export that pack with the same presentation controls."
       }
     ]
   },
@@ -1979,6 +2638,8 @@
     "specificationDetails": "Technical specification",
     "specificationDetailsDescription": "Scope, complexity, integrations, and delivery assumptions used for estimation.",
     "clientQuestionnaireGuidance": "Review client details below. Save your changes or skip to continue to the technical specification.",
+    "technicalSpecificationGuidance": "AI values were applied to the fields below. Please check that each value is correct — you can edit any field manually.",
+    "guidanceDismiss": "Got it",
     "saveAndContinue": "Save and continue",
     "skipForNow": "Skip for now",
     "expandSection": "Expand section",
@@ -2063,7 +2724,7 @@
       "eyebrow": "Workflow",
       "title": "How it works",
       "stepCta": "Get started",
-      "intro": "Request access with your email, verify the magic link, and complete one estimate from project form through export. Standard rates apply automatically—no rate card setup required.",
+      "intro": "Request access with your email, verify the magic link, and complete one estimate from project form through a branded export. Standard rates apply automatically—no rate card setup required.",
       "steps": [
         {
           "icon": "login",
@@ -2080,7 +2741,7 @@
         {
           "icon": "create",
           "title": "Complete the project form",
-          "description": "Fill in the 21-field project form with client and scope details on your estimate page.",
+          "description": "Fill in the project form with client and scope details on your estimate page.",
           "href": null
         },
         {
@@ -2104,7 +2765,7 @@
         {
           "icon": "export",
           "title": "Export results",
-          "description": "Export up to three times per estimate in PDF, Excel, or Markdown. Each export is emailed to you; PDFs include a Draft Estimate watermark.",
+          "description": "Choose language, format (PDF/DOCX report or quotation, Excel, Markdown), and optional Theme, Style, Template, and Cover preset. Export up to three times per estimate—each file is emailed; PDFs include a Draft Estimate watermark.",
           "href": null
         }
       ]

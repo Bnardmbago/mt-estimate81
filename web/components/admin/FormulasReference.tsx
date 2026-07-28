@@ -20,9 +20,11 @@ type FormulaSectionKey =
   | "nrc"
   | "rc"
   | "discount"
+  | "quotation"
   | "gantt"
   | "clientAdvisories"
   | "rateCard"
+  | "presentationExport"
   | "contactAccess"
   | "variance";
 
@@ -32,9 +34,11 @@ const SECTION_ORDER: FormulaSectionKey[] = [
   "nrc",
   "rc",
   "discount",
+  "quotation",
   "gantt",
   "clientAdvisories",
   "rateCard",
+  "presentationExport",
   "contactAccess",
   "variance",
 ];

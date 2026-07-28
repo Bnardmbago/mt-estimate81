@@ -37,6 +37,25 @@ def build_preview_base_system(
         return build_rate_card_system_prompt(locale, has_extraction_context=False)
     if location == "rate_card_section":
         return build_rate_card_section_system_prompt(locale, "roles", free_form=False)
+    if location in ("proposal_assessment", "proposal_body", "proposal_poc"):
+        from app.proposals.generation_presets import (
+            DEFAULT_PROPOSAL_AI_SETTINGS,
+            LOCATION_TO_PART,
+            purpose_for_part,
+        )
+        from app.proposals.prompts import (
+            build_assessment_system_prompt,
+            build_poc_system_prompt,
+            build_proposal_system_prompt,
+        )
+
+        part = LOCATION_TO_PART[location]
+        purpose = purpose_for_part(DEFAULT_PROPOSAL_AI_SETTINGS, part)
+        if location == "proposal_assessment":
+            return build_assessment_system_prompt(locale, purpose=purpose)
+        if location == "proposal_body":
+            return build_proposal_system_prompt(locale, purpose=purpose)
+        return build_poc_system_prompt(locale, purpose=purpose)
     raise ValueError(f"Unknown location: {location}")
 
 

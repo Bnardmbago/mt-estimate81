@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import PasswordField from "@/components/PasswordField";
 import { apiJson } from "@/lib/api";
 
 type SMTPSettings = {
@@ -203,8 +204,7 @@ export default function SmtpSettingsPanel() {
 
         <div className="block text-sm">
           <label className="mb-1 block font-medium text-gray-700">{t("smtpPassword")}</label>
-          <input
-            type="password"
+          <PasswordField
             value={smtpPassword}
             onChange={(event) => {
               setSmtpPassword(event.target.value);

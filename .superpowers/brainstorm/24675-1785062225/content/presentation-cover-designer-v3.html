@@ -1,0 +1,105 @@
+<h2>Admin / Presentation — reference-based cover designer</h2>
+<p class="subtitle">AI creates the initial cover design from the reference document; the admin reviews and customizes it before saving the Template.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Admin / Presentation / Generated preset drafts / Cover design</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="mock-button">Theme</button>
+      <button class="mock-button">Style</button>
+      <button class="mock-button" style="background:#2563eb;color:white">Template &amp; Cover</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:0.85fr 1.15fr;gap:20px">
+      <div>
+        <div class="section" style="border:1px solid #d8dee9;border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>Cover page in this Template</strong>
+              <div><small>AI detected a dedicated cover in the reference</small></div>
+            </div>
+            <div style="width:43px;height:24px;background:#2563eb;border-radius:20px;padding:3px">
+              <div style="width:18px;height:18px;background:white;border-radius:50%;margin-left:19px"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">AI-generated design settings</div>
+          <label><small>Background</small><div class="mock-input">Solid · Surface cream (#F6F4EF)</div></label>
+          <label><small>Content alignment</small><div class="mock-input">Left · vertically centered</div></label>
+          <label><small>Logo placement</small><div class="mock-input">Top left · medium</div></label>
+          <label><small>Accent treatment</small><div class="mock-input">Gold rule · 48 mm</div></label>
+          <label><small>Page padding</small><div class="mock-input">24 mm</div></label>
+        </div>
+
+        <div class="section">
+          <div class="label">Colors and typography</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <label><small>Title color</small><div class="mock-input"><span style="display:inline-block;width:12px;height:12px;background:#17365d;border-radius:3px"></span> #17365D</div></label>
+            <label><small>Accent color</small><div class="mock-input"><span style="display:inline-block;width:12px;height:12px;background:#d89b2b;border-radius:3px"></span> #D89B2B</div></label>
+            <label><small>Title size</small><div class="mock-input">30 pt · Bold</div></label>
+            <label><small>Metadata size</small><div class="mock-input">10 pt · Regular</div></label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="label">Ordered variable text fields</div>
+          <div style="display:grid;gap:7px">
+            <div class="mock-input">☰ &nbsp; Document title · title · required</div>
+            <div class="mock-input">☰ &nbsp; Client name · metadata · auto-fill</div>
+            <div class="mock-input">☰ &nbsp; Prepared date · metadata · auto-fill</div>
+            <div class="mock-input">☰ &nbsp; Confidentiality note · footer · optional</div>
+          </div>
+          <button class="mock-button" style="margin-top:9px">+ Add text field</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">Live cover preview</div>
+        <div style="background:#e6e9ee;padding:22px;border-radius:10px">
+          <div style="aspect-ratio:0.707;background:#f6f4ef;border:1px solid #ccc;box-shadow:0 7px 20px rgba(0,0,0,.12);padding:38px;display:flex;flex-direction:column;max-height:590px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="width:30px;height:30px;background:#17365d;border-radius:4px"></div>
+              <div style="font-size:11px;font-weight:700;color:#17365d">YOUR COMPANY</div>
+            </div>
+            <div style="margin:auto 0">
+              <div style="font-size:12px;letter-spacing:.08em;color:#6b7280;text-transform:uppercase">Example Corporation</div>
+              <div style="font-size:34px;line-height:1.1;font-weight:750;color:#17365d;margin-top:13px">Digital Transformation Proposal</div>
+              <div style="height:4px;background:#d89b2b;width:95px;margin-top:18px"></div>
+              <div style="font-size:12px;color:#64748b;margin-top:17px">Prepared July 2026</div>
+            </div>
+            <div style="font-size:9px;color:#6b7280">CONFIDENTIAL — FOR INTENDED RECIPIENT ONLY</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <small>Preview uses sample values; actual values are entered with the Proposal.</small>
+          <button class="mock-button">Reset to AI result</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #d8dee9;margin-top:20px;padding-top:14px;display:flex;justify-content:flex-end;gap:8px">
+      <button class="mock-button">Save draft</button>
+      <button class="mock-button" style="background:#2563eb;color:white">Approve and save 3 presets</button>
+    </div>
+    <p style="text-align:center;margin:9px 0 0"><small>This page configures presets only. It does not export documents.</small></p>
+  </div>
+</div>
+
+<div class="options" style="margin-top:22px">
+  <div class="option" data-choice="approve-cover-designer" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve the structured cover designer</h3>
+      <p>Reference-derived settings, controlled customization, ordered variables, and live preview.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise-cover-designer" onclick="toggleSelect(this)">
+    <div class="letter">↻</div>
+    <div class="content">
+      <h3>Request changes</h3>
+      <p>Select this and describe the adjustment in chat.</p>
+    </div>
+  </div>
+</div>
