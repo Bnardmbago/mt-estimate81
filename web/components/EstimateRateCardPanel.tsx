@@ -96,7 +96,7 @@ export default function EstimateRateCardPanel({
   }
 
   return (
-    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4" data-tour="estimate-rate-card-panel">
       <h3 className="text-sm font-semibold text-gray-900">{tPanel("autoTitle")}</h3>
       <p className="mt-1 text-sm text-gray-600">{tPanel("autoDescription")}</p>
 

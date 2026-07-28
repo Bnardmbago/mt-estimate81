@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import AppHeader from "@/components/AppHeader";
+import TourProvider from "@/components/tour/TourProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import ThemeScript from "@/components/ThemeScript";
 import type { AccountType } from "@/lib/user-types";
@@ -54,13 +55,19 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
-            <AppHeader
-              locale={locale}
+            <TourProvider
               isAuthenticated={isAuthenticated}
               isAdmin={isAdmin}
               accountType={accountType}
-            />
-            <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+            >
+              <AppHeader
+                locale={locale}
+                isAuthenticated={isAuthenticated}
+                isAdmin={isAdmin}
+                accountType={accountType}
+              />
+              <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+            </TourProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

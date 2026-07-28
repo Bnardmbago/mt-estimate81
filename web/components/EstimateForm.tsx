@@ -728,7 +728,12 @@ const EstimateForm = forwardRef<EstimateFormHandle, EstimateFormProps>(function 
         </div>
       </div>
 
-      <form id="estimate-form" onSubmit={handleSubmit} className="space-y-5">
+      <form
+        id="estimate-form"
+        data-tour="estimate-form"
+        onSubmit={handleSubmit}
+        className="space-y-5"
+      >
         <div>
           <label htmlFor="field-project_name" className="mb-1 block text-sm font-medium">
             {tForm("project_name")}

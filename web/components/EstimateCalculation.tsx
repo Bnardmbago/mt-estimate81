@@ -144,6 +144,7 @@ export default function EstimateCalculation({
 
           <button
             type="button"
+            data-tour="estimate-calculate-button"
             onClick={() => void handleCalculate()}
             disabled={calculating || !estimate.rate_card_id}
             className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"

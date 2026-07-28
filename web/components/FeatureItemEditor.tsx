@@ -133,7 +133,7 @@ export default function FeatureItemEditor({
   }
 
   return (
-    <section className="mt-8 border-t border-gray-200 pt-8">
+    <section className="mt-8 border-t border-gray-200 pt-8" data-tour="estimate-features-list">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">{t("featuresTitle")}</h2>

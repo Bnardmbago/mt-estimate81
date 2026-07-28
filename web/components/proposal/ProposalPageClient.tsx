@@ -386,6 +386,7 @@ export default function ProposalPageClient() {
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
+            data-tour="proposal-generate-button"
             disabled={busy}
             className="proposal-btn-primary rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
             onClick={() => void handleGenerate()}

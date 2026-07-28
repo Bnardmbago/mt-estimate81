@@ -87,6 +87,19 @@ export default function AdminPanel() {
           <button
             key={tab}
             type="button"
+            data-tour={
+              tab === "users"
+                ? "admin-tab-users"
+                : tab === "presentation"
+                  ? "admin-tab-presentation"
+                  : tab === "aiSettings"
+                    ? "admin-tab-ai-settings"
+                    : tab === "smtpSettings"
+                      ? "admin-tab-smtp"
+                      : tab === "system"
+                        ? "admin-tab-system"
+                        : undefined
+            }
             onClick={() => setActiveTab(tab)}
             aria-current={activeTab === tab ? "page" : undefined}
             className={tabButtonClass(activeTab === tab)}

@@ -2770,5 +2770,221 @@
         "canva": "Canva"
       }
     }
+  },
+  "tour": {
+    "welcomeTitle": "このページのツアーを始めますか？",
+    "welcomeBody": {
+      "contact": "このページの操作を短くご案内します。",
+      "user": "このページの操作を短くご案内します。",
+      "admin": "このページの操作を短くご案内します。"
+    },
+    "audience": {
+      "contact": "コンタクト",
+      "user": "ユーザー",
+      "admin": "管理者"
+    },
+    "start": "ページツアーを開始",
+    "skip": "スキップ",
+    "skipPage": "このページをスキップ",
+    "exit": "ツアーを終了",
+    "dontShowAgain": "ツアーを今後表示しない",
+    "floatingLabel": "ページツアー操作",
+    "floatingTitle": "ページツアー",
+    "next": "次へ",
+    "previous": "前へ",
+    "done": "完了",
+    "progress": "{current} / {total}",
+    "stepTitle": "{number}. {title}",
+    "stepSequence": "ステップ {current} / {total}",
+    "nextTarget": "次へ（{number}）: {label}",
+    "lastStepHint": "このページの最後のステップです。完了したら「完了」を押してください。",
+    "restart": "このページのツアーを再開",
+    "restartPage": "このページのツアーを再開",
+    "resetAllPages": "すべてのページツアーをリセット",
+    "enableToggle": "ページツアーを有効にする",
+    "settingsTitle": "ページツアー",
+    "settingsDescription": "{audience}向けに、各ページごとの短いツアーをこのブラウザで制御します。",
+    "helpRestartTitle": "ページツアー",
+    "helpRestartDescription": "このヘルプページのガイドツアーを再実行できます。",
+    "pages": {
+      "welcome": {
+        "title": "ウェルカムページのツアー",
+        "body": "このページでコンタクト見積のアクセス申請方法を案内します。"
+      },
+      "estimatesList": {
+        "title": "見積一覧のツアー",
+        "body": "見積の検索・開く・新規作成を案内します。"
+      },
+      "estimatesNew": {
+        "title": "新規見積のツアー",
+        "body": "カテゴリとテンプレートの選び方を案内します。"
+      },
+      "estimateDetail": {
+        "title": "見積ページのツアー",
+        "body": "フォーム、抽出、計算、エクスポートを案内します。"
+      },
+      "proposal": {
+        "title": "提案書ページのツアー",
+        "body": "提案書の生成とエクスポートを案内します。"
+      },
+      "rateCards": {
+        "title": "レートカードのツアー",
+        "body": "役割・フェーズ・単価の管理を案内します。"
+      },
+      "help": {
+        "title": "ヘルプページのツアー",
+        "body": "ヘルプ検索とこのページツアーの再開を案内します。"
+      },
+      "settings": {
+        "title": "設定ページのツアー",
+        "body": "ツアーの有効化・再開・リセットを案内します。"
+      },
+      "admin": {
+        "title": "管理ページのツアー",
+        "body": "管理コンソールのタブ概要を案内します。"
+      }
+    },
+    "steps": {
+      "settingsTour": {
+        "title": "ページツアー設定",
+        "body": "ツアーのオン/オフ、このページの再開、全ページのリセットができます。"
+      },
+      "cWelcome": {
+        "title": "ようこそ",
+        "body": "コンタクト見積への入り口です。"
+      },
+      "cRequest": {
+        "title": "アクセス申請",
+        "body": "ここでワンタイムのマジックリンクを申請します。"
+      },
+      "cForm": {
+        "title": "マジックリンクフォーム",
+        "body": "メールとお名前を入力し、セキュリティチェック後に送信します。"
+      },
+      "cFormFields": {
+        "title": "プロジェクトフォーム",
+        "body": "クライアントとプロジェクト情報を入力します。"
+      },
+      "cUpload": {
+        "title": "文書アップロード",
+        "body": "AI抽出用の要件文書を添付します。"
+      },
+      "cExtract": {
+        "title": "抽出実行",
+        "body": "文書から機能と工数を抽出します。"
+      },
+      "cFeatures": {
+        "title": "機能の確認",
+        "body": "計算前に抽出結果を確認・編集します。"
+      },
+      "cCalculate": {
+        "title": "計算",
+        "body": "システムレートカードでコストを計算します。"
+      },
+      "cExport": {
+        "title": "エクスポート",
+        "body": "PDF / DOCX / Excel / Markdown を出力できます。"
+      },
+      "cExportLimit": {
+        "title": "エクスポート上限",
+        "body": "コンタクトは見積あたり最大3回。ファイルは自動でメール送信されます。"
+      },
+      "fNavEstimates": {
+        "title": "見積",
+        "body": "見積の作成・閲覧のメイン画面です。"
+      },
+      "fList": {
+        "title": "見積一覧",
+        "body": "既存の見積を開きます。"
+      },
+      "fNew": {
+        "title": "新規見積",
+        "body": "カテゴリとテンプレートから新規作成します。"
+      },
+      "fTemplate": {
+        "title": "テンプレート選択",
+        "body": "業務種別とフォームテンプレートを選びます。"
+      },
+      "fCreate": {
+        "title": "作成",
+        "body": "下書きフォームへ進みます。"
+      },
+      "fForm": {
+        "title": "プロジェクトフォーム",
+        "body": "プロジェクトとクライアント情報を入力します。"
+      },
+      "fRateCard": {
+        "title": "レートカード",
+        "body": "原価計算に使うレートカードを選択・調整します。"
+      },
+      "fUpload": {
+        "title": "文書アップロード",
+        "body": "任意のAI抽出用に要件文書を添付します。"
+      },
+      "fExtract": {
+        "title": "抽出",
+        "body": "AI抽出で機能一覧を作成します。"
+      },
+      "fFeatures": {
+        "title": "機能一覧",
+        "body": "計算前に機能を確認・編集します。"
+      },
+      "fCalculate": {
+        "title": "計算",
+        "body": "レートカードを適用してコストを算出します。"
+      },
+      "fExport": {
+        "title": "見積エクスポート",
+        "body": "テーマ・スタイル・テンプレート・表紙を選んで出力します。"
+      },
+      "fOpenProposal": {
+        "title": "提案書を開く",
+        "body": "この見積から Assessment / Proposal / PoC を生成します。"
+      },
+      "fProposalGen": {
+        "title": "提案書生成",
+        "body": "計算済み見積を選び、ステークホルダー向け文書を生成します。"
+      },
+      "fProposalExport": {
+        "title": "提案書エクスポート",
+        "body": "提案パックを出力し、接続済みなら Google / Canva で開けます。"
+      },
+      "fRates": {
+        "title": "レートカード",
+        "body": "役割・フェーズ・単価を管理します。"
+      },
+      "fHelp": {
+        "title": "ヘルプと再開",
+        "body": "ヘルプを検索するか、いつでもツアーを再開できます。"
+      },
+      "aNavAdmin": {
+        "title": "管理",
+        "body": "システム設定の管理コンソールを開きます。"
+      },
+      "aUsers": {
+        "title": "ユーザー",
+        "body": "フルユーザーアカウントを作成・管理します。"
+      },
+      "aPresentation": {
+        "title": "プレゼンテーション",
+        "body": "テーマ・スタイル・テンプレート・表紙プリセットを設定します。"
+      },
+      "aAi": {
+        "title": "AI設定",
+        "body": "AIプロバイダーと提案書生成を設定します。"
+      },
+      "aSmtp": {
+        "title": "SMTP",
+        "body": "マジックリンクとエクスポート送信用のメールを設定します。"
+      },
+      "aSystem": {
+        "title": "システムヘルス",
+        "body": "システム状態と停滞ジョブを監視します。"
+      },
+      "aHelp": {
+        "title": "管理者ヘルプ",
+        "body": "管理者向けリファレンスとツアー再開です。"
+      }
+    }
   }
 }

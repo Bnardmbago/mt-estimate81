@@ -97,7 +97,11 @@ export default function ContactAccessForm({ onSubmitted }: ContactAccessFormProp
   }
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="mx-auto max-w-md space-y-4">
+    <form
+      data-tour="contact-magic-link-form"
+      onSubmit={(event) => void handleSubmit(event)}
+      className="mx-auto max-w-md space-y-4"
+    >
       <div>
         <label htmlFor="contact-email" className="mb-1 block text-sm font-medium">
           {t("email")}

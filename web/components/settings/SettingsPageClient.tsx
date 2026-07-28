@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import LogoutButton from "@/components/LogoutButton";
 import PasswordField from "@/components/PasswordField";
+import TourSettingsSection from "@/components/tour/TourSettingsSection";
 import ConnectedAccountsPanel from "@/components/settings/ConnectedAccountsPanel";
 import { useTheme } from "@/components/ThemeProvider";
 import { apiFetch, apiJson, parseApiErrorPayload } from "@/lib/api";
@@ -245,6 +246,8 @@ export default function SettingsPageClient({ locale, profile }: SettingsPageClie
           <ConnectedAccountsPanel />
         </div>
       ) : null}
+
+      <TourSettingsSection />
 
       <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
         <h2 className="mb-3 text-base font-semibold">{t("sessionTitle")}</h2>

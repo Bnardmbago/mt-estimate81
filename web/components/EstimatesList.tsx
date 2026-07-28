@@ -92,7 +92,7 @@ export default function EstimatesList({ estimates, locale }: EstimatesListProps)
   }
 
   return (
-    <div>
+    <div data-tour="estimates-list-table">
       {error && (
         <p className="mb-4 text-sm text-red-600" role="alert">
           {error}

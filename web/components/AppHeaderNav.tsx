@@ -19,6 +19,7 @@ type NavItem = {
   href: string;
   label: string;
   match: (pathname: string) => boolean;
+  dataTour?: string;
 };
 
 type AppHeaderNavProps = {
@@ -101,6 +102,7 @@ export default function AppHeaderNav({
       href: `/${locale}/estimates`,
       label: labels.estimates,
       match: (path) => path === "/estimates" || path.startsWith("/estimates/"),
+      dataTour: "nav-estimates",
     });
 
     if (!isContactUser) {
@@ -109,16 +111,19 @@ export default function AppHeaderNav({
           href: `/${locale}/proposal`,
           label: labels.proposal,
           match: (path) => path === "/proposal" || path.startsWith("/proposal/"),
+          dataTour: "nav-proposal",
         },
         {
           href: `/${locale}/rate-cards`,
           label: labels.rateCards,
           match: (path) => path === "/rate-cards" || path.startsWith("/rate-cards/"),
+          dataTour: "nav-rate-cards",
         },
         {
           href: `/${locale}/help`,
           label: labels.help,
           match: (path) => path === "/help" || path.startsWith("/help/"),
+          dataTour: "nav-help",
         },
       );
     }
@@ -128,6 +133,7 @@ export default function AppHeaderNav({
         href: `/${locale}/admin?tab=users`,
         label: labels.admin,
         match: (path) => path === "/admin" || path.startsWith("/admin/"),
+        dataTour: "nav-admin",
       });
     }
   }
@@ -186,6 +192,7 @@ export default function AppHeaderNav({
               href={item.href}
               className={navLinkClass(isActive)}
               aria-current={isActive ? "page" : undefined}
+              data-tour={item.dataTour}
             >
               {item.label}
             </Link>
@@ -207,6 +214,7 @@ export default function AppHeaderNav({
                   href={item.href}
                   className={navLinkClass(isActive, true)}
                   aria-current={isActive ? "page" : undefined}
+                  data-tour={item.dataTour}
                   onClick={() => setMenuOpen(false)}
                 >
                   {item.label}

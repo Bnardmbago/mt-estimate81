@@ -457,9 +457,12 @@ export default function ExportPanel({
   }, [selectedFormats, t]);
 
   return (
-    <section className="mt-8 border-t border-gray-200 pt-8">
+    <section className="mt-8 border-t border-gray-200 pt-8" data-tour="estimate-export-panel">
       {isContactUser ? (
-        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
+        <div
+          data-tour="contact-export-limit-notice"
+          className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100"
+        >
           {exportLimitReached
             ? t("contactExportLimitReached", { limit: CONTACT_EXPORT_LIMIT })
             : t("contactExportsRemaining", {

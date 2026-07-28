@@ -141,6 +141,7 @@ type Interaction = {
   handle?: ResizeHandle;
   rotate?: boolean;
   moved: boolean;
+  latest?: CoverGeometry;
 };
 
 const RESIZE_HANDLES: ResizeHandle[] = [
@@ -249,9 +250,10 @@ export default function PresentationCoverPreview({
     });
   }, [measurementSignature]);
 
-  function updateLayerGeometry(layer: Layer, geometry: CoverGeometry) {
+  function updateLayerGeometry(layer: Layer, geometry: CoverGeometry, commit: boolean) {
     const normalized = normalizeGeometry(geometry);
     setLiveGeometry({ layerId: layer.id, geometry: normalized });
+    if (!commit) return;
     if (layer.kind === "field" && layer.fieldKey !== undefined) {
       onFieldGeometryChange(layer.fieldKey, normalized);
     } else if (layer.kind === "shape" && layer.shapeId !== undefined) {
@@ -280,7 +282,9 @@ export default function PresentationCoverPreview({
     }
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // Capture on the page so move/up handlers keep receiving events even if
+    // the hit-target re-renders during the drag.
+    pageElement.setPointerCapture(event.pointerId);
     onSelectLayer(layer.id);
     const geometry = layer.geometry ||
       measuredGeometry[layer.id] ||
@@ -294,6 +298,7 @@ export default function PresentationCoverPreview({
       handle,
       rotate,
       moved: false,
+      latest: geometry,
     };
     setLiveGeometry({ layerId: layer.id, geometry });
   }
@@ -332,12 +337,19 @@ export default function PresentationCoverPreview({
       setGuides([]);
     }
     active.moved = true;
-    updateLayerGeometry(active.layer, next);
+    active.latest = next;
+    // Preview only during drag — committing every move re-renders the design
+    // tree and can drop pointer capture / stall accent-shape dragging.
+    updateLayerGeometry(active.layer, next, false);
   }
 
   function endInteraction(event: ReactPointerEvent<HTMLDivElement>) {
     if (interaction.current?.pointerId !== event.pointerId) return;
+    const active = interaction.current;
     interaction.current = null;
+    if (active?.moved && active.latest) {
+      updateLayerGeometry(active.layer, active.latest, true);
+    }
     setLiveGeometry(null);
     setGuides([]);
   }
@@ -365,6 +377,7 @@ export default function PresentationCoverPreview({
     updateLayerGeometry(
       selectedLayer,
       keyboardMove(selectedGeometry, event.key as "ArrowUp" | "ArrowRight" | "ArrowDown" | "ArrowLeft", event.shiftKey),
+      true,
     );
     setLiveGeometry(null);
   }
@@ -463,29 +476,6 @@ export default function PresentationCoverPreview({
               ))}
             </svg>
           ) : null}
-          {visibleShapes.map((shape) => {
-            const layer = layers.find((candidate) => candidate.id === shapeLayerId(shape.id))!;
-            const geometry =
-              liveGeometry?.layerId === layer.id ? liveGeometry.geometry : shape.geometry;
-            return (
-              <div
-                key={shape.id}
-                ref={(node) => { layerElements.current[layer.id] = node; }}
-                className={`presentation-cover-preview-layer presentation-cover-preview-shape-layer ${shape.locked ? "is-locked" : ""}`}
-                style={{
-                  ...geometryStyle(geometry),
-                  transform: geometry.rotation_deg ? `rotate(${geometry.rotation_deg}deg)` : undefined,
-                  transformOrigin: "center",
-                }}
-                role="button"
-                tabIndex={0}
-                aria-pressed={selectedLayerId === layer.id}
-                aria-label={shape.name}
-                onPointerDown={(event) => beginInteraction(event, layer)}
-                onKeyDown={(event) => selectLayerWithKeyboard(event, layer.id, onSelectLayer)}
-              />
-            );
-          })}
           <div
             className="presentation-cover-preview-content"
             style={{ padding: `${Math.max(4, padding / 2)}%` }}
@@ -510,6 +500,30 @@ export default function PresentationCoverPreview({
               );
             })}
           </div>
+          {/* Shape hit targets after content so low z_index shapes remain draggable. */}
+          {visibleShapes.map((shape) => {
+            const layer = layers.find((candidate) => candidate.id === shapeLayerId(shape.id))!;
+            const geometry =
+              liveGeometry?.layerId === layer.id ? liveGeometry.geometry : shape.geometry;
+            return (
+              <div
+                key={shape.id}
+                ref={(node) => { layerElements.current[layer.id] = node; }}
+                className={`presentation-cover-preview-layer presentation-cover-preview-shape-layer ${shape.locked ? "is-locked" : ""}`}
+                style={{
+                  ...geometryStyle(geometry),
+                  transform: geometry.rotation_deg ? `rotate(${geometry.rotation_deg}deg)` : undefined,
+                  transformOrigin: "center",
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedLayerId === layer.id}
+                aria-label={shape.name}
+                onPointerDown={(event) => beginInteraction(event, layer)}
+                onKeyDown={(event) => selectLayerWithKeyboard(event, layer.id, onSelectLayer)}
+              />
+            );
+          })}
           {fields.map((field, index) => {
             if (!field.geometry) return null;
             const layer = layers[index];

@@ -199,7 +199,7 @@ export default function DocumentUpload({
         </>
       ) : null}
 
-      <div className={isEmbedded ? "mb-3" : "mb-4"}>
+      <div className={isEmbedded ? "mb-3" : "mb-4"} data-tour="estimate-document-upload">
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}

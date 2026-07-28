@@ -190,6 +190,222 @@
       }
     }
   },
+  "tour": {
+    "welcomeTitle": "Tour this page?",
+    "welcomeBody": {
+      "contact": "A short guide for the controls on this page.",
+      "user": "A short guide for the controls on this page.",
+      "admin": "A short guide for the controls on this page."
+    },
+    "audience": {
+      "contact": "Contact",
+      "user": "User",
+      "admin": "Admin"
+    },
+    "start": "Start page tour",
+    "skip": "Skip",
+    "skipPage": "Skip this page",
+    "exit": "Exit tour",
+    "dontShowAgain": "Don't show tours again",
+    "floatingLabel": "Page tour controls",
+    "floatingTitle": "Page tour",
+    "next": "Next",
+    "previous": "Previous",
+    "done": "Done",
+    "progress": "{current} of {total}",
+    "stepTitle": "{number}. {title}",
+    "stepSequence": "Step {current} of {total}",
+    "nextTarget": "Next ({number}): {label}",
+    "lastStepHint": "Last step on this page — click Done when finished.",
+    "restart": "Restart page tour",
+    "restartPage": "Restart this page tour",
+    "resetAllPages": "Reset all page tours",
+    "enableToggle": "Enable page tours",
+    "settingsTitle": "Page tours",
+    "settingsDescription": "Each page has its own short tour for {audience} accounts in this browser.",
+    "helpRestartTitle": "Page tour",
+    "helpRestartDescription": "Replay the guided walkthrough for this Help page.",
+    "pages": {
+      "welcome": {
+        "title": "Welcome page tour",
+        "body": "Learn how to request contact estimate access on this page."
+      },
+      "estimatesList": {
+        "title": "Estimates list tour",
+        "body": "Find, open, and create estimates from this page."
+      },
+      "estimatesNew": {
+        "title": "New estimate tour",
+        "body": "Choose a category and template to start an estimate."
+      },
+      "estimateDetail": {
+        "title": "Estimate page tour",
+        "body": "Walk through the form, extraction, calculation, and export on this estimate."
+      },
+      "proposal": {
+        "title": "Proposal page tour",
+        "body": "Generate and export proposal documents on this page."
+      },
+      "rateCards": {
+        "title": "Rate cards tour",
+        "body": "Manage roles, phases, and rates on this page."
+      },
+      "help": {
+        "title": "Help page tour",
+        "body": "Search help articles or restart this page tour."
+      },
+      "settings": {
+        "title": "Settings page tour",
+        "body": "Enable, restart, or reset page tours here."
+      },
+      "admin": {
+        "title": "Admin page tour",
+        "body": "Overview of Admin console tabs on this page."
+      }
+    },
+    "steps": {
+      "settingsTour": {
+        "title": "Page tour controls",
+        "body": "Turn tours on or off, restart this page, or reset all pages."
+      },
+      "cWelcome": {
+        "title": "Welcome",
+        "body": "This is the entry point for contact estimate access."
+      },
+      "cRequest": {
+        "title": "Request access",
+        "body": "Scroll here to request a one-time magic link."
+      },
+      "cForm": {
+        "title": "Magic-link form",
+        "body": "Enter your email and name, complete the security check, then submit."
+      },
+      "cFormFields": {
+        "title": "Project form",
+        "body": "Fill in client and project details for your estimate."
+      },
+      "cUpload": {
+        "title": "Upload documents",
+        "body": "Attach requirement documents for AI extraction."
+      },
+      "cExtract": {
+        "title": "Run extraction",
+        "body": "Extract features and suggested hours from your documents."
+      },
+      "cFeatures": {
+        "title": "Review features",
+        "body": "Edit extracted features and effort before calculating."
+      },
+      "cCalculate": {
+        "title": "Calculate",
+        "body": "Run the calculation using the system rate card."
+      },
+      "cExport": {
+        "title": "Export",
+        "body": "Export PDF, DOCX, Excel, or Markdown with optional presentation presets."
+      },
+      "cExportLimit": {
+        "title": "Export limit",
+        "body": "Contact users can export up to three times per estimate; files are emailed automatically."
+      },
+      "fNavEstimates": {
+        "title": "Estimates",
+        "body": "Your main workspace for creating and opening estimates."
+      },
+      "fList": {
+        "title": "Estimate list",
+        "body": "Open an existing estimate from this list."
+      },
+      "fNew": {
+        "title": "New estimate",
+        "body": "Start a new estimate with a category and template."
+      },
+      "fTemplate": {
+        "title": "Template picker",
+        "body": "Choose the nature of work and form template."
+      },
+      "fCreate": {
+        "title": "Create",
+        "body": "Continue to the draft estimate form."
+      },
+      "fForm": {
+        "title": "Project form",
+        "body": "Enter project and client details."
+      },
+      "fRateCard": {
+        "title": "Rate card",
+        "body": "Select or tune the rate card used for costing."
+      },
+      "fUpload": {
+        "title": "Upload documents",
+        "body": "Attach requirements for optional AI extraction."
+      },
+      "fExtract": {
+        "title": "Extract",
+        "body": "Run AI extraction to build the feature list."
+      },
+      "fFeatures": {
+        "title": "Features",
+        "body": "Review and edit features before calculation."
+      },
+      "fCalculate": {
+        "title": "Calculate",
+        "body": "Apply the rate card to produce costs."
+      },
+      "fExport": {
+        "title": "Export estimate",
+        "body": "Export with theme, style, template, and cover options."
+      },
+      "fOpenProposal": {
+        "title": "Open Proposal",
+        "body": "Generate Assessment, Proposal, and Proof of Concept from this estimate."
+      },
+      "fProposalGen": {
+        "title": "Generate proposal",
+        "body": "Select a calculated estimate and generate stakeholder documents."
+      },
+      "fProposalExport": {
+        "title": "Export proposal",
+        "body": "Export the proposal pack and open in Google or Canva when connected."
+      },
+      "fRates": {
+        "title": "Rate cards",
+        "body": "Create and manage roles, phases, and rates."
+      },
+      "fHelp": {
+        "title": "Help & restart",
+        "body": "Search help articles or restart this tour anytime."
+      },
+      "aNavAdmin": {
+        "title": "Admin",
+        "body": "Open the Admin console for system configuration."
+      },
+      "aUsers": {
+        "title": "Users",
+        "body": "Create and manage full user accounts."
+      },
+      "aPresentation": {
+        "title": "Presentation",
+        "body": "Configure themes, styles, templates, and cover presets."
+      },
+      "aAi": {
+        "title": "AI settings",
+        "body": "Configure AI providers and proposal generation."
+      },
+      "aSmtp": {
+        "title": "SMTP",
+        "body": "Configure email for magic links and export delivery."
+      },
+      "aSystem": {
+        "title": "System health",
+        "body": "Monitor system status and stuck jobs."
+      },
+      "aHelp": {
+        "title": "Admin help",
+        "body": "Admin reference docs and restart the admin tour."
+      }
+    }
+  },
   "login": {
     "title": "Login",
     "email": "Email",

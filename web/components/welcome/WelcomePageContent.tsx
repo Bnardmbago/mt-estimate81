@@ -14,6 +14,7 @@ export default function WelcomePageContent() {
       <WelcomeGuideSection />
       <section
         id="get-estimate"
+        data-tour="welcome-get-estimate"
         className="scroll-mt-20 border-t border-slate-200 py-16 dark:border-slate-800"
       >
         <div className="mx-auto max-w-2xl px-4 sm:px-0">

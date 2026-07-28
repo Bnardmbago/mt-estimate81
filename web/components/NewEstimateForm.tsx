@@ -122,7 +122,10 @@ export default function NewEstimateForm() {
   }
 
   return (
-    <div className="max-w-lg space-y-5 rounded-lg border border-gray-200 bg-white p-6">
+    <div
+      data-tour="new-estimate-template-picker"
+      className="max-w-lg space-y-5 rounded-lg border border-gray-200 bg-white p-6"
+    >
       <div>
         <label htmlFor="new-estimate-category" className="mb-1 block text-sm font-medium">
           {t("natureOfWorkLabel")}
@@ -172,6 +175,7 @@ export default function NewEstimateForm() {
 
       <button
         type="button"
+        data-tour="new-estimate-create-button"
         onClick={handleCreate}
         disabled={creating || !selectedTemplateId}
         className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
