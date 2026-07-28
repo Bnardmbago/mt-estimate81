@@ -12,6 +12,7 @@ import {
   type PresentationCatalogKind,
   type PresentationPresetDetail,
 } from "@/lib/presentation";
+import { clonePlainData } from "@/lib/clonePlainData";
 
 export type PresentationEditorField = {
   path: string;
@@ -44,7 +45,7 @@ function writePath(
   path: string,
   value: string | number | boolean,
 ): Record<string, unknown> {
-  const copy = structuredClone(config);
+  const copy = clonePlainData(config);
   const keys = path.split(".");
   let cursor = copy;
   keys.slice(0, -1).forEach((key) => {
@@ -86,7 +87,7 @@ export default function PresentationCatalogEditor({
     setSelectedId(selected.id);
     setName(selected.name);
     setDescription(selected.description || "");
-    setConfig(structuredClone(selected.config || defaultConfig));
+    setConfig(clonePlainData(selected.config || defaultConfig));
     setAdvancedJson(JSON.stringify(selected.config || defaultConfig, null, 2));
   }, [selected?.id, presets, defaultConfig]);
 
@@ -95,7 +96,7 @@ export default function PresentationCatalogEditor({
     setSlug("");
     setName("");
     setDescription("");
-    setConfig(structuredClone(defaultConfig));
+    setConfig(clonePlainData(defaultConfig));
     setAdvancedJson(JSON.stringify(defaultConfig, null, 2));
     setError(null);
   }

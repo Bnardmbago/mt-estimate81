@@ -18,6 +18,7 @@ import {
   type PresentationPresetDetail,
 } from "@/lib/presentation";
 import { DEFAULT_COVER_TEMPLATE_CONFIG } from "@/lib/cover-template-defaults";
+import { clonePlainData } from "@/lib/clonePlainData";
 import {
   normalizeGeometry,
   type CoverGeometry,
@@ -118,7 +119,7 @@ export default function PresentationCoverDesigner({
 
   useEffect(() => {
     if (mode === "draft" && draft) {
-      const payload = structuredClone(draft.template_draft || {});
+      const payload = clonePlainData(draft.template_draft || {});
       const selectedConfig = configOf(payload);
       const design = designOf(selectedConfig.cover_design);
       selectedConfig.cover_design = {
@@ -135,8 +136,8 @@ export default function PresentationCoverDesigner({
       );
     } else if (isCreating) {
       const seeded = createConfig && typeof createConfig === "object"
-        ? structuredClone(createConfig)
-        : structuredClone(DEFAULT_COVER_TEMPLATE_CONFIG);
+        ? clonePlainData(createConfig)
+        : clonePlainData(DEFAULT_COVER_TEMPLATE_CONFIG);
       if (seeded && typeof seeded === "object") {
         (seeded as Record<string, unknown>).cover = true;
       }
@@ -147,7 +148,7 @@ export default function PresentationCoverDesigner({
       });
       setCoverMode("enabled");
     } else if (catalogTemplate) {
-      const nextConfig = structuredClone(
+      const nextConfig = clonePlainData(
         catalogTemplate.config || DEFAULT_COVER_TEMPLATE_CONFIG,
       ) as Record<string, unknown>;
       const design = designOf(nextConfig.cover_design);
@@ -254,7 +255,7 @@ export default function PresentationCoverDesigner({
         t("saved"),
       );
       if (updated) {
-        setTemplatePayload(structuredClone(updated.template_draft));
+        setTemplatePayload(clonePlainData(updated.template_draft));
         await onChanged();
       }
       return updated;
@@ -307,7 +308,7 @@ export default function PresentationCoverDesigner({
       setTemplatePayload({
         name: updated.name,
         description: updated.description || "",
-        config: structuredClone(updated.config),
+        config: clonePlainData(updated.config),
       });
       await onChanged();
     }
@@ -408,7 +409,7 @@ export default function PresentationCoverDesigner({
         t("saved"),
       );
       if (updated) {
-        setTemplatePayload(structuredClone(updated.template_draft));
+        setTemplatePayload(clonePlainData(updated.template_draft));
         await onChanged();
       }
       return updated;
@@ -427,7 +428,7 @@ export default function PresentationCoverDesigner({
       setTemplatePayload({
         name: updated.name,
         description: updated.description || "",
-        config: structuredClone(updated.config),
+        config: clonePlainData(updated.config),
       });
       await onChanged();
     }
@@ -569,7 +570,7 @@ export default function PresentationCoverDesigner({
       t("suggestionsApplied"),
     );
     if (!result) return;
-    setTemplatePayload(structuredClone(result.template_draft));
+    setTemplatePayload(clonePlainData(result.template_draft));
     await onChanged();
     const refreshed = await run(() => checkPresentationDraftConsistency(draft.id));
     if (refreshed) setSuggestions(refreshed);

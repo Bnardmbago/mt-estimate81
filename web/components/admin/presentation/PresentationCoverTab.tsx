@@ -16,6 +16,7 @@ import {
   DEFAULT_COVER_TEMPLATE_CONFIG,
   templateHasCoverConfig,
 } from "@/lib/cover-template-defaults";
+import { clonePlainData } from "@/lib/clonePlainData";
 import PresentationCoverDesigner from "./PresentationCoverDesigner";
 
 type Props = {
@@ -41,8 +42,8 @@ function coverConfigFromDraft(draft: PresentationDraft): Record<string, unknown>
   const template = draft.template_draft || {};
   const config =
     template.config && typeof template.config === "object" && !Array.isArray(template.config)
-      ? structuredClone(template.config as Record<string, unknown>)
-      : structuredClone(DEFAULT_COVER_TEMPLATE_CONFIG);
+      ? clonePlainData(template.config as Record<string, unknown>)
+      : clonePlainData(DEFAULT_COVER_TEMPLATE_CONFIG);
   config.cover = true;
   if (!config.layout) config.layout = "executive_cover";
   if (!config.page) config.page = { size: "A4", orientation: "portrait" };

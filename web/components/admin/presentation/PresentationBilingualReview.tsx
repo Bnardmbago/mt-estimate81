@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { clonePlainData } from "@/lib/clonePlainData";
 import type { PresentationDraft, PresentationLocale } from "@/lib/presentation";
 
 type Props = {
@@ -219,7 +220,7 @@ function applyAxisEdit(
   sourceLocale: PresentationLocale,
   edit: { name: string; description: string },
 ) {
-  const next = structuredClone(payload);
+  const next = clonePlainData(payload);
   const name = edit.name.trim();
   const description = edit.description;
   next.name = name;
